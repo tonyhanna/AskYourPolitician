@@ -14,7 +14,7 @@ export async function sendVerificationEmail({
   verificationUrl: string;
 }) {
   const { data, error } = await resend.emails.send({
-    from: "Ask Your Politician <onboarding@resend.dev>",
+    from: "Ask Your Politician <noreply@introcrazy.com>",
     to,
     subject: "Bekræft din upvote",
     html: `
@@ -54,7 +54,7 @@ export async function sendGoalReachedEmail({
   dashboardUrl: string;
 }) {
   const { data, error } = await resend.emails.send({
-    from: "Ask Your Politician <onboarding@resend.dev>",
+    from: "Ask Your Politician <noreply@introcrazy.com>",
     to,
     subject: `${upvoteCount} ${upvoteCount === 1 ? "borger" : "borgere"} vil have svar på dit spørgsmål!`,
     html: `
@@ -91,7 +91,7 @@ export async function sendGoalReachedCitizenEmail({
   questionText: string;
 }) {
   const { error } = await resend.emails.send({
-    from: "Ask Your Politician <onboarding@resend.dev>",
+    from: "Ask Your Politician <noreply@introcrazy.com>",
     to,
     subject: `Dit spørgsmål har nået sit mål!`,
     html: `
@@ -123,7 +123,7 @@ export async function sendAnswerNotificationEmail({
   answerUrl: string;
 }) {
   const { error } = await resend.emails.send({
-    from: "Ask Your Politician <onboarding@resend.dev>",
+    from: "Ask Your Politician <noreply@introcrazy.com>",
     to,
     subject: `${politicianName} fra ${partyName} har svaret på dit spørgsmål!`,
     html: `
