@@ -14,7 +14,7 @@ export async function sendVerificationEmail({
   verificationUrl: string;
 }) {
   const { data, error } = await resend.emails.send({
-    from: "Ask Your Politician <noreply@introcrazy.com>",
+    from: "Ask Your Politician <noreply@introkrati.dk>",
     to,
     subject: "Bekræft din upvote",
     html: `
@@ -54,7 +54,7 @@ export async function sendGoalReachedEmail({
   dashboardUrl: string;
 }) {
   const { data, error } = await resend.emails.send({
-    from: "Ask Your Politician <noreply@introcrazy.com>",
+    from: "Ask Your Politician <noreply@introkrati.dk>",
     to,
     subject: `${upvoteCount} ${upvoteCount === 1 ? "borger" : "borgere"} vil have svar på dit spørgsmål!`,
     html: `
@@ -91,7 +91,7 @@ export async function sendGoalReachedCitizenEmail({
   questionText: string;
 }) {
   const { error } = await resend.emails.send({
-    from: "Ask Your Politician <noreply@introcrazy.com>",
+    from: "Ask Your Politician <noreply@introkrati.dk>",
     to,
     subject: `Dit spørgsmål har nået sit mål!`,
     html: `
@@ -119,7 +119,7 @@ export async function sendSuggestionVerificationEmail({
   verificationUrl: string;
 }) {
   const { error } = await resend.emails.send({
-    from: "Ask Your Politician <noreply@introcrazy.com>",
+    from: "Ask Your Politician <noreply@introkrati.dk>",
     to,
     subject: "Bekræft dit forslag til et spørgsmål",
     html: `
@@ -155,7 +155,7 @@ export async function sendSuggestionReceivedEmail({
   questionText: string;
 }) {
   const { error } = await resend.emails.send({
-    from: "Ask Your Politician <noreply@introcrazy.com>",
+    from: "Ask Your Politician <noreply@introkrati.dk>",
     to,
     subject: "Tak for dit forslag!",
     html: `
@@ -185,7 +185,7 @@ export async function sendSuggestionApprovedEmail({
   questionUrl: string;
 }) {
   const { error } = await resend.emails.send({
-    from: "Ask Your Politician <noreply@introcrazy.com>",
+    from: "Ask Your Politician <noreply@introkrati.dk>",
     to,
     subject: "Dit forslag er blevet godkendt!",
     html: `
@@ -229,7 +229,7 @@ export async function sendSuggestionRejectedEmail({
     : "";
 
   const { error } = await resend.emails.send({
-    from: "Ask Your Politician <noreply@introcrazy.com>",
+    from: "Ask Your Politician <noreply@introkrati.dk>",
     to,
     subject: "Opdatering om dit forslag",
     html: `
@@ -261,7 +261,7 @@ export async function sendNewSuggestionNotificationEmail({
   dashboardUrl: string;
 }) {
   const { error } = await resend.emails.send({
-    from: "Ask Your Politician <noreply@introcrazy.com>",
+    from: "Ask Your Politician <noreply@introkrati.dk>",
     to,
     subject: `Nyt forslag fra ${citizenName}`,
     html: `
@@ -299,7 +299,7 @@ export async function sendAnswerNotificationEmail({
   isUpdate?: boolean;
 }) {
   const { error } = await resend.emails.send({
-    from: "Ask Your Politician <noreply@introcrazy.com>",
+    from: "Ask Your Politician <noreply@introkrati.dk>",
     to,
     subject: isUpdate
       ? `${politicianName} fra ${partyName} har opdateret sit svar på dit spørgsmål!`
