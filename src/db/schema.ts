@@ -94,6 +94,9 @@ export const questions = pgTable("questions", {
   upvoteCount: integer("upvote_count").notNull().default(0),
   goalReachedEmailSent: boolean("goal_reached_email_sent").notNull().default(false),
   answerUrl: varchar("answer_url", { length: 2048 }),
+  suggestedByCitizenId: uuid("suggested_by_citizen_id").references(
+    () => citizens.id
+  ),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -181,4 +184,33 @@ export const citizenSessions = pgTable("citizen_sessions", {
     .references(() => citizens.id),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const questionSuggestions = pgTable("question_suggestions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  politicianId: uuid("politician_id")
+    .notNull()
+    .references(() => politicians.id, { onDelete: "cascade" }),
+  citizenId: uuid("citizen_id")
+    .notNull()
+    .references(() => citizens.id, { onDelete: "cascade" }),
+  text: varchar("text", { length: 300 }).notNull(),
+  status: varchar("status", { length: 50 }).notNull().default("pending_verification"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const suggestionTokens = pgTable("suggestion_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  citizenId: uuid("citizen_id")
+    .notNull()
+    .references(() => citizens.id),
+  suggestionId: uuid("suggestion_id")
+    .notNull()
+    .references(() => questionSuggestions.id, { onDelete: "cascade" }),
+  politicianSlug: varchar("politician_slug", { length: 255 }).notNull(),
+  partySlug: varchar("party_slug", { length: 255 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
 });

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { deleteQuestion, editQuestion, submitAnswerUrl } from "@/app/politiker/dashboard/actions";
+import { CopyLinkButton } from "./CopyLinkButton";
 
 type Question = {
   id: string;
@@ -11,19 +12,22 @@ type Question = {
   tags: string[];
   goalReached: boolean;
   answerUrl: string | null;
+  suggestedBy: string | null;
 };
 
 export function QuestionList({
   questions,
   availableTags,
+  basePath,
 }: {
   questions: Question[];
   availableTags: { tagId: string; title: string }[];
+  basePath: string;
 }) {
   return (
     <div className="space-y-4">
       {questions.map((q) => (
-        <QuestionItem key={q.id} question={q} availableTags={availableTags} />
+        <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
       ))}
     </div>
   );
@@ -32,9 +36,11 @@ export function QuestionList({
 function QuestionItem({
   question,
   availableTags,
+  basePath,
 }: {
   question: Question;
   availableTags: { tagId: string; title: string }[];
+  basePath: string;
 }) {
   const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -159,7 +165,10 @@ function QuestionItem({
 
   return (
     <div className="border border-gray-200 rounded-lg p-4">
-      <p className="font-medium text-gray-900 mb-2">{question.text}</p>
+      <p className="font-medium text-gray-900 mb-1">{question.text}</p>
+      {question.suggestedBy && (
+        <p className="text-sm text-gray-500 mb-1">Foreslået af {question.suggestedBy}</p>
+      )}
       <div className="flex flex-wrap items-center gap-2 mb-2">
         {question.tags.map((tag) => (
           <span
@@ -255,9 +264,16 @@ function QuestionItem({
       )}
 
       <div className="flex items-center justify-between">
-        <span className="text-sm text-gray-600">
-          {question.upvoteCount} / {question.upvoteGoal} {question.upvoteGoal === 1 ? "upvote" : "upvotes"}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-600">
+            {question.upvoteCount} / {question.upvoteGoal} {question.upvoteGoal === 1 ? "upvote" : "upvotes"}
+          </span>
+          <CopyLinkButton
+            url={`${basePath}/q/${question.id}`}
+            title={question.text}
+            compact
+          />
+        </div>
         {!hasUpvotes && (
           <div className="flex gap-3">
             <button

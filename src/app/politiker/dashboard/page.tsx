@@ -1,13 +1,14 @@
 import { auth, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { politicians, questions, questionTags, causes } from "@/db/schema";
-import { eq, desc, inArray } from "drizzle-orm";
+import { politicians, questions, questionTags, causes, questionSuggestions, citizens } from "@/db/schema";
+import { eq, desc, inArray, and } from "drizzle-orm";
 import { QuestionForm } from "@/components/QuestionForm";
 import { SettingsForm } from "@/components/SettingsForm";
 import { QuestionList } from "@/components/QuestionList";
 import { CauseForm } from "@/components/CauseForm";
 import { CauseList } from "@/components/CauseList";
+import { SuggestionList } from "@/components/SuggestionList";
 
 export default async function Dashboard() {
   const session = await auth();
@@ -27,6 +28,7 @@ export default async function Dashboard() {
     tags: string[];
     goalReached: boolean;
     answerUrl: string | null;
+    suggestedBy: string | null;
   }[] = [];
 
   let politicianCauses: {
@@ -66,6 +68,23 @@ export default async function Dashboard() {
       }
     }
 
+    // Fetch citizen names for suggested questions
+    const suggestedByNames = new Map<string, string>();
+    const suggestedCitizenIds = rawQuestions
+      .filter((q) => q.suggestedByCitizenId)
+      .map((q) => q.suggestedByCitizenId!);
+
+    if (suggestedCitizenIds.length > 0) {
+      const suggestedCitizens = await db
+        .select({ id: citizens.id, firstName: citizens.firstName })
+        .from(citizens)
+        .where(inArray(citizens.id, suggestedCitizenIds));
+
+      for (const c of suggestedCitizens) {
+        suggestedByNames.set(c.id, c.firstName);
+      }
+    }
+
     politicianQuestions = rawQuestions.map((q) => ({
       id: q.id,
       text: q.text,
@@ -74,6 +93,9 @@ export default async function Dashboard() {
       tags: tagsByQuestion.get(q.id) ?? [],
       goalReached: q.goalReachedEmailSent,
       answerUrl: q.answerUrl,
+      suggestedBy: q.suggestedByCitizenId
+        ? suggestedByNames.get(q.suggestedByCitizenId) ?? null
+        : null,
     }));
 
     // Fetch causes
@@ -94,6 +116,40 @@ export default async function Dashboard() {
     }));
 
     availableTags = rawCauses.map((c) => ({ tagId: c.tagId, title: c.title }));
+  }
+
+  // Fetch pending suggestions
+  let pendingSuggestions: {
+    id: string;
+    citizenFirstName: string;
+    text: string;
+    createdAt: string;
+  }[] = [];
+
+  if (politician) {
+    const rawSuggestions = await db
+      .select({
+        id: questionSuggestions.id,
+        text: questionSuggestions.text,
+        createdAt: questionSuggestions.createdAt,
+        citizenFirstName: citizens.firstName,
+      })
+      .from(questionSuggestions)
+      .innerJoin(citizens, eq(questionSuggestions.citizenId, citizens.id))
+      .where(
+        and(
+          eq(questionSuggestions.politicianId, politician.id),
+          eq(questionSuggestions.status, "pending")
+        )
+      )
+      .orderBy(desc(questionSuggestions.createdAt));
+
+    pendingSuggestions = rawSuggestions.map((s) => ({
+      id: s.id,
+      citizenFirstName: s.citizenFirstName,
+      text: s.text,
+      createdAt: s.createdAt.toISOString(),
+    }));
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -123,9 +179,22 @@ export default async function Dashboard() {
 
           {politicianQuestions.length > 0 && (
             <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <QuestionList questions={politicianQuestions} availableTags={availableTags} />
+              <QuestionList questions={politicianQuestions} availableTags={availableTags} basePath={uniqueUrl!} />
             </section>
           )}
+
+          <h2 id="borgeres-spoergsmaal" className="text-2xl font-bold text-gray-900">
+            Borgeres spørgsmål
+            {pendingSuggestions.length > 0 && (
+              <span className="ml-2 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-full font-medium align-middle">
+                {pendingSuggestions.length}
+              </span>
+            )}
+          </h2>
+
+          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <SuggestionList suggestions={pendingSuggestions} availableTags={availableTags} />
+          </section>
 
           <h2 className="text-2xl font-bold text-gray-900">Mærkesager</h2>
 

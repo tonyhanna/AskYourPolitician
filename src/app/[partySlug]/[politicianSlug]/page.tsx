@@ -1,13 +1,12 @@
 import { Suspense } from "react";
 import { db } from "@/db";
-import { politicians, questions, questionTags, upvotes } from "@/db/schema";
+import { politicians, questions, questionTags, upvotes, citizens } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getCitizenFromSession } from "@/lib/citizen-session";
 import { SuccessBanner } from "@/components/SuccessBanner";
-import { CitizenUpvotedList } from "@/components/CitizenUpvotedList";
-import { UpvoteButton } from "@/components/UpvoteButton";
-import { CancelUpvoteButton } from "@/components/CancelUpvoteButton";
+import { SuggestQuestionButton } from "@/components/SuggestQuestionButton";
+import { QuestionFeedFilter } from "@/components/QuestionFeedFilter";
 import { citizenLogout } from "./actions";
 
 
@@ -32,12 +31,13 @@ export default async function BorgerFeed({
   if (!politician) notFound();
 
   const basePath = `/${partySlug}/${politicianSlug}`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
   const allQuestions = await db
     .select()
     .from(questions)
     .where(eq(questions.politicianId, politician.id))
-    .orderBy(desc(questions.upvoteCount));
+    .orderBy(desc(questions.createdAt));
 
   // Fetch tags
   const tagsByQuestion = new Map<string, string[]>();
@@ -55,6 +55,20 @@ export default async function BorgerFeed({
     }
   }
 
+  // Fetch "suggested by" citizen names
+  const suggestedByNames = new Map<string, string>();
+  const suggestedQuestions = allQuestions.filter((q) => q.suggestedByCitizenId);
+  if (suggestedQuestions.length > 0) {
+    const citizenIds = [...new Set(suggestedQuestions.map((q) => q.suggestedByCitizenId!))];
+    const suggesters = await db
+      .select({ id: citizens.id, firstName: citizens.firstName })
+      .from(citizens)
+      .where(inArray(citizens.id, citizenIds));
+    for (const c of suggesters) {
+      suggestedByNames.set(c.id, c.firstName);
+    }
+  }
+
   // Check citizen session for upvoted questions
   const citizen = await getCitizenFromSession();
   let citizenUpvotedIds = new Set<string>();
@@ -68,9 +82,25 @@ export default async function BorgerFeed({
     citizenUpvotedIds = new Set(citizenUpvotes.map((u) => u.questionId));
   }
 
-  const upvotedQuestions = allQuestions.filter((q) =>
-    citizenUpvotedIds.has(q.id)
-  );
+  // Prepare data for filter component
+  const politicianFirstName = politician.name.split(" ")[0];
+  const allTagsSet = new Set<string>();
+  tagsByQuestion.forEach((tags) => tags.forEach((t) => allTagsSet.add(t)));
+
+  const feedQuestions = allQuestions.map((q) => ({
+    id: q.id,
+    text: q.text,
+    upvoteCount: q.upvoteCount,
+    upvoteGoal: q.upvoteGoal,
+    answerUrl: q.answerUrl,
+    goalReachedEmailSent: q.goalReachedEmailSent,
+    suggestedBy: q.suggestedByCitizenId
+      ? suggestedByNames.get(q.suggestedByCitizenId) ?? null
+      : null,
+    tags: tagsByQuestion.get(q.id) ?? [],
+    isUpvoted: citizenUpvotedIds.has(q.id),
+    createdAt: q.createdAt.toISOString(),
+  }));
 
   return (
     <main className="max-w-2xl mx-auto p-6">
@@ -83,103 +113,38 @@ export default async function BorgerFeed({
         <p className="text-gray-600">{politician.party}</p>
       </div>
 
-      {upvotedQuestions.length > 0 && (
-        <CitizenUpvotedList
-          questions={upvotedQuestions.map((q) => ({
-            id: q.id,
-            text: q.text,
-            upvoteCount: q.upvoteCount,
-          }))}
-          partySlug={partySlug}
-          politicianSlug={politicianSlug}
-        />
-      )}
-
       <div className="mb-6">
         <p className="text-gray-600 mb-4">
           Her kan du se spørgsmål, som du kan stille til {politician.name}. Upvote
           de spørgsmål du synes er vigtigst, så politikeren ved hvad der betyder
           noget for dig.
         </p>
+        <SuggestQuestionButton
+          politicianName={politician.name}
+          politicianId={politician.id}
+          partySlug={partySlug}
+          politicianSlug={politicianSlug}
+          hasSession={!!citizen}
+        />
       </div>
 
-      <div className="space-y-4">
-        {allQuestions.map((question) => {
-          const isUpvoted = citizenUpvotedIds.has(question.id);
-          const tags = tagsByQuestion.get(question.id) ?? [];
-
-          return (
-            <div
-              key={question.id}
-              className={`border rounded-lg p-4 ${
-                isUpvoted
-                  ? "border-green-300 bg-green-50"
-                  : "border-gray-200"
-              }`}
-            >
-              <p className="font-medium text-gray-900 mb-2">{question.text}</p>
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {question.answerUrl && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-2">
-                  <p className="text-sm text-green-800 font-medium mb-1">
-                    {politician.name} har svaret!
-                  </p>
-                  <a
-                    href={question.answerUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:text-blue-800 underline"
-                  >
-                    Se svar
-                  </a>
-                </div>
-              )}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">
-                  {question.upvoteCount} {question.upvoteCount === 1 ? "upvote" : "upvotes"}
-                </span>
-                {question.answerUrl ? null : question.goalReachedEmailSent ? (
-                  <span className="text-sm text-amber-600 font-medium">Afventer svar...</span>
-                ) : isUpvoted ? (
-                  <CancelUpvoteButton
-                    questionId={question.id}
-                    partySlug={partySlug}
-                    politicianSlug={politicianSlug}
-                  />
-                ) : (
-                  <UpvoteButton
-                    questionId={question.id}
-                    basePath={basePath}
-                    isUpvoted={false}
-                    hasSession={!!citizen}
-                    partySlug={partySlug}
-                    politicianSlug={politicianSlug}
-                  />
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {allQuestions.length === 0 && (
+      {allQuestions.length === 0 ? (
         <p className="text-gray-500 text-center py-8">
           Der er endnu ingen spørgsmål fra denne politiker.
         </p>
+      ) : (
+        <QuestionFeedFilter
+          questions={feedQuestions}
+          allTags={[...allTagsSet]}
+          politicianFirstName={politicianFirstName}
+          politicianName={politician.name}
+          basePath={basePath}
+          appUrl={appUrl!}
+          hasSession={!!citizen}
+          partySlug={partySlug}
+          politicianSlug={politicianSlug}
+        />
       )}
-
-{/* TODO: Foreslå et spørgsmål-feature */}
 
       {citizen && (
         <div className="text-center mt-8 space-y-2">

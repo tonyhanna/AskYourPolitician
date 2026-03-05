@@ -2,8 +2,8 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { politicians, questions, questionTags, upvotes, citizens, answerHistory, causes } from "@/db/schema";
-import { sendAnswerNotificationEmail } from "@/lib/email";
+import { politicians, questions, questionTags, upvotes, citizens, answerHistory, causes, questionSuggestions } from "@/db/schema";
+import { sendAnswerNotificationEmail, sendSuggestionApprovedEmail, sendSuggestionRejectedEmail } from "@/lib/email";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { generateSlug } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
@@ -207,6 +207,8 @@ export async function submitAnswerUrl(questionId: string, answerUrl: string) {
 
   if (!question) throw new Error("Spørgsmålet kan ikke besvares endnu");
 
+  const isUpdate = !!question.answerUrl;
+
   await db.insert(answerHistory).values({ questionId, answerUrl });
 
   await db
@@ -232,6 +234,7 @@ export async function submitAnswerUrl(questionId: string, answerUrl: string) {
         partyName: politician.party,
         questionText: question.text,
         answerUrl,
+        isUpdate,
       })
     )
   );
@@ -399,4 +402,181 @@ export async function deleteCause(causeId: string) {
   await db.delete(causes).where(eq(causes.id, causeId));
 
   revalidatePath("/politiker/dashboard");
+}
+
+export async function approveSuggestion(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const suggestionId = formData.get("suggestionId") as string;
+  const upvoteGoal = parseInt(formData.get("upvoteGoal") as string) || 1000;
+  const tagsRaw = formData.get("tags") as string;
+
+  const [politician] = await db
+    .select()
+    .from(politicians)
+    .where(eq(politicians.userId, session.user.id))
+    .limit(1);
+
+  if (!politician) throw new Error("Politician not found");
+
+  const [suggestion] = await db
+    .select()
+    .from(questionSuggestions)
+    .where(
+      and(
+        eq(questionSuggestions.id, suggestionId),
+        eq(questionSuggestions.politicianId, politician.id),
+        eq(questionSuggestions.status, "pending")
+      )
+    )
+    .limit(1);
+
+  if (!suggestion) throw new Error("Forslag ikke fundet");
+
+  // Create the question from the suggestion
+  const [question] = await db
+    .insert(questions)
+    .values({
+      politicianId: politician.id,
+      text: suggestion.text,
+      upvoteGoal,
+      suggestedByCitizenId: suggestion.citizenId,
+    })
+    .returning();
+
+  // Add tags if any
+  if (tagsRaw) {
+    const tags = tagsRaw.split(",").map((t) => t.trim()).filter(Boolean);
+    if (tags.length > 0) {
+      await db
+        .insert(questionTags)
+        .values(tags.map((tag) => ({ questionId: question.id, tag })));
+    }
+  }
+
+  // Auto-upvote by the suggesting citizen
+  await db.insert(upvotes).values({
+    questionId: question.id,
+    citizenId: suggestion.citizenId,
+  });
+  await db
+    .update(questions)
+    .set({ upvoteCount: sql`${questions.upvoteCount} + 1` })
+    .where(eq(questions.id, question.id));
+
+  // Update suggestion status
+  await db
+    .update(questionSuggestions)
+    .set({ status: "approved" })
+    .where(eq(questionSuggestions.id, suggestionId));
+
+  // Send email to citizen
+  const [citizen] = await db
+    .select()
+    .from(citizens)
+    .where(eq(citizens.id, suggestion.citizenId))
+    .limit(1);
+
+  if (citizen) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const questionUrl = `${appUrl}/${politician.partySlug}/${politician.slug}/q/${question.id}`;
+    await sendSuggestionApprovedEmail({
+      to: citizen.email,
+      firstName: citizen.firstName,
+      politicianName: politician.name,
+      questionText: suggestion.text,
+      questionUrl,
+    });
+  }
+
+  revalidatePath("/politiker/dashboard");
+  revalidatePath(`/${politician.partySlug}/${politician.slug}`);
+}
+
+const REJECTION_REASONS: Record<string, string> = {
+  already_answered: "Jeg har allerede svaret på det spørgsmål",
+  duplicate: "Dit spørgsmål ligner et eksisterende spørgsmål",
+};
+
+export async function rejectSuggestion(suggestionId: string, reason: string, link?: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const [politician] = await db
+    .select()
+    .from(politicians)
+    .where(eq(politicians.userId, session.user.id))
+    .limit(1);
+
+  if (!politician) throw new Error("Politician not found");
+
+  const [suggestion] = await db
+    .select()
+    .from(questionSuggestions)
+    .where(
+      and(
+        eq(questionSuggestions.id, suggestionId),
+        eq(questionSuggestions.politicianId, politician.id),
+        eq(questionSuggestions.status, "pending")
+      )
+    )
+    .limit(1);
+
+  if (!suggestion) throw new Error("Forslag ikke fundet");
+
+  // Map standard reason or use custom text
+  const rejectionText = REJECTION_REASONS[reason] ?? reason;
+
+  await db
+    .update(questionSuggestions)
+    .set({ status: "rejected", rejectionReason: rejectionText })
+    .where(eq(questionSuggestions.id, suggestionId));
+
+  // Send rejection email
+  const [citizen] = await db
+    .select()
+    .from(citizens)
+    .where(eq(citizens.id, suggestion.citizenId))
+    .limit(1);
+
+  if (citizen) {
+    await sendSuggestionRejectedEmail({
+      to: citizen.email,
+      firstName: citizen.firstName,
+      politicianName: politician.name,
+      questionText: suggestion.text,
+      reason: rejectionText,
+      link: link || undefined,
+    });
+  }
+
+  revalidatePath("/politiker/dashboard");
+}
+
+export async function verifyQuestionLink(url: string): Promise<{ valid: boolean; questionText?: string }> {
+  try {
+    const parsed = new URL(url);
+    const segments = parsed.pathname.split("/").filter(Boolean);
+
+    // Expected: /{partySlug}/{politicianSlug}/q/{questionId}
+    const qIndex = segments.indexOf("q");
+    if (qIndex === -1 || qIndex + 1 >= segments.length) {
+      return { valid: false };
+    }
+
+    const questionId = segments[qIndex + 1];
+
+    const [question] = await db
+      .select({ text: questions.text })
+      .from(questions)
+      .where(eq(questions.id, questionId))
+      .limit(1);
+
+    if (!question) return { valid: false };
+
+    return { valid: true, questionText: question.text };
+  } catch {
+    return { valid: false };
+  }
 }
