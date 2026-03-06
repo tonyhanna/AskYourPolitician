@@ -52,27 +52,31 @@ export async function GET(
     )
     .limit(1);
 
-  if (!existingUpvote) {
-    // Create upvote
-    await db.insert(upvotes).values({
-      questionId: verification.questionId,
-      citizenId: verification.citizenId,
-    });
-
-    // Increment upvote count atomically
-    await db
-      .update(questions)
-      .set({
-        upvoteCount: sql`${questions.upvoteCount} + 1`,
-      })
-      .where(eq(questions.id, verification.questionId));
-
-    await checkAndNotifyGoalReached(verification.questionId);
-  }
-
   // Create citizen session
   const sessionToken = await createCitizenSession(verification.citizenId);
   await setCitizenSessionCookie(sessionToken);
+
+  if (existingUpvote) {
+    return NextResponse.redirect(
+      `${appUrl}/${verification.partySlug}/${verification.politicianSlug}?already_upvoted=true`
+    );
+  }
+
+  // Create upvote
+  await db.insert(upvotes).values({
+    questionId: verification.questionId,
+    citizenId: verification.citizenId,
+  });
+
+  // Increment upvote count atomically
+  await db
+    .update(questions)
+    .set({
+      upvoteCount: sql`${questions.upvoteCount} + 1`,
+    })
+    .where(eq(questions.id, verification.questionId));
+
+  await checkAndNotifyGoalReached(verification.questionId);
 
   return NextResponse.redirect(
     `${appUrl}/${verification.partySlug}/${verification.politicianSlug}?success=true`

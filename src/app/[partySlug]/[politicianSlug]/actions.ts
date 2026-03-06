@@ -50,19 +50,6 @@ export async function submitUpvote(formData: FormData): Promise<{ error?: string
       .returning();
   }
 
-  // Check if already upvoted
-  const [existingUpvote] = await db
-    .select()
-    .from(upvotes)
-    .where(
-      and(eq(upvotes.questionId, questionId), eq(upvotes.citizenId, citizen.id))
-    )
-    .limit(1);
-
-  if (existingUpvote) {
-    return { error: "Du har allerede upvotet dette spørgsmål" };
-  }
-
   // Get the question text for the email
   const [question] = await db
     .select()
