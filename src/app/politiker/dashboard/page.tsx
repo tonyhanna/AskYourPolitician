@@ -259,6 +259,7 @@ export default async function Dashboard() {
                   partyColor: politician.partyColor,
                   partyColorLight: politician.partyColorLight,
                   partyColorDark: politician.partyColorDark,
+                  chatbaseId: politician.chatbaseId,
                 }
               : null
           }

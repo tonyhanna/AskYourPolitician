@@ -1,0 +1,1 @@
+ALTER TABLE "politicians" ADD COLUMN "chatbase_id" varchar(255);

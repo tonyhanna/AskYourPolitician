@@ -14,6 +14,7 @@ type PoliticianData = {
   partyColor: string | null;
   partyColorLight: string | null;
   partyColorDark: string | null;
+  chatbaseId: string | null;
 } | null;
 
 async function cropToSquare(file: File): Promise<File> {
@@ -54,6 +55,7 @@ export function SettingsForm({
   const [partyColor, setPartyColor] = useState(politician?.partyColor ?? "#000000");
   const [partyColorLight, setPartyColorLight] = useState(politician?.partyColorLight ?? "#E5E7EB");
   const [partyColorDark, setPartyColorDark] = useState(politician?.partyColorDark ?? "#1F2937");
+  const [chatbaseId, setChatbaseId] = useState(politician?.chatbaseId ?? "");
 
   async function handleImageUpload(
     file: File,
@@ -301,6 +303,46 @@ export function SettingsForm({
           <div className="w-8 h-8 rounded-full border border-gray-200" style={{ backgroundColor: partyColor }} title="Normal" />
           <div className="w-8 h-8 rounded-full border border-gray-200" style={{ backgroundColor: partyColorDark }} title="Mørk" />
         </div>
+      </div>
+
+      <hr className="border-gray-200" />
+
+      {/* Chatbase */}
+      <div>
+        <label htmlFor="chatbaseEmbed" className="block text-sm font-medium text-gray-700 mb-1">
+          Chatbase embed-kode
+        </label>
+        <input type="hidden" name="chatbaseId" value={chatbaseId} />
+        <textarea
+          id="chatbaseEmbed"
+          rows={4}
+          defaultValue={politician?.chatbaseId ? `(allerede konfigureret: ${politician.chatbaseId})` : ""}
+          placeholder='Paste hele embed-koden fra Chatbase her...'
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          onChange={(e) => {
+            const val = e.target.value;
+            const match = val.match(/script\.id\s*=\s*"([^"]+)"/);
+            if (match) {
+              setChatbaseId(match[1]);
+            } else if (!val.trim()) {
+              setChatbaseId("");
+            }
+          }}
+        />
+        {chatbaseId ? (
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-green-600">Chatbot-ID fundet: {chatbaseId}</span>
+            <button
+              type="button"
+              onClick={() => setChatbaseId("")}
+              className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+            >
+              Fjern
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500 mt-1">Gå til Chatbase &rarr; Deploy &rarr; Embed, og paste hele script-koden her. Lad feltet stå tomt for at deaktivere.</p>
+        )}
       </div>
 
       <button

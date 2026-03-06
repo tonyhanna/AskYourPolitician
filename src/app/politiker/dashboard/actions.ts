@@ -63,6 +63,7 @@ export async function updateSettings(formData: FormData) {
   const partyColor = (formData.get("partyColor") as string) || null;
   const partyColorLight = (formData.get("partyColorLight") as string) || null;
   const partyColorDark = (formData.get("partyColorDark") as string) || null;
+  const chatbaseId = (formData.get("chatbaseId") as string)?.trim() || null;
 
   if (!name || !party || !email) throw new Error("Navn, parti og email er påkrævet");
 
@@ -89,6 +90,7 @@ export async function updateSettings(formData: FormData) {
         partyColor,
         partyColorLight,
         partyColorDark,
+        chatbaseId,
         updatedAt: new Date(),
       })
       .where(eq(politicians.id, existing.id));
@@ -105,6 +107,7 @@ export async function updateSettings(formData: FormData) {
       partyColor,
       partyColorLight,
       partyColorDark,
+      chatbaseId,
     });
   }
 

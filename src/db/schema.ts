@@ -85,6 +85,7 @@ export const politicians = pgTable("politicians", {
   partyColor: varchar("party_color", { length: 7 }),
   partyColorLight: varchar("party_color_light", { length: 7 }),
   partyColorDark: varchar("party_color_dark", { length: 7 }),
+  chatbaseId: varchar("chatbase_id", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

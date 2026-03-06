@@ -9,6 +9,7 @@ import { SuccessBanner } from "@/components/SuccessBanner";
 import { SuggestQuestionButton } from "@/components/SuggestQuestionButton";
 import { QuestionFeedFilter } from "@/components/QuestionFeedFilter";
 import { citizenLogout } from "./actions";
+import { ChatbaseWidget } from "@/components/ChatbaseWidget";
 
 export async function generateMetadata({
   params,
@@ -191,6 +192,9 @@ export default async function BorgerFeed({
             </button>
           </form>
         </div>
+      )}
+      {politician.chatbaseId && (
+        <ChatbaseWidget chatbotId={politician.chatbaseId} />
       )}
     </main>
   );

@@ -36,6 +36,13 @@
       "when": 1772792021696,
       "tag": "0004_broken_darkstar",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772793331636,
+      "tag": "0005_sudden_garia",
+      "breakpoints": true
     }
   ]
 }
