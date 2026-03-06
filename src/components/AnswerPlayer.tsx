@@ -1,6 +1,6 @@
 "use client";
 
-import { isBlobUrl, getBlobMediaType } from "@/lib/answer-utils";
+import { isBlobUrl, getBlobMediaType, getYouTubeVideoId } from "@/lib/answer-utils";
 
 export function AnswerPlayer({
   answerUrl,
@@ -11,6 +11,21 @@ export function AnswerPlayer({
   photoUrl?: string | null;
   className?: string;
 }) {
+  const youtubeId = getYouTubeVideoId(answerUrl);
+  if (youtubeId) {
+    return (
+      <div className="w-full aspect-video">
+        <iframe
+          src={`https://www.youtube-nocookie.com/embed/${youtubeId}`}
+          title="Svar fra politiker"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          className={className ?? "w-full h-full rounded-lg"}
+        />
+      </div>
+    );
+  }
+
   if (isBlobUrl(answerUrl)) {
     const mediaType = getBlobMediaType(answerUrl);
 

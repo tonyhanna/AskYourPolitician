@@ -254,6 +254,11 @@ export default async function Dashboard() {
                   party: politician.party,
                   email: politician.email,
                   slug: politician.slug,
+                  profilePhotoUrl: politician.profilePhotoUrl,
+                  partyLogoUrl: politician.partyLogoUrl,
+                  partyColor: politician.partyColor,
+                  partyColorLight: politician.partyColorLight,
+                  partyColorDark: politician.partyColorDark,
                 }
               : null
           }

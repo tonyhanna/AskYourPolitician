@@ -80,6 +80,11 @@ export const politicians = pgTable("politicians", {
   party: varchar("party", { length: 255 }).notNull(),
   partySlug: varchar("party_slug", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }).notNull(),
+  profilePhotoUrl: varchar("profile_photo_url", { length: 2048 }),
+  partyLogoUrl: varchar("party_logo_url", { length: 2048 }),
+  partyColor: varchar("party_color", { length: 7 }),
+  partyColorLight: varchar("party_color_light", { length: 7 }),
+  partyColorDark: varchar("party_color_dark", { length: 7 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
