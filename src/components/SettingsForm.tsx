@@ -46,6 +46,7 @@ export function SettingsForm({
   googleName: string;
 }) {
   const [pending, setPending] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(politician?.profilePhotoUrl ?? "");
   const [partyLogoUrl, setPartyLogoUrl] = useState(politician?.partyLogoUrl ?? "");
   const [uploadingProfile, setUploadingProfile] = useState(false);
@@ -83,6 +84,8 @@ export function SettingsForm({
     setPending(true);
     try {
       await updateSettings(formData);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Der opstod en fejl");
     } finally {
@@ -303,9 +306,13 @@ export function SettingsForm({
       <button
         type="submit"
         disabled={pending || uploadingProfile || uploadingLogo}
-        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 cursor-pointer"
+        className={`px-6 py-2 rounded-lg transition font-medium disabled:opacity-50 cursor-pointer ${
+          saved
+            ? "bg-green-600 text-white"
+            : "bg-blue-600 text-white hover:bg-blue-700"
+        }`}
       >
-        {pending ? "Gemmer..." : "Gem indstillinger"}
+        {pending ? "Gemmer..." : saved ? "Gemt" : "Gem indstillinger"}
       </button>
     </form>
   );

@@ -254,23 +254,12 @@ export function QuestionFeedFilter({
               />
               <div className="flex items-center gap-3">
                 {question.answerUrl ? (
-                  isBlobUrl(question.answerUrl) ? (
-                    <a
-                      href={`${basePath}/q/${question.id}`}
-                      className="text-sm text-blue-400 hover:text-blue-300 underline font-medium"
-                    >
-                      {getBlobMediaType(question.answerUrl) === "audio" ? "Lyt til svar" : "Se svar"}
-                    </a>
-                  ) : (
-                    <a
-                      href={question.answerUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-400 hover:text-blue-300 underline font-medium"
-                    >
-                      Se svar
-                    </a>
-                  )
+                  <a
+                    href={`${basePath}/q/${question.id}`}
+                    className="text-sm text-blue-400 hover:text-blue-300 underline font-medium"
+                  >
+                    {isBlobUrl(question.answerUrl) && getBlobMediaType(question.answerUrl) === "audio" ? "Lyt til svar" : "Se svar"}
+                  </a>
                 ) : (
                   <span className="text-sm text-gray-500">
                     {question.upvoteCount} {question.upvoteCount === 1 ? "upvote" : "upvotes"}
