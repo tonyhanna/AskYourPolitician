@@ -7,6 +7,7 @@ import { UpvoteButton } from "@/components/UpvoteButton";
 import { CancelUpvoteButton } from "@/components/CancelUpvoteButton";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { AnswerPlayer } from "@/components/AnswerPlayer";
+import { citizenLogout } from "../../actions";
 import type { Metadata } from "next";
 
 type Props = {
@@ -115,6 +116,15 @@ export default async function QuestionLandingPage({ params }: Props) {
 
   return (
     <main className="max-w-xl mx-auto p-6 mt-8">
+      <div className="mb-4">
+        <a
+          href={basePath}
+          className="text-sm text-gray-500 hover:text-gray-700"
+        >
+          &larr; Se alle spørgsmål fra {politician.name}
+        </a>
+      </div>
+
       <div className={`rounded-xl shadow-sm p-6 space-y-6 ${
         question.answerUrl
           ? "bg-gray-900 border border-gray-900"
@@ -190,14 +200,26 @@ export default async function QuestionLandingPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="text-center mt-6">
-        <a
-          href={basePath}
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          Se alle spørgsmål fra {politician.name}
-        </a>
-      </div>
+      {citizen && (
+        <div className="text-center mt-6 space-y-2">
+          <p className="text-sm text-gray-500">
+            Logget ind som {citizen.email}
+          </p>
+          <form
+            action={async () => {
+              "use server";
+              await citizenLogout(partySlug, politicianSlug);
+            }}
+          >
+            <button
+              type="submit"
+              className="text-sm text-gray-500 hover:text-red-600 transition cursor-pointer"
+            >
+              Log ud
+            </button>
+          </form>
+        </div>
+      )}
     </main>
   );
 }
