@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { db } from "@/db";
 import { politicians, questions, questionTags, upvotes, citizens } from "@/db/schema";
@@ -9,6 +10,30 @@ import { SuggestQuestionButton } from "@/components/SuggestQuestionButton";
 import { QuestionFeedFilter } from "@/components/QuestionFeedFilter";
 import { citizenLogout } from "./actions";
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ partySlug: string; politicianSlug: string }>;
+}): Promise<Metadata> {
+  const { partySlug, politicianSlug } = await params;
+
+  const [politician] = await db
+    .select({ name: politicians.name, party: politicians.party })
+    .from(politicians)
+    .where(
+      and(
+        eq(politicians.partySlug, partySlug),
+        eq(politicians.slug, politicianSlug)
+      )
+    )
+    .limit(1);
+
+  if (!politician) return { title: "Ikke fundet * Introkrati" };
+
+  return {
+    title: `${politician.name} / ${politician.party} * Introkrati`,
+  };
+}
 
 export default async function BorgerFeed({
   params,

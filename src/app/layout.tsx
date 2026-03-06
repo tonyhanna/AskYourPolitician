@@ -7,7 +7,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Ask Your Politician",
+  title: "Introkrati",
   description: "Stil spørgsmål til din politiker og stem på de vigtigste.",
 };
 

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
@@ -9,6 +10,23 @@ import { QuestionList } from "@/components/QuestionList";
 import { CauseForm } from "@/components/CauseForm";
 import { CauseList } from "@/components/CauseList";
 import { SuggestionList } from "@/components/SuggestionList";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const session = await auth();
+  if (!session?.user?.id) return { title: "Politiker Dashboard * Introkrati" };
+
+  const [politician] = await db
+    .select({ name: politicians.name })
+    .from(politicians)
+    .where(eq(politicians.userId, session.user.id))
+    .limit(1);
+
+  return {
+    title: politician
+      ? `Politiker Dashboard / ${politician.name} * Introkrati`
+      : "Politiker Dashboard * Introkrati",
+  };
+}
 
 export default async function Dashboard() {
   const session = await auth();

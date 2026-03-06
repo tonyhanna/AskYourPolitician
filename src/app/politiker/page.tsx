@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { auth, signIn } from "@/lib/auth";
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  title: "Politiker * Introkrati",
+};
 
 export default async function PolitikerLogin() {
   const session = await auth();
