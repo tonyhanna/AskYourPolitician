@@ -22,7 +22,7 @@ import { generateToken } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { checkAndNotifyGoalReached } from "@/lib/goal-check";
 
-export async function submitUpvote(formData: FormData) {
+export async function submitUpvote(formData: FormData): Promise<{ error?: string }> {
   const firstName = formData.get("firstName") as string;
   const email = formData.get("email") as string;
   const questionId = formData.get("questionId") as string;
@@ -30,7 +30,7 @@ export async function submitUpvote(formData: FormData) {
   const partySlug = formData.get("partySlug") as string;
 
   if (!firstName || !email || !questionId || !politicianSlug || !partySlug) {
-    throw new Error("Alle felter er påkrævet");
+    return { error: "Alle felter er påkrævet" };
   }
 
   // Find or create citizen
@@ -60,7 +60,7 @@ export async function submitUpvote(formData: FormData) {
     .limit(1);
 
   if (existingUpvote) {
-    throw new Error("Du har allerede upvotet dette spørgsmål");
+    return { error: "Du har allerede upvotet dette spørgsmål" };
   }
 
   // Get the question text for the email
@@ -70,7 +70,7 @@ export async function submitUpvote(formData: FormData) {
     .where(eq(questions.id, questionId))
     .limit(1);
 
-  if (!question) throw new Error("Spørgsmål ikke fundet");
+  if (!question) return { error: "Spørgsmål ikke fundet" };
 
   // Create verification token
   const token = generateToken();
@@ -94,6 +94,8 @@ export async function submitUpvote(formData: FormData) {
     questionText: question.text,
     verificationUrl,
   });
+
+  return {};
 }
 
 export async function directUpvote(

@@ -33,8 +33,12 @@ export default function UpvotePage() {
     formData.set("partySlug", params.partySlug);
 
     try {
-      await submitUpvote(formData);
-      setEmailSent(true);
+      const result = await submitUpvote(formData);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setEmailSent(true);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Der opstod en fejl");
     } finally {
