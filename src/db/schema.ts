@@ -160,7 +160,7 @@ export const verificationTokens = pgTable("verification_tokens", {
     .references(() => citizens.id),
   questionId: uuid("question_id")
     .notNull()
-    .references(() => questions.id),
+    .references(() => questions.id, { onDelete: "cascade" }),
   politicianSlug: varchar("politician_slug", { length: 255 }).notNull(),
   partySlug: varchar("party_slug", { length: 255 }).notNull(),
   expiresAt: timestamp("expires_at").notNull(),

@@ -55,7 +55,11 @@ function QuestionItem({
     if (!confirm("Er du sikker på at du vil slette dette spørgsmål?")) return;
     setDeleting(true);
     try {
-      await deleteQuestion(question.id);
+      const result = await deleteQuestion(question.id);
+      if (result.error) {
+        alert(result.error);
+        setDeleting(false);
+      }
     } catch (e) {
       alert(e instanceof Error ? e.message : "Der opstod en fejl");
       setDeleting(false);

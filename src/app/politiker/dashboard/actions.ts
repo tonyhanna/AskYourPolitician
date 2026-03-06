@@ -151,9 +151,9 @@ export async function editQuestion(formData: FormData) {
   revalidatePath("/politiker/dashboard");
 }
 
-export async function deleteQuestion(questionId: string) {
+export async function deleteQuestion(questionId: string): Promise<{ error?: string }> {
   const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
+  if (!session?.user?.id) return { error: "Unauthorized" };
 
   const [politician] = await db
     .select()
@@ -161,7 +161,7 @@ export async function deleteQuestion(questionId: string) {
     .where(eq(politicians.userId, session.user.id))
     .limit(1);
 
-  if (!politician) throw new Error("Politician not found");
+  if (!politician) return { error: "Politician not found" };
 
   // Only delete if upvoteCount is 0
   await db
@@ -175,6 +175,7 @@ export async function deleteQuestion(questionId: string) {
     );
 
   revalidatePath("/politiker/dashboard");
+  return {};
 }
 
 export async function submitAnswerUrl(questionId: string, answerUrl: string) {
