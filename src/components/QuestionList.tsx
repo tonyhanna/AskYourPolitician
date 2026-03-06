@@ -83,8 +83,12 @@ function QuestionItem({
     try {
       formData.set("questionId", question.id);
       formData.set("tags", Array.from(selectedTags).join(","));
-      await editQuestion(formData);
-      setEditing(false);
+      const result = await editQuestion(formData);
+      if (result.error) {
+        alert(result.error);
+      } else {
+        setEditing(false);
+      }
     } catch (e) {
       alert(e instanceof Error ? e.message : "Der opstod en fejl");
     } finally {

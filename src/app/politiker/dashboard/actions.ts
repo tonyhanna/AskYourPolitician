@@ -95,16 +95,16 @@ export async function updateSettings(formData: FormData) {
   revalidatePath("/politiker/dashboard");
 }
 
-export async function editQuestion(formData: FormData) {
+export async function editQuestion(formData: FormData): Promise<{ error?: string }> {
   const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
+  if (!session?.user?.id) return { error: "Unauthorized" };
 
   const questionId = formData.get("questionId") as string;
   const text = formData.get("text") as string;
   const tagsRaw = formData.get("tags") as string;
   const upvoteGoal = parseInt(formData.get("upvoteGoal") as string) || 1000;
 
-  if (!text || text.length > 300) throw new Error("Ugyldigt spørgsmål");
+  if (!text || text.length > 300) return { error: "Ugyldigt spørgsmål" };
 
   const [politician] = await db
     .select()
@@ -112,7 +112,7 @@ export async function editQuestion(formData: FormData) {
     .where(eq(politicians.userId, session.user.id))
     .limit(1);
 
-  if (!politician) throw new Error("Politician not found");
+  if (!politician) return { error: "Politician not found" };
 
   // Only edit if upvoteCount is 0
   const [question] = await db
@@ -127,7 +127,7 @@ export async function editQuestion(formData: FormData) {
     )
     .limit(1);
 
-  if (!question) throw new Error("Spørgsmålet kan ikke redigeres");
+  if (!question) return { error: "Spørgsmålet kan ikke redigeres, da det allerede har fået upvotes" };
 
   await db
     .update(questions)
@@ -149,6 +149,7 @@ export async function editQuestion(formData: FormData) {
   }
 
   revalidatePath("/politiker/dashboard");
+  return {};
 }
 
 export async function deleteQuestion(questionId: string): Promise<{ error?: string }> {
