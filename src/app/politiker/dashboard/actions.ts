@@ -6,6 +6,7 @@ import { politicians, questions, questionTags, upvotes, citizens, answerHistory,
 import { sendAnswerNotificationEmail, sendSuggestionApprovedEmail, sendSuggestionRejectedEmail } from "@/lib/email";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { generateSlug } from "@/lib/utils";
+import { isBlobUrl } from "@/lib/answer-utils";
 import { revalidatePath } from "next/cache";
 
 export async function createQuestion(formData: FormData) {
@@ -227,6 +228,11 @@ export async function submitAnswerUrl(questionId: string, answerUrl: string) {
     .innerJoin(citizens, eq(upvotes.citizenId, citizens.id))
     .where(eq(upvotes.questionId, questionId));
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const emailAnswerUrl = isBlobUrl(answerUrl)
+    ? `${appUrl}/${politician.partySlug}/${politician.slug}/q/${questionId}`
+    : answerUrl;
+
   await Promise.allSettled(
     upvoters.map((citizen) =>
       sendAnswerNotificationEmail({
@@ -235,7 +241,7 @@ export async function submitAnswerUrl(questionId: string, answerUrl: string) {
         politicianName: politician.name,
         partyName: politician.party,
         questionText: question.text,
-        answerUrl,
+        answerUrl: emailAnswerUrl,
         isUpdate,
       })
     )

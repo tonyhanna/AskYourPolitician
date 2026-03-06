@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { upload } from "@vercel/blob/client";
 import { deleteQuestion, editQuestion, submitAnswerUrl } from "@/app/politiker/dashboard/actions";
 import { CopyLinkButton } from "./CopyLinkButton";
+import { isBlobUrl, getBlobMediaType } from "@/lib/answer-utils";
 
 type Question = {
   id: string;
@@ -49,7 +51,38 @@ function QuestionItem({
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
   const [editingAnswer, setEditingAnswer] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set(question.tags));
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const hasUpvotes = question.upvoteCount > 0;
+
+  async function handleFileUpload(file: File) {
+    if (file.size > 250 * 1024 * 1024) {
+      setUploadError("Filen er for stor (maks 250 MB)");
+      return;
+    }
+    if (!file.type.startsWith("video/") && !file.type.startsWith("audio/")) {
+      setUploadError("Kun video- og lydfiler er tilladt");
+      return;
+    }
+    setUploading(true);
+    setUploadError(null);
+    setUploadProgress(0);
+    try {
+      const blob = await upload(file.name, file, {
+        access: "public",
+        handleUploadUrl: "/api/upload",
+        onUploadProgress: ({ percentage }) => setUploadProgress(percentage),
+      });
+      await submitAnswerUrl(question.id, blob.url);
+      setEditingAnswer(false);
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Upload fejlede");
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  }
 
   async function handleDelete() {
     if (!confirm("Er du sikker på at du vil slette dette spørgsmål?")) return;
@@ -173,7 +206,14 @@ function QuestionItem({
 
   return (
     <div className="border border-gray-200 rounded-lg p-4">
-      <p className="font-medium text-gray-900 mb-1">{question.text}</p>
+      <a
+        href={`${basePath}/q/${question.id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-medium text-gray-900 hover:text-blue-600 transition mb-1 block"
+      >
+        {question.text}
+      </a>
       {question.suggestedBy && (
         <p className="text-sm text-gray-500 mb-1">Foreslået af {question.suggestedBy}</p>
       )}
@@ -195,14 +235,20 @@ function QuestionItem({
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-sm text-green-800 font-medium mb-1">Svar indsendt</p>
-                  <a
-                    href={question.answerUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
-                  >
-                    {question.answerUrl}
-                  </a>
+                  {isBlobUrl(question.answerUrl!) ? (
+                    <p className="text-sm text-green-700">
+                      {getBlobMediaType(question.answerUrl!) === "audio" ? "Lydfil" : "Video"} uploadet
+                    </p>
+                  ) : (
+                    <a
+                      href={question.answerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                    >
+                      {question.answerUrl}
+                    </a>
+                  )}
                 </div>
                 <button
                   onClick={() => {
@@ -220,12 +266,13 @@ function QuestionItem({
               <p className="text-sm text-amber-800 font-medium mb-2">
                 {editingAnswer ? "Opdatér dit svar" : "Målet er nået! Indsend dit svar (helst inden 24 timer)"}
               </p>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mb-3">
                 <input
                   type="url"
                   placeholder="https://youtube.com/watch?v=..."
                   value={answerUrlInput}
                   onChange={(e) => setAnswerUrlInput(e.target.value)}
+                  disabled={uploading}
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <div className="flex gap-2">
@@ -259,12 +306,50 @@ function QuestionItem({
                         setSubmittingAnswer(false);
                       }
                     }}
-                    disabled={submittingAnswer || !answerUrlInput}
+                    disabled={submittingAnswer || uploading || !answerUrlInput}
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer whitespace-nowrap"
                   >
                     {submittingAnswer ? "Sender..." : editingAnswer ? "Opdatér svar" : "Indsend svar"}
                   </button>
                 </div>
+              </div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex-1 border-t border-amber-300" />
+                <span className="text-xs text-amber-600">eller</span>
+                <div className="flex-1 border-t border-amber-300" />
+              </div>
+              <div>
+                <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
+                  <input
+                    type="file"
+                    accept="video/*,audio/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(file);
+                    }}
+                    disabled={uploading || submittingAnswer}
+                  />
+                  <span className="text-sm text-amber-700">
+                    Upload video eller lydfil (maks 250 MB)
+                  </span>
+                </label>
+                {uploading && (
+                  <div className="mt-2">
+                    <div className="w-full bg-amber-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-amber-600 mt-1">
+                      Uploader... {Math.round(uploadProgress)}%
+                    </p>
+                  </div>
+                )}
+                {uploadError && (
+                  <p className="text-sm text-red-600 mt-2">{uploadError}</p>
+                )}
               </div>
             </div>
           )}

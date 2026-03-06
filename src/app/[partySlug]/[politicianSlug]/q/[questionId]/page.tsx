@@ -6,6 +6,7 @@ import { getCitizenFromSession } from "@/lib/citizen-session";
 import { UpvoteButton } from "@/components/UpvoteButton";
 import { CancelUpvoteButton } from "@/components/CancelUpvoteButton";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
+import { AnswerPlayer } from "@/components/AnswerPlayer";
 import type { Metadata } from "next";
 
 type Props = {
@@ -150,14 +151,7 @@ export default async function QuestionLandingPage({ params }: Props) {
 
         <div className={`flex items-center justify-between pt-2 border-t ${question.answerUrl ? "border-gray-700" : "border-gray-100"}`}>
           {question.answerUrl ? (
-            <a
-              href={question.answerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-lg text-blue-400 hover:text-blue-300 underline font-semibold"
-            >
-              Se svar
-            </a>
+            <AnswerPlayer answerUrl={question.answerUrl} className="w-full rounded-lg" />
           ) : (
             <span className="text-lg font-semibold text-gray-700">
               {question.upvoteCount} {question.upvoteCount === 1 ? "upvote" : "upvotes"}
