@@ -72,7 +72,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const url = `${appUrl}/${partySlug}/${politicianSlug}/q/${questionId}`;
 
   return {
-    title: `${question.text} / ${politician.name} / ${politician.party} * Introkrati`,
+    title: `${question.text} / ${politician.name} / ${politician.party}`,
     description: `${politician.name} fra ${politician.party} — ${question.upvoteCount} upvotes`,
     openGraph: {
       title: question.text,

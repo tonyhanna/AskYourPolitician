@@ -28,10 +28,10 @@ export async function generateMetadata({
     )
     .limit(1);
 
-  if (!politician) return { title: "Ikke fundet * Introkrati" };
+  if (!politician) return { title: "Ikke fundet" };
 
   return {
-    title: `${politician.name} / ${politician.party} * Introkrati`,
+    title: `${politician.name} / ${politician.party}`,
   };
 }
 

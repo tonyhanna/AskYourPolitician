@@ -13,7 +13,7 @@ import { SuggestionList } from "@/components/SuggestionList";
 
 export async function generateMetadata(): Promise<Metadata> {
   const session = await auth();
-  if (!session?.user?.id) return { title: "Politiker Dashboard * Introkrati" };
+  if (!session?.user?.id) return { title: "Politiker Dashboard" };
 
   const [politician] = await db
     .select({ name: politicians.name })
@@ -23,8 +23,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: politician
-      ? `Politiker Dashboard / ${politician.name} * Introkrati`
-      : "Politiker Dashboard * Introkrati",
+      ? `Politiker Dashboard / ${politician.name}`
+      : "Politiker Dashboard",
   };
 }
 

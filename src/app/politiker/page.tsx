@@ -3,7 +3,7 @@ import { auth, signIn } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Politiker * Introkrati",
+  title: "Politiker",
 };
 
 export default async function PolitikerLogin() {
