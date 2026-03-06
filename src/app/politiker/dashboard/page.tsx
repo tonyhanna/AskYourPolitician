@@ -182,6 +182,19 @@ export default async function Dashboard() {
           </>
         ) : "Dashboard"}
       </h1>
+      {uniqueUrl && (
+        <>
+          <a
+            href={uniqueUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-blue-600 hover:text-blue-800 transition"
+          >
+            Se Borgerside &rarr;
+          </a>
+          <hr className="border-gray-200" />
+        </>
+      )}
 
       {politician && (
         <>
