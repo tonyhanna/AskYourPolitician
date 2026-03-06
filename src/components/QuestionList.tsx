@@ -266,7 +266,7 @@ function QuestionItem({
               <p className="text-sm text-amber-800 font-medium mb-2">
                 {editingAnswer ? "Opdatér dit svar" : "Målet er nået! Indsend dit svar (helst inden 24 timer)"}
               </p>
-              <div className="flex gap-2 mb-3">
+              <div className="flex flex-col sm:flex-row gap-2 mb-3">
                 <input
                   type="url"
                   placeholder="https://youtube.com/watch?v=..."
