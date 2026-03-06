@@ -180,7 +180,7 @@ export async function deleteQuestion(questionId: string): Promise<{ error?: stri
   return {};
 }
 
-export async function submitAnswerUrl(questionId: string, answerUrl: string) {
+export async function submitAnswerUrl(questionId: string, answerUrl: string, photoUrl?: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -212,11 +212,11 @@ export async function submitAnswerUrl(questionId: string, answerUrl: string) {
 
   const isUpdate = !!question.answerUrl;
 
-  await db.insert(answerHistory).values({ questionId, answerUrl });
+  await db.insert(answerHistory).values({ questionId, answerUrl, answerPhotoUrl: photoUrl ?? null });
 
   await db
     .update(questions)
-    .set({ answerUrl })
+    .set({ answerUrl, answerPhotoUrl: photoUrl ?? null })
     .where(eq(questions.id, questionId));
 
   const upvoters = await db

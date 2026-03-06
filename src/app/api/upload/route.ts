@@ -15,8 +15,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       body,
       request,
       onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ["video/*", "audio/*"],
+        allowedContentTypes: ["video/*", "audio/*", "image/*"],
         maximumSizeInBytes: 250 * 1024 * 1024,
+        addRandomSuffix: true,
       }),
       onUploadCompleted: async () => {},
     });

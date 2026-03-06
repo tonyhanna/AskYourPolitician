@@ -12,6 +12,7 @@ type FeedQuestion = {
   upvoteCount: number;
   upvoteGoal: number;
   answerUrl: string | null;
+  answerPhotoUrl: string | null;
   goalReachedEmailSent: boolean;
   suggestedBy: string | null;
   tags: string[];

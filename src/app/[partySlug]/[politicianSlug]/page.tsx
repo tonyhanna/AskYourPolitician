@@ -118,6 +118,7 @@ export default async function BorgerFeed({
     upvoteCount: q.upvoteCount,
     upvoteGoal: q.upvoteGoal,
     answerUrl: q.answerUrl,
+    answerPhotoUrl: q.answerPhotoUrl,
     goalReachedEmailSent: q.goalReachedEmailSent,
     suggestedBy: q.suggestedByCitizenId
       ? suggestedByNames.get(q.suggestedByCitizenId) ?? null

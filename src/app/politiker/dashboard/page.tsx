@@ -46,6 +46,7 @@ export default async function Dashboard() {
     tags: string[];
     goalReached: boolean;
     answerUrl: string | null;
+    answerPhotoUrl: string | null;
     suggestedBy: string | null;
   }[] = [];
 
@@ -111,6 +112,7 @@ export default async function Dashboard() {
       tags: tagsByQuestion.get(q.id) ?? [],
       goalReached: q.goalReachedEmailSent,
       answerUrl: q.answerUrl,
+      answerPhotoUrl: q.answerPhotoUrl,
       suggestedBy: q.suggestedByCitizenId
         ? suggestedByNames.get(q.suggestedByCitizenId) ?? null
         : null,

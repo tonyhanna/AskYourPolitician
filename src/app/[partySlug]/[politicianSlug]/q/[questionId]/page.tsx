@@ -161,7 +161,7 @@ export default async function QuestionLandingPage({ params }: Props) {
 
         <div className={`flex items-center justify-between pt-2 border-t ${question.answerUrl ? "border-gray-700" : "border-gray-100"}`}>
           {question.answerUrl ? (
-            <AnswerPlayer answerUrl={question.answerUrl} className="w-full rounded-lg" />
+            <AnswerPlayer answerUrl={question.answerUrl} photoUrl={question.answerPhotoUrl} className="w-full rounded-lg" />
           ) : (
             <span className="text-lg font-semibold text-gray-700">
               {question.upvoteCount} {question.upvoteCount === 1 ? "upvote" : "upvotes"}

@@ -14,6 +14,7 @@ type Question = {
   tags: string[];
   goalReached: boolean;
   answerUrl: string | null;
+  answerPhotoUrl: string | null;
   suggestedBy: string | null;
 };
 
@@ -54,6 +55,10 @@ function QuestionItem({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pendingAudioUrl, setPendingAudioUrl] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoProgress, setPhotoProgress] = useState(0);
   const hasUpvotes = question.upvoteCount > 0;
 
   async function handleFileUpload(file: File) {
@@ -74,13 +79,65 @@ function QuestionItem({
         handleUploadUrl: "/api/upload",
         onUploadProgress: ({ percentage }) => setUploadProgress(percentage),
       });
-      await submitAnswerUrl(question.id, blob.url);
-      setEditingAnswer(false);
+      if (file.type.startsWith("audio/")) {
+        setPendingAudioUrl(blob.url);
+      } else {
+        await submitAnswerUrl(question.id, blob.url);
+        setEditingAnswer(false);
+      }
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "Upload fejlede");
     } finally {
       setUploading(false);
       setUploadProgress(0);
+    }
+  }
+
+  async function handlePhotoUpload(file: File) {
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError("Billedet er for stort (maks 10 MB)");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Kun billedfiler er tilladt");
+      return;
+    }
+    setUploadingPhoto(true);
+    setUploadError(null);
+    setPhotoProgress(0);
+    try {
+      const blob = await upload(file.name, file, {
+        access: "public",
+        handleUploadUrl: "/api/upload",
+        onUploadProgress: ({ percentage }) => setPhotoProgress(percentage),
+      });
+      setPhotoUrl(blob.url);
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Upload fejlede");
+    } finally {
+      setUploadingPhoto(false);
+      setPhotoProgress(0);
+    }
+  }
+
+  async function handleSubmitAudioAnswer() {
+    if (!pendingAudioUrl) return;
+    if (editingAnswer) {
+      const confirmed = confirm(
+        `Er du sikker på at du vil sende dette opdateret svar ud til ${question.upvoteCount} ${question.upvoteCount === 1 ? "borger" : "borgere"}?`
+      );
+      if (!confirmed) return;
+    }
+    setSubmittingAnswer(true);
+    try {
+      await submitAnswerUrl(question.id, pendingAudioUrl, photoUrl ?? undefined);
+      setPendingAudioUrl(null);
+      setPhotoUrl(null);
+      setEditingAnswer(false);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Der opstod en fejl");
+    } finally {
+      setSubmittingAnswer(false);
     }
   }
 
@@ -238,6 +295,7 @@ function QuestionItem({
                   {isBlobUrl(question.answerUrl!) ? (
                     <p className="text-sm text-green-700">
                       {getBlobMediaType(question.answerUrl!) === "audio" ? "Lydfil" : "Video"} uploadet
+                      {question.answerPhotoUrl && " (med billede)"}
                     </p>
                   ) : (
                     <a
@@ -319,33 +377,92 @@ function QuestionItem({
                 <div className="flex-1 border-t border-amber-300" />
               </div>
               <div>
-                <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
-                  <input
-                    type="file"
-                    accept="video/*,audio/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileUpload(file);
-                    }}
-                    disabled={uploading || submittingAnswer}
-                  />
-                  <span className="text-sm text-amber-700">
-                    Upload video eller lydfil (maks 250 MB)
-                  </span>
-                </label>
-                {uploading && (
-                  <div className="mt-2">
-                    <div className="w-full bg-amber-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all"
-                        style={{ width: `${uploadProgress}%` }}
-                      />
+                {pendingAudioUrl ? (
+                  <div className="space-y-3">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <p className="text-sm text-green-800 font-medium">Lydfil klar til indsendelse</p>
                     </div>
-                    <p className="text-xs text-amber-600 mt-1">
-                      Uploader... {Math.round(uploadProgress)}%
-                    </p>
+                    <div>
+                      <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handlePhotoUpload(file);
+                          }}
+                          disabled={uploadingPhoto || submittingAnswer}
+                        />
+                        <span className="text-sm text-amber-700">
+                          Tilføj et billede af dig selv (valgfrit)
+                        </span>
+                      </label>
+                      {uploadingPhoto && (
+                        <div className="mt-2">
+                          <div className="w-full bg-amber-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all"
+                              style={{ width: `${photoProgress}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-amber-600 mt-1">
+                            Uploader billede... {Math.round(photoProgress)}%
+                          </p>
+                        </div>
+                      )}
+                      {photoUrl && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <img src={photoUrl} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setPhotoUrl(null)}
+                            className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+                          >
+                            Fjern billede
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleSubmitAudioAnswer}
+                      disabled={submittingAnswer || uploadingPhoto}
+                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer"
+                    >
+                      {submittingAnswer ? "Sender..." : `Indsend svar${photoUrl ? " med billede" : ""}`}
+                    </button>
                   </div>
+                ) : (
+                  <>
+                    <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
+                      <input
+                        type="file"
+                        accept="video/*,audio/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file);
+                        }}
+                        disabled={uploading || submittingAnswer}
+                      />
+                      <span className="text-sm text-amber-700">
+                        Upload video eller lydfil (maks 250 MB)
+                      </span>
+                    </label>
+                    {uploading && (
+                      <div className="mt-2">
+                        <div className="w-full bg-amber-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all"
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-amber-600 mt-1">
+                          Uploader... {Math.round(uploadProgress)}%
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
                 {uploadError && (
                   <p className="text-sm text-red-600 mt-2">{uploadError}</p>

@@ -94,6 +94,7 @@ export const questions = pgTable("questions", {
   upvoteCount: integer("upvote_count").notNull().default(0),
   goalReachedEmailSent: boolean("goal_reached_email_sent").notNull().default(false),
   answerUrl: varchar("answer_url", { length: 2048 }),
+  answerPhotoUrl: varchar("answer_photo_url", { length: 2048 }),
   suggestedByCitizenId: uuid("suggested_by_citizen_id").references(
     () => citizens.id
   ),
@@ -173,6 +174,7 @@ export const answerHistory = pgTable("answer_history", {
     .notNull()
     .references(() => questions.id, { onDelete: "cascade" }),
   answerUrl: varchar("answer_url", { length: 2048 }).notNull(),
+  answerPhotoUrl: varchar("answer_photo_url", { length: 2048 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

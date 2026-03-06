@@ -4,9 +4,11 @@ import { isBlobUrl, getBlobMediaType } from "@/lib/answer-utils";
 
 export function AnswerPlayer({
   answerUrl,
+  photoUrl,
   className,
 }: {
   answerUrl: string;
+  photoUrl?: string | null;
   className?: string;
 }) {
   if (isBlobUrl(answerUrl)) {
@@ -28,14 +30,23 @@ export function AnswerPlayer({
 
     if (mediaType === "audio") {
       return (
-        <audio
-          src={answerUrl}
-          controls
-          preload="metadata"
-          className={className ?? "w-full"}
-        >
-          Din browser understøtter ikke lydafspilning.
-        </audio>
+        <div className="w-full space-y-3">
+          {photoUrl && (
+            <img
+              src={photoUrl}
+              alt="Politiker"
+              className="w-full rounded-lg object-cover max-h-80"
+            />
+          )}
+          <audio
+            src={answerUrl}
+            controls
+            preload="metadata"
+            className={className ?? "w-full"}
+          >
+            Din browser understøtter ikke lydafspilning.
+          </audio>
+        </div>
       );
     }
   }
