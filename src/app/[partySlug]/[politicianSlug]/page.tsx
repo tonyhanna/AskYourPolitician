@@ -187,7 +187,7 @@ export default async function BorgerFeed({
         heroLine2={politician.heroLine2}
         heroLine2Color={resolvedHeroLine2Color}
       />
-      <main className="px-6 py-6">
+      <main className="px-6 py-6 pb-[100px]">
       <QuestionFeedFilter
         questions={feedQuestions}
         allTags={[...allTagsSet]}

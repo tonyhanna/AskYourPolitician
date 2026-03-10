@@ -102,6 +102,22 @@ export async function generateVideoClip(
   canvas.height = h;
   const ctx = canvas.getContext("2d")!;
 
+  // Draw the first frame BEFORE starting the recorder so the canvas
+  // stream already has pixel data.  Then start playback and wait for
+  // the video to actually render a frame before we begin recording.
+  ctx.drawImage(video, 0, 0, w, h);
+
+  await video.play();
+
+  // Wait until the video has rendered at least one frame (canplay +
+  // one rAF to ensure the canvas draw loop will have real data).
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      ctx.drawImage(video, 0, 0, w, h);
+      resolve();
+    });
+  });
+
   const stream = canvas.captureStream(fps);
   const recorder = new MediaRecorder(stream, {
     mimeType,
@@ -113,9 +129,8 @@ export async function generateVideoClip(
     if (e.data.size > 0) chunks.push(e.data);
   };
 
-  // Start recording + playback
-  recorder.start();
-  await video.play();
+  // Now start recording — canvas already has real pixel data
+  recorder.start(100); // Request data every 100ms for more reliable output
 
   // Draw frames using requestAnimationFrame for smooth rendering
   let stopped = false;
@@ -143,6 +158,10 @@ export async function generateVideoClip(
   });
 
   const blob = new Blob(chunks, { type: mimeType });
+
+  // Guard against corrupt/empty recordings (< 1 KB is not a valid clip)
+  if (blob.size < 1024) return null;
+
   const ext = mimeType.includes("webm") ? "webm" : "mp4";
   return new File([blob], `clip.${ext}`, { type: mimeType });
 }
