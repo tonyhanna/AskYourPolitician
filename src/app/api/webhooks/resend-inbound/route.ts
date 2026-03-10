@@ -32,15 +32,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Ignored" }, { status: 200 });
     }
 
-    // Log full payload to debug field names
-    console.log("Inbound email payload keys:", JSON.stringify(Object.keys(payload.data)));
-    console.log("Inbound email payload:", JSON.stringify(payload.data).slice(0, 2000));
+    const { from, subject, email_id } = payload.data as {
+      from: string;
+      subject: string;
+      email_id: string;
+    };
 
-    const data = payload.data as Record<string, unknown>;
-    const from = (data.from || data.sender || "") as string;
-    const subject = (data.subject || "") as string;
-    const html = (data.html || data.body || "") as string;
-    const text = (data.text || data.plain_text || data.content || "") as string;
+    // Fetch full email content from Resend API
+    const emailResponse = await fetch(`https://api.resend.com/emails/${email_id}`, {
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+    });
+    const emailData = (await emailResponse.json()) as {
+      html?: string;
+      text?: string;
+    };
+
+    const html = emailData.html || "";
+    const text = emailData.text || "";
 
     // Forward the inbound email to admin
     await resend.emails.send({
