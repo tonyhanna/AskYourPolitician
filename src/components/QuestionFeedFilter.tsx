@@ -853,10 +853,14 @@ function QuestionCard({
             </>
           ) : (
             <>
-              {isAnsweredColumn && !question.goalReachedEmailSent ? (
+              {question.goalReachedEmailSent ? (
+                <span className="text-xs ml-auto" style={{ color: "#7E7D7A" }}>
+                  Afventer svar
+                </span>
+              ) : isAnsweredColumn ? (
                 <span className="ml-auto" />
               ) : (
-                <span className={`text-xs ml-auto ${question.goalReachedEmailSent ? "" : "transition-opacity duration-200 md:opacity-0 md:group-hover/card:opacity-100"}`} style={{ color: partyColor || "#3B82F6" }}>
+                <span className={`text-xs ml-auto transition-opacity duration-200 md:opacity-0 md:group-hover/card:opacity-100`} style={{ color: partyColor || "#3B82F6" }}>
                   {question.upvoteCount} / {question.upvoteGoal}
                 </span>
               )}
@@ -867,24 +871,16 @@ function QuestionCard({
                   politicianSlug={politicianSlug}
                 />
               ) : question.goalReachedEmailSent && !question.isUpvoted ? (
-                <>
-                  <span
-                    className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
-                    style={{ backgroundColor: "#E8E7E5", color: "#7E7D7A" }}
-                  >
-                    Afventer svar
-                  </span>
-                  <UpvoteButton
-                    questionId={question.id}
-                    basePath={basePath}
-                    isUpvoted={false}
-                    hasSession={hasSession}
-                    partySlug={partySlug}
-                    politicianSlug={politicianSlug}
-                    partyColor={partyColor}
-                    partyColorDark={partyColorDark}
-                  />
-                </>
+                <UpvoteButton
+                  questionId={question.id}
+                  basePath={basePath}
+                  isUpvoted={false}
+                  hasSession={hasSession}
+                  partySlug={partySlug}
+                  politicianSlug={politicianSlug}
+                  partyColor={partyColor}
+                  partyColorDark={partyColorDark}
+                />
               ) : question.isUpvoted ? (
                 <CancelUpvoteButton
                   questionId={question.id}
