@@ -34,16 +34,17 @@ export async function POST(request: Request) {
 
     const { from, subject, email_id } = payload.data;
 
-    // Fetch full email content from Resend API
-    const emailResponse = await fetch(`https://api.resend.com/emails/${email_id}`, {
+    // Fetch full email content from Resend Receiving API
+    const emailResponse = await fetch(`https://api.resend.com/emails/receiving/${email_id}`, {
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
     });
-    const emailData = await emailResponse.json();
-    console.log("Resend email API status:", emailResponse.status);
-    console.log("Resend email API response:", JSON.stringify(emailData).slice(0, 3000));
+    const emailData = (await emailResponse.json()) as {
+      html?: string;
+      text?: string;
+    };
 
-    const html = (emailData as Record<string, string>).html || "";
-    const text = (emailData as Record<string, string>).text || "";
+    const html = emailData.html || "";
+    const text = emailData.text || "";
 
     // Forward the inbound email to admin
     await resend.emails.send({
