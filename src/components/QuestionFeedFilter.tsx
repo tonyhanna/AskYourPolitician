@@ -6,7 +6,6 @@ import { faFire, faVideo, faMicrophone, faEllipsis, faCircleXmark } from "@forta
 import { faArrowRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import { UpvoteButton } from "./UpvoteButton";
 import { CancelUpvoteButton } from "./CancelUpvoteButton";
-import { AwaitingAnswerButton } from "./AwaitingAnswerButton";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { isBlobUrl, getBlobMediaType } from "@/lib/answer-utils";
 import { citizenLogout } from "@/app/[partySlug]/[politicianSlug]/actions";
@@ -865,7 +864,7 @@ function QuestionCard({
                 </span>
               )}
               {question.goalReachedEmailSent && question.isUpvoted ? (
-                <AwaitingAnswerButton
+                <CancelUpvoteButton
                   questionId={question.id}
                   partySlug={partySlug}
                   politicianSlug={politicianSlug}
