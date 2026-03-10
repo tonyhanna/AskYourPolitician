@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCopy } from "@fortawesome/pro-duotone-svg-icons";
 
 function isMobile() {
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
-export function CopyLinkButton({ url, title, compact = false }: { url: string; title?: string; compact?: boolean }) {
+export function CopyLinkButton({ url, title, compact = false, partyColor }: { url: string; title?: string; compact?: boolean; partyColor?: string | null }) {
   const [copied, setCopied] = useState(false);
 
   async function handleClick() {
@@ -35,15 +37,27 @@ export function CopyLinkButton({ url, title, compact = false }: { url: string; t
     }
   }
 
+  if (compact) {
+    return (
+      <button
+        onClick={handleClick}
+        className="inline-flex items-center gap-1.5 text-xs py-1.5 pr-3 cursor-pointer transition hover:opacity-70"
+        style={{ color: partyColor || "#3B82F6" }}
+      >
+        <FontAwesomeIcon icon={faCopy} className="text-xs" />
+        {copied ? "Kopieret!" : "Del"}
+      </button>
+    );
+  }
+
   return (
     <button
       onClick={handleClick}
-      className={compact
-        ? "text-sm text-gray-400 hover:text-gray-600 cursor-pointer transition"
-        : "bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer"
-      }
+      className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full cursor-pointer transition hover:opacity-70"
+      style={{ backgroundColor: "#E8E7E5", color: partyColor || "#3B82F6" }}
     >
-      {copied ? (compact ? "Link kopieret!" : "Kopieret!") : (compact ? "Del" : "Kopier link")}
+      <FontAwesomeIcon icon={faCopy} className="text-xs" />
+      {copied ? "Kopieret!" : "Kopier link"}
     </button>
   );
 }

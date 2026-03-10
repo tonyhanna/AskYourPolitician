@@ -28,6 +28,8 @@ export async function submitUpvote(formData: FormData): Promise<{ error?: string
   const questionId = formData.get("questionId") as string;
   const politicianSlug = formData.get("politicianSlug") as string;
   const partySlug = formData.get("partySlug") as string;
+  const ageStr = formData.get("age") as string | null;
+  const age = ageStr ? parseInt(ageStr, 10) : null;
 
   if (!firstName || !email || !questionId || !politicianSlug || !partySlug) {
     return { error: "Alle felter er påkrævet" };
@@ -46,8 +48,11 @@ export async function submitUpvote(formData: FormData): Promise<{ error?: string
       .values({
         firstName,
         email: email.toLowerCase(),
+        ...(age ? { age } : {}),
       })
       .returning();
+  } else if (age && !citizen.age) {
+    await db.update(citizens).set({ age }).where(eq(citizens.id, citizen.id));
   }
 
   // Get the question text for the email
@@ -147,6 +152,18 @@ export async function cancelUpvote(
     })
     .where(eq(questions.id, questionId));
 
+  // Reset goalReachedEmailSent if count dropped below goal (only if unanswered)
+  await db
+    .update(questions)
+    .set({ goalReachedEmailSent: false })
+    .where(
+      and(
+        eq(questions.id, questionId),
+        sql`${questions.upvoteCount} < ${questions.upvoteGoal}`,
+        sql`${questions.answerUrl} IS NULL`
+      )
+    );
+
   revalidatePath(`/${partySlug}/${politicianSlug}`);
 }
 
@@ -157,6 +174,8 @@ export async function submitSuggestion(formData: FormData) {
   const politicianId = formData.get("politicianId") as string;
   const politicianSlug = formData.get("politicianSlug") as string;
   const partySlug = formData.get("partySlug") as string;
+  const ageStr = formData.get("age") as string | null;
+  const age = ageStr ? parseInt(ageStr, 10) : null;
 
   if (!firstName || !email || !text || !politicianId || !politicianSlug || !partySlug) {
     throw new Error("Alle felter er påkrævet");
@@ -177,8 +196,11 @@ export async function submitSuggestion(formData: FormData) {
       .values({
         firstName,
         email: email.toLowerCase(),
+        ...(age ? { age } : {}),
       })
       .returning();
+  } else if (age && !citizen.age) {
+    await db.update(citizens).set({ age }).where(eq(citizens.id, citizen.id));
   }
 
   // Create suggestion with pending_verification status
@@ -237,7 +259,7 @@ export async function directSuggestion(formData: FormData) {
 
   // Get politician info for emails
   const [politician] = await db
-    .select({ name: politicians.name, email: politicians.email })
+    .select({ name: politicians.name, email: politicians.email, party: politicians.party })
     .from(politicians)
     .where(eq(politicians.id, politicianId))
     .limit(1);
@@ -247,6 +269,7 @@ export async function directSuggestion(formData: FormData) {
       to: citizen.email,
       firstName: citizen.firstName,
       politicianName: politician.name,
+      partyName: politician.party,
       questionText: text,
     });
 

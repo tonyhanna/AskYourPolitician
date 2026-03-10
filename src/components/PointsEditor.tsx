@@ -1,0 +1,162 @@
+"use client";
+
+import { useState, useId } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+type PointItem = { id: string; text: string };
+
+function makeId() {
+  return Math.random().toString(36).slice(2, 9);
+}
+
+export function PointsEditor({
+  points,
+  onChange,
+}: {
+  points: string[];
+  onChange: (points: string[]) => void;
+}) {
+  const dndId = useId();
+  const [items, setItems] = useState<PointItem[]>(
+    points.length > 0 ? points.map((t) => ({ id: makeId(), text: t })) : [{ id: makeId(), text: "" }]
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  function sync(updated: PointItem[]) {
+    setItems(updated);
+    onChange(updated.map((i) => i.text).filter((t) => t.trim()));
+  }
+
+  function updateText(id: string, text: string) {
+    sync(items.map((i) => (i.id === id ? { ...i, text } : i)));
+  }
+
+  function removeItem(id: string) {
+    if (items.length <= 1) {
+      sync([{ id: makeId(), text: "" }]);
+      return;
+    }
+    sync(items.filter((i) => i.id !== id));
+  }
+
+  function addItem() {
+    const updated = [...items, { id: makeId(), text: "" }];
+    setItems(updated);
+    onChange(updated.map((i) => i.text).filter((t) => t.trim()));
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = items.findIndex((i) => i.id === active.id);
+    const newIndex = items.findIndex((i) => i.id === over.id);
+    sync(arrayMove(items, oldIndex, newIndex));
+  }
+
+  return (
+    <div>
+      <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2">
+            {items.map((item) => (
+              <SortablePoint
+                key={item.id}
+                item={item}
+                onUpdate={updateText}
+                onRemove={removeItem}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+      <button
+        type="button"
+        onClick={addItem}
+        className="mt-2 text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+      >
+        + Tilføj punkt
+      </button>
+    </div>
+  );
+}
+
+function SortablePoint({
+  item,
+  onUpdate,
+  onRemove,
+}: {
+  item: PointItem;
+  onUpdate: (id: string, text: string) => void;
+  onRemove: (id: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2">
+      <button
+        type="button"
+        className="text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing touch-none"
+        {...attributes}
+        {...listeners}
+      >
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+          <circle cx="5" cy="3" r="1.5" />
+          <circle cx="11" cy="3" r="1.5" />
+          <circle cx="5" cy="8" r="1.5" />
+          <circle cx="11" cy="8" r="1.5" />
+          <circle cx="5" cy="13" r="1.5" />
+          <circle cx="11" cy="13" r="1.5" />
+        </svg>
+      </button>
+      <span className="text-gray-400 text-sm">•</span>
+      <input
+        type="text"
+        value={item.text}
+        onChange={(e) => onUpdate(item.id, e.target.value)}
+        placeholder="Skriv et handlingspunkt..."
+        className="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      />
+      <button
+        type="button"
+        onClick={() => onRemove(item.id)}
+        className="text-gray-400 hover:text-red-500 text-sm cursor-pointer px-1"
+        title="Fjern punkt"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}

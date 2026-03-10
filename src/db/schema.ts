@@ -69,6 +69,26 @@ export const authVerificationTokens = pgTable(
 // Application tables
 // ============================================
 
+export const admins = pgTable("admins", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }),
+  permissions: text("permissions").notNull().default('["all"]'),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const parties = pgTable("parties", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  logoUrl: varchar("logo_url", { length: 2048 }),
+  color: varchar("color", { length: 7 }),
+  colorLight: varchar("color_light", { length: 7 }),
+  colorDark: varchar("color_dark", { length: 7 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const politicians = pgTable("politicians", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id")
@@ -79,13 +99,18 @@ export const politicians = pgTable("politicians", {
   slug: varchar("slug", { length: 255 }).notNull(),
   party: varchar("party", { length: 255 }).notNull(),
   partySlug: varchar("party_slug", { length: 255 }).notNull(),
+  partyId: uuid("party_id").references(() => parties.id),
   email: varchar("email", { length: 255 }).notNull(),
   profilePhotoUrl: varchar("profile_photo_url", { length: 2048 }),
-  partyLogoUrl: varchar("party_logo_url", { length: 2048 }),
-  partyColor: varchar("party_color", { length: 7 }),
-  partyColorLight: varchar("party_color_light", { length: 7 }),
-  partyColorDark: varchar("party_color_dark", { length: 7 }),
+  bannerUrl: varchar("banner_url", { length: 2048 }),
+  bannerBgColor: varchar("banner_bg_color", { length: 7 }),
+  heroLine1: varchar("hero_line_1", { length: 255 }),
+  heroLine1Color: varchar("hero_line_1_color", { length: 7 }),
+  heroLine2: varchar("hero_line_2", { length: 255 }),
+  heroLine2Color: varchar("hero_line_2_color", { length: 7 }),
+  constituency: varchar("constituency", { length: 255 }),
   chatbaseId: varchar("chatbase_id", { length: 255 }),
+  defaultUpvoteGoal: integer("default_upvote_goal").notNull().default(1000),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -101,6 +126,7 @@ export const questions = pgTable("questions", {
   goalReachedEmailSent: boolean("goal_reached_email_sent").notNull().default(false),
   answerUrl: varchar("answer_url", { length: 2048 }),
   answerPhotoUrl: varchar("answer_photo_url", { length: 2048 }),
+  pinned: boolean("pinned").notNull().default(false),
   suggestedByCitizenId: uuid("suggested_by_citizen_id").references(
     () => citizens.id
   ),
@@ -118,8 +144,10 @@ export const causes = pgTable(
     shortDescription: text("short_description").notNull(),
     longDescription: text("long_description"),
     videoUrl: varchar("video_url", { length: 2048 }),
+    points: text("points"),
     tagId: varchar("tag_id", { length: 100 }).notNull(),
     slug: varchar("slug", { length: 255 }).notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
@@ -139,6 +167,7 @@ export const citizens = pgTable("citizens", {
   id: uuid("id").primaryKey().defaultRandom(),
   firstName: varchar("first_name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
+  age: integer("age"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -6,16 +6,28 @@ import { updateSettings } from "@/app/politiker/dashboard/actions";
 
 type PoliticianData = {
   name: string;
-  party: string | null;
+  partyId: string | null;
   email: string;
   slug: string;
+  constituency: string | null;
   profilePhotoUrl: string | null;
-  partyLogoUrl: string | null;
-  partyColor: string | null;
-  partyColorLight: string | null;
-  partyColorDark: string | null;
+  bannerUrl: string | null;
+  bannerBgColor: string | null;
+  heroLine1: string | null;
+  heroLine1Color: string | null;
+  heroLine2: string | null;
+  heroLine2Color: string | null;
   chatbaseId: string | null;
+  defaultUpvoteGoal: number;
 } | null;
+
+type PartyOption = {
+  id: string;
+  name: string;
+  color: string | null;
+  colorLight: string | null;
+  colorDark: string | null;
+};
 
 async function cropToSquare(file: File): Promise<File> {
   return new Promise((resolve) => {
@@ -39,28 +51,31 @@ async function cropToSquare(file: File): Promise<File> {
 
 export function SettingsForm({
   politician,
+  allParties,
   googleEmail,
   googleName,
 }: {
   politician: PoliticianData;
+  allParties: PartyOption[];
   googleEmail: string;
   googleName: string;
 }) {
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(politician?.profilePhotoUrl ?? "");
-  const [partyLogoUrl, setPartyLogoUrl] = useState(politician?.partyLogoUrl ?? "");
   const [uploadingProfile, setUploadingProfile] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [partyColor, setPartyColor] = useState(politician?.partyColor ?? "#000000");
-  const [partyColorLight, setPartyColorLight] = useState(politician?.partyColorLight ?? "#E5E7EB");
-  const [partyColorDark, setPartyColorDark] = useState(politician?.partyColorDark ?? "#1F2937");
+  const [bannerUrl, setBannerUrl] = useState(politician?.bannerUrl ?? "");
+  const [bannerBgColor, setBannerBgColor] = useState(politician?.bannerBgColor ?? "");
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [heroLine1Color, setHeroLine1Color] = useState(politician?.heroLine1Color ?? "");
+  const [heroLine2Color, setHeroLine2Color] = useState(politician?.heroLine2Color ?? "");
   const [chatbaseId, setChatbaseId] = useState(politician?.chatbaseId ?? "");
 
   async function handleImageUpload(
     file: File,
     setUrl: (url: string) => void,
     setUploading: (v: boolean) => void,
+    crop = true,
   ) {
     if (!file.type.startsWith("image/")) return;
     if (file.size > 10 * 1024 * 1024) {
@@ -69,8 +84,8 @@ export function SettingsForm({
     }
     setUploading(true);
     try {
-      const cropped = await cropToSquare(file);
-      const blob = await upload(cropped.name, cropped, {
+      const toUpload = crop ? await cropToSquare(file) : file;
+      const blob = await upload(toUpload.name, toUpload, {
         access: "public",
         handleUploadUrl: "/api/upload",
       });
@@ -98,10 +113,10 @@ export function SettingsForm({
   return (
     <form action={handleSubmit} className="space-y-6">
       <input type="hidden" name="profilePhotoUrl" value={profilePhotoUrl} />
-      <input type="hidden" name="partyLogoUrl" value={partyLogoUrl} />
-      <input type="hidden" name="partyColor" value={partyColor} />
-      <input type="hidden" name="partyColorLight" value={partyColorLight} />
-      <input type="hidden" name="partyColorDark" value={partyColorDark} />
+      <input type="hidden" name="bannerUrl" value={bannerUrl} />
+      <input type="hidden" name="bannerBgColor" value={bannerBgColor} />
+      <input type="hidden" name="heroLine1Color" value={heroLine1Color} />
+      <input type="hidden" name="heroLine2Color" value={heroLine2Color} />
 
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -117,16 +132,25 @@ export function SettingsForm({
         />
       </div>
       <div>
-        <label htmlFor="party" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="partyId" className="block text-sm font-medium text-gray-700 mb-1">
           Parti
         </label>
-        <input
-          id="party"
-          name="party"
-          type="text"
-          defaultValue={politician?.party ?? ""}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
+        {allParties.length > 0 ? (
+          <select
+            id="partyId"
+            name="partyId"
+            required
+            defaultValue={politician?.partyId ?? ""}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="" disabled>Vælg parti...</option>
+            {allParties.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-sm text-gray-500">Ingen partier oprettet endnu. Kontakt admin.</p>
+        )}
       </div>
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -138,6 +162,19 @@ export function SettingsForm({
           type="email"
           required
           defaultValue={politician?.email ?? googleEmail}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+      <div>
+        <label htmlFor="constituency" className="block text-sm font-medium text-gray-700 mb-1">
+          Kreds
+        </label>
+        <input
+          id="constituency"
+          name="constituency"
+          type="text"
+          defaultValue={politician?.constituency ?? ""}
+          placeholder="F.eks. Københavns Storkreds"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
@@ -190,119 +227,143 @@ export function SettingsForm({
         <p className="text-xs text-gray-500 mt-1">Anbefalet: mindst 512 x 512 px. Auto-croppes til firkantet.</p>
       </div>
 
-      {/* Partilogo */}
+      {/* Hero banner */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Partilogo
+          Hero banner
         </label>
-        <div className="flex items-center gap-4">
-          {partyLogoUrl ? (
-            <img
-              src={partyLogoUrl}
-              alt="Partilogo"
-              className="w-20 h-20 rounded-lg object-cover border border-gray-200"
+        {bannerUrl ? (
+          <img
+            src={bannerUrl}
+            alt="Hero banner"
+            className="w-full rounded-lg border border-gray-200 mb-2"
+          />
+        ) : (
+          <div className="w-full aspect-[4/1] rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs mb-2">
+            Intet banner
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer">
+            {uploadingBanner ? "Uploader..." : "Vælg banner"}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploadingBanner}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload(file, setBannerUrl, setUploadingBanner, false);
+              }}
             />
-          ) : (
-            <div className="w-20 h-20 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs">
-              Intet logo
-            </div>
+          </label>
+          {bannerUrl && (
+            <button
+              type="button"
+              onClick={() => setBannerUrl("")}
+              className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+            >
+              Fjern
+            </button>
           )}
-          <div className="flex flex-col gap-2">
-            <label className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer">
-              {uploadingLogo ? "Uploader..." : "Vælg logo"}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={uploadingLogo}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleImageUpload(file, setPartyLogoUrl, setUploadingLogo);
-                }}
-              />
-            </label>
-            {partyLogoUrl && (
+        </div>
+        <p className="text-xs text-gray-500 mt-1">Anbefalet minimum: 1584 × 396 px. Vises øverst på borgersiden.</p>
+      </div>
+
+      {/* Hero banner baggrundsfarve */}
+      {bannerUrl && (
+        <div>
+          <label htmlFor="bannerBgColor" className="block text-sm font-medium text-gray-700 mb-1">
+            Hero banner baggrundsfarve (valgfrit)
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              id="bannerBgColor"
+              type="color"
+              value={bannerBgColor || "#ffffff"}
+              onChange={(e) => setBannerBgColor(e.target.value)}
+              className="w-10 h-10 rounded border border-gray-300 cursor-pointer p-0.5"
+            />
+            <span className="text-sm text-gray-600">{bannerBgColor || "Ingen (auto-detect)"}</span>
+            {bannerBgColor && (
               <button
                 type="button"
-                onClick={() => setPartyLogoUrl("")}
-                className="text-xs text-red-600 hover:text-red-800 cursor-pointer text-left"
+                onClick={() => setBannerBgColor("")}
+                className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
               >
-                Fjern
+                Nulstil til auto
               </button>
             )}
           </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Farven forlænger banneret til skærmens kanter. Lad stå tom for automatisk at matche billedets hjørnefarve.
+          </p>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Anbefalet: mindst 512 x 512 px. Auto-croppes til firkantet.</p>
+      )}
+
+      {/* Velkomsttekst */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Velkomsttekst (valgfrit)
+        </label>
+        <p className="text-xs text-gray-500 mb-2">Vises på hero banneret. Vælg en partifarve for hver linje.</p>
+        {[
+          { name: "heroLine1", colorState: heroLine1Color, setColor: setHeroLine1Color, defaultValue: politician?.heroLine1 ?? "", placeholder: "Linje 1" },
+          { name: "heroLine2", colorState: heroLine2Color, setColor: setHeroLine2Color, defaultValue: politician?.heroLine2 ?? "", placeholder: "Linje 2" },
+        ].map((line) => {
+          const selectedParty = allParties.find((p) => p.id === (politician?.partyId ?? ""));
+          const partyColorOptions = selectedParty
+            ? [
+                { key: "primary", hex: selectedParty.color },
+                { key: "light", hex: selectedParty.colorLight },
+                { key: "dark", hex: selectedParty.colorDark },
+              ].filter((c) => c.hex) as { key: string; hex: string }[]
+            : [];
+          return (
+            <div key={line.name} className="flex items-center gap-2 mb-2">
+              <input
+                name={line.name}
+                type="text"
+                defaultValue={line.defaultValue}
+                placeholder={line.placeholder}
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <div className="flex items-center gap-1">
+                {partyColorOptions.map(({ key, hex }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => line.setColor(line.colorState === key ? "" : key)}
+                    className={`w-7 h-7 rounded-full border-2 cursor-pointer transition ${
+                      line.colorState === key ? "border-gray-900 scale-110" : "border-gray-300 hover:border-gray-400"
+                    }`}
+                    style={{ backgroundColor: hex }}
+                    title={key}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <hr className="border-gray-200" />
 
-      {/* Partifarver */}
-      <div className="space-y-3">
-        <label className="block text-sm font-medium text-gray-700">Partifarver</label>
-
-        <div className="flex items-center gap-3">
-          <input
-            type="color"
-            value={partyColor}
-            onChange={(e) => setPartyColor(e.target.value)}
-            className="w-10 h-10 rounded cursor-pointer border border-gray-300"
-          />
-          <div className="flex-1">
-            <label className="text-xs text-gray-500">Normal</label>
-            <input
-              type="text"
-              value={partyColor}
-              onChange={(e) => setPartyColor(e.target.value)}
-              maxLength={7}
-              className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <input
-            type="color"
-            value={partyColorLight}
-            onChange={(e) => setPartyColorLight(e.target.value)}
-            className="w-10 h-10 rounded cursor-pointer border border-gray-300"
-          />
-          <div className="flex-1">
-            <label className="text-xs text-gray-500">Lys</label>
-            <input
-              type="text"
-              value={partyColorLight}
-              onChange={(e) => setPartyColorLight(e.target.value)}
-              maxLength={7}
-              className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <input
-            type="color"
-            value={partyColorDark}
-            onChange={(e) => setPartyColorDark(e.target.value)}
-            className="w-10 h-10 rounded cursor-pointer border border-gray-300"
-          />
-          <div className="flex-1">
-            <label className="text-xs text-gray-500">Mørk</label>
-            <input
-              type="text"
-              value={partyColorDark}
-              onChange={(e) => setPartyColorDark(e.target.value)}
-              maxLength={7}
-              className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono"
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-2 mt-2">
-          <div className="w-8 h-8 rounded-full border border-gray-200" style={{ backgroundColor: partyColorLight }} title="Lys" />
-          <div className="w-8 h-8 rounded-full border border-gray-200" style={{ backgroundColor: partyColor }} title="Normal" />
-          <div className="w-8 h-8 rounded-full border border-gray-200" style={{ backgroundColor: partyColorDark }} title="Mørk" />
-        </div>
+      {/* Standard upvote-mål */}
+      <div>
+        <label htmlFor="defaultUpvoteGoal" className="block text-sm font-medium text-gray-700 mb-1">
+          Standard upvote-mål
+        </label>
+        <input
+          id="defaultUpvoteGoal"
+          name="defaultUpvoteGoal"
+          type="number"
+          min={1}
+          required
+          defaultValue={politician?.defaultUpvoteGoal ?? 1000}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <p className="text-xs text-gray-500 mt-1">Standard antal upvotes der kræves, når du opretter nye spørgsmål.</p>
       </div>
 
       <hr className="border-gray-200" />
@@ -347,7 +408,7 @@ export function SettingsForm({
 
       <button
         type="submit"
-        disabled={pending || uploadingProfile || uploadingLogo}
+        disabled={pending || uploadingProfile || uploadingBanner}
         className={`px-6 py-2 rounded-lg transition font-medium disabled:opacity-50 cursor-pointer ${
           saved
             ? "bg-green-600 text-white"

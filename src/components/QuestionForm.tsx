@@ -7,12 +7,15 @@ export function QuestionForm({
   politicianId,
   disabled,
   availableTags,
+  defaultUpvoteGoal = 1000,
 }: {
   politicianId?: string;
   disabled: boolean;
   availableTags: { tagId: string; title: string }[];
+  defaultUpvoteGoal?: number;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [open, setOpen] = useState(false);
   const [charCount, setCharCount] = useState(0);
   const [pending, setPending] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
@@ -25,6 +28,7 @@ export function QuestionForm({
       formRef.current?.reset();
       setCharCount(0);
       setSelectedTags(new Set());
+      setOpen(false);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Der opstod en fejl");
     } finally {
@@ -44,6 +48,19 @@ export function QuestionForm({
     });
   }
 
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        disabled={disabled}
+        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        + Opret spørgsmål
+      </button>
+    );
+  }
+
   return (
     <form ref={formRef} action={handleSubmit} className="space-y-4">
       <div>
@@ -57,7 +74,7 @@ export function QuestionForm({
           required
           disabled={disabled}
           rows={3}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
           placeholder="Hvilket spørgsmål vil du gerne have borgerne til at stille dig?"
           onChange={(e) => setCharCount(e.target.value.length)}
         />
@@ -96,18 +113,27 @@ export function QuestionForm({
           name="upvoteGoal"
           type="number"
           min={1}
-          defaultValue={1000}
+          defaultValue={defaultUpvoteGoal}
           disabled={disabled}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
         />
       </div>
-      <button
-        type="submit"
-        disabled={disabled || pending}
-        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-      >
-        {pending ? "Opretter..." : "Opret spørgsmål"}
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={disabled || pending}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          {pending ? "Opretter..." : "Opret spørgsmål"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-sm text-gray-600 hover:text-gray-800 px-3 py-2 cursor-pointer"
+        >
+          Annullér
+        </button>
+      </div>
       {disabled && (
         <p className="text-sm text-amber-600">
           Udfyld dine indstillinger nedenfor først.

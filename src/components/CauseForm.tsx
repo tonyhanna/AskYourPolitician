@@ -3,11 +3,15 @@
 import { useState } from "react";
 import { createCause } from "@/app/politiker/dashboard/actions";
 import { generateSlug } from "@/lib/utils";
+import { PointsEditor } from "@/components/PointsEditor";
 
 export function CauseForm({ politicianId }: { politicianId: string }) {
+  const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showLongDesc, setShowLongDesc] = useState(false);
   const [tagIdValue, setTagIdValue] = useState("");
+  const [points, setPoints] = useState<string[]>([]);
+  const [resetKey, setResetKey] = useState(0);
 
   async function handleSubmit(formData: FormData) {
     setSaving(true);
@@ -18,6 +22,9 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
       form?.reset();
       setShowLongDesc(false);
       setTagIdValue("");
+      setPoints([]);
+      setResetKey((k) => k + 1);
+      setOpen(false);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Der opstod en fejl");
     } finally {
@@ -25,8 +32,26 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
     }
   }
 
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium cursor-pointer"
+      >
+        + Opret mærkesag
+      </button>
+    );
+  }
+
   return (
     <form id="cause-form" action={handleSubmit} className="space-y-4">
+      <input
+        type="hidden"
+        name="points"
+        value={points.length > 0 ? JSON.stringify(points) : ""}
+      />
+
       <div>
         <label htmlFor="cause-title" className="block text-sm font-medium text-gray-700 mb-1">
           Overskrift
@@ -37,7 +62,7 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
           type="text"
           maxLength={300}
           required
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="f.eks. Grøn omstilling"
         />
       </div>
@@ -51,7 +76,7 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
           name="shortDescription"
           required
           rows={2}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="En kort beskrivelse af mærkesagen"
         />
       </div>
@@ -65,7 +90,7 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
             id="cause-long"
             name="longDescription"
             rows={5}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="En detaljeret beskrivelse af din holdning til denne mærkesag"
           />
         </div>
@@ -79,6 +104,14 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
         </button>
       )}
 
+      {/* Handlingspunkter */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Handlingspunkter
+        </label>
+        <PointsEditor key={resetKey} points={[]} onChange={setPoints} />
+      </div>
+
       <div>
         <label htmlFor="cause-video" className="block text-sm font-medium text-gray-700 mb-1">
           Video-URL (valgfrit)
@@ -87,7 +120,7 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
           id="cause-video"
           name="videoUrl"
           type="url"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="https://youtube.com/watch?v=..."
         />
       </div>
@@ -104,7 +137,7 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
           required
           value={tagIdValue}
           onChange={(e) => setTagIdValue(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="f.eks. grøn omstilling"
         />
         <p className="text-xs text-gray-500 mt-1">
@@ -112,13 +145,22 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
         </p>
       </div>
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer"
-      >
-        {saving ? "Opretter..." : "Opret mærkesag"}
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium disabled:opacity-50 cursor-pointer"
+        >
+          {saving ? "Opretter..." : "Opret mærkesag"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-sm text-gray-600 hover:text-gray-800 px-3 py-2 cursor-pointer"
+        >
+          Annullér
+        </button>
+      </div>
     </form>
   );
 }

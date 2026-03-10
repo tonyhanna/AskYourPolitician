@@ -1,6 +1,11 @@
 "use client";
 
-import { isBlobUrl, getBlobMediaType, getYouTubeVideoId } from "@/lib/answer-utils";
+import {
+  isBlobUrl,
+  getBlobMediaType,
+  getYouTubeVideoId,
+  isFacebookVideoUrl,
+} from "@/lib/answer-utils";
 
 export function AnswerPlayer({
   answerUrl,
@@ -20,7 +25,23 @@ export function AnswerPlayer({
           title="Svar fra politiker"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
-          className={className ?? "w-full h-full rounded-lg"}
+          className="w-full h-full rounded-lg"
+        />
+      </div>
+    );
+  }
+
+  if (isFacebookVideoUrl(answerUrl)) {
+    const embedSrc = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(answerUrl)}&show_text=false&width=400`;
+    return (
+      <div className="w-full" style={{ maxWidth: 400 }}>
+        <iframe
+          src={embedSrc}
+          title="Svar fra politiker"
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+          allowFullScreen
+          className={className ?? "w-full rounded-lg"}
+          style={{ border: "none", overflow: "hidden", height: 750 }}
         />
       </div>
     );

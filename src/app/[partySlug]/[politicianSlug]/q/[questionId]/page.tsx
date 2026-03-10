@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { getCitizenFromSession } from "@/lib/citizen-session";
 import { UpvoteButton } from "@/components/UpvoteButton";
 import { CancelUpvoteButton } from "@/components/CancelUpvoteButton";
+import { AwaitingAnswerButton } from "@/components/AwaitingAnswerButton";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { AnswerPlayer } from "@/components/AnswerPlayer";
 import { citizenLogout } from "../../actions";
@@ -53,11 +54,11 @@ async function getQuestionData(partySlug: string, politicianSlug: string, questi
   let suggestedByName: string | null = null;
   if (question.suggestedByCitizenId) {
     const [suggester] = await db
-      .select({ firstName: citizens.firstName })
+      .select({ firstName: citizens.firstName, age: citizens.age })
       .from(citizens)
       .where(eq(citizens.id, question.suggestedByCitizenId))
       .limit(1);
-    if (suggester) suggestedByName = suggester.firstName;
+    if (suggester) suggestedByName = suggester.firstName + (suggester.age ? `, ${suggester.age} år` : "");
   }
 
   return { politician, question, tags: tags.map((t) => t.tag), suggestedByName };
@@ -137,7 +138,7 @@ export default async function QuestionLandingPage({ params }: Props) {
           <h1 className={`text-2xl font-bold ${question.answerUrl ? "text-white" : "text-gray-900"}`}>{question.text}</h1>
           {suggestedByName && (
             <p className="text-xs text-gray-400 mt-1">
-              Foreslået af {suggestedByName}
+              {suggestedByName}
             </p>
           )}
         </div>
@@ -159,10 +160,14 @@ export default async function QuestionLandingPage({ params }: Props) {
           </div>
         )}
 
-        <div className={`flex items-center justify-between pt-2 border-t ${question.answerUrl ? "border-gray-700" : "border-gray-100"}`}>
-          {question.answerUrl ? (
+        {question.answerUrl && (
+          <div className="pt-2 border-t border-gray-700">
             <AnswerPlayer answerUrl={question.answerUrl} photoUrl={question.answerPhotoUrl} className="w-full rounded-lg" />
-          ) : (
+          </div>
+        )}
+
+        <div className={`flex items-center justify-between pt-2 ${!question.answerUrl ? `border-t ${question.answerUrl ? "border-gray-700" : "border-gray-100"}` : ""}`}>
+          {!question.answerUrl && (
             <span className="text-lg font-semibold text-gray-700">
               {question.upvoteCount} {question.upvoteCount === 1 ? "upvote" : "upvotes"}
             </span>
@@ -175,6 +180,12 @@ export default async function QuestionLandingPage({ params }: Props) {
                 politicianSlug={politicianSlug}
               />
             ) : null
+          ) : question.goalReachedEmailSent && isUpvoted ? (
+            <AwaitingAnswerButton
+              questionId={question.id}
+              partySlug={partySlug}
+              politicianSlug={politicianSlug}
+            />
           ) : question.goalReachedEmailSent ? (
             <span className="text-sm text-amber-600 font-medium">Afventer svar...</span>
           ) : isUpvoted ? (

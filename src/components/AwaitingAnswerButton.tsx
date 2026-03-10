@@ -5,7 +5,7 @@ import { cancelUpvote } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpToLine } from "@fortawesome/pro-duotone-svg-icons";
 
-export function CancelUpvoteButton({
+export function AwaitingAnswerButton({
   questionId,
   partySlug,
   politicianSlug,
@@ -14,6 +14,7 @@ export function CancelUpvoteButton({
   partySlug: string;
   politicianSlug: string;
 }) {
+  const [hovered, setHovered] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
   async function handleCancel() {
@@ -30,11 +31,13 @@ export function CancelUpvoteButton({
     <button
       onClick={handleCancel}
       disabled={cancelling}
-      className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full cursor-pointer transition hover:opacity-70 disabled:opacity-50"
-      style={{ backgroundColor: "#E8E7E5", color: "#FF4105" }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full cursor-pointer transition disabled:opacity-50"
+      style={{ backgroundColor: "#E8E7E5", color: hovered || cancelling ? "#FF4105" : "#7E7D7A" }}
     >
       <FontAwesomeIcon icon={faArrowUpToLine} className="text-xs" />
-      {cancelling ? "Annullerer..." : "Annullér"}
+      {cancelling ? "Annullerer..." : hovered ? "Annullér" : "Afventer svar..."}
     </button>
   );
 }

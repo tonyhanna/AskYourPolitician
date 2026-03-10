@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { auth, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { politicians, questions, questionTags, causes, questionSuggestions, citizens } from "@/db/schema";
+import { politicians, questions, questionTags, causes, questionSuggestions, citizens, parties } from "@/db/schema";
 import { eq, desc, inArray, and } from "drizzle-orm";
 import { QuestionForm } from "@/components/QuestionForm";
 import { SettingsForm } from "@/components/SettingsForm";
@@ -10,17 +10,11 @@ import { QuestionList } from "@/components/QuestionList";
 import { CauseForm } from "@/components/CauseForm";
 import { CauseList } from "@/components/CauseList";
 import { SuggestionList } from "@/components/SuggestionList";
+import { getActivePolitician, getImpersonatingPoliticianId } from "@/lib/admin";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const session = await auth();
-  if (!session?.user?.id) return { title: "Politiker Dashboard" };
-
-  const [politician] = await db
-    .select({ name: politicians.name })
-    .from(politicians)
-    .where(eq(politicians.userId, session.user.id))
-    .limit(1);
-
+  const politician = await getActivePolitician();
   return {
     title: politician
       ? `Politiker Dashboard / ${politician.name}`
@@ -32,11 +26,14 @@ export default async function Dashboard() {
   const session = await auth();
   if (!session?.user?.id) redirect("/politiker");
 
-  const [politician] = await db
-    .select()
-    .from(politicians)
-    .where(eq(politicians.userId, session.user.id))
-    .limit(1);
+  const impersonatingId = await getImpersonatingPoliticianId();
+  const politician = await getActivePolitician();
+
+  // Fetch all parties for dropdown
+  const allParties = await db
+    .select({ id: parties.id, name: parties.name, color: parties.color, colorLight: parties.colorLight, colorDark: parties.colorDark })
+    .from(parties)
+    .orderBy(parties.name);
 
   let politicianQuestions: {
     id: string;
@@ -48,6 +45,7 @@ export default async function Dashboard() {
     answerUrl: string | null;
     answerPhotoUrl: string | null;
     suggestedBy: string | null;
+    pinned: boolean;
   }[] = [];
 
   let politicianCauses: {
@@ -56,7 +54,9 @@ export default async function Dashboard() {
     shortDescription: string;
     longDescription: string | null;
     videoUrl: string | null;
+    points: string[];
     tagId: string;
+    sortOrder: number;
     inUse: boolean;
   }[] = [];
 
@@ -95,12 +95,12 @@ export default async function Dashboard() {
 
     if (suggestedCitizenIds.length > 0) {
       const suggestedCitizens = await db
-        .select({ id: citizens.id, firstName: citizens.firstName })
+        .select({ id: citizens.id, firstName: citizens.firstName, age: citizens.age })
         .from(citizens)
         .where(inArray(citizens.id, suggestedCitizenIds));
 
       for (const c of suggestedCitizens) {
-        suggestedByNames.set(c.id, c.firstName);
+        suggestedByNames.set(c.id, c.firstName + (c.age ? `, ${c.age} år` : ""));
       }
     }
 
@@ -116,6 +116,7 @@ export default async function Dashboard() {
       suggestedBy: q.suggestedByCitizenId
         ? suggestedByNames.get(q.suggestedByCitizenId) ?? null
         : null,
+      pinned: q.pinned,
     }));
 
     // Fetch causes
@@ -123,17 +124,25 @@ export default async function Dashboard() {
       .select()
       .from(causes)
       .where(eq(causes.politicianId, politician.id))
-      .orderBy(desc(causes.createdAt));
+      .orderBy(causes.sortOrder);
 
-    politicianCauses = rawCauses.map((c) => ({
-      id: c.id,
-      title: c.title,
-      shortDescription: c.shortDescription,
-      longDescription: c.longDescription,
-      videoUrl: c.videoUrl,
-      tagId: c.tagId,
-      inUse: usedTagIds.has(c.tagId),
-    }));
+    politicianCauses = rawCauses.map((c) => {
+      let parsedPoints: string[] = [];
+      if (c.points) {
+        try { parsedPoints = JSON.parse(c.points); } catch {}
+      }
+      return {
+        id: c.id,
+        title: c.title,
+        shortDescription: c.shortDescription,
+        longDescription: c.longDescription,
+        videoUrl: c.videoUrl,
+        points: parsedPoints,
+        tagId: c.tagId,
+        sortOrder: c.sortOrder,
+        inUse: usedTagIds.has(c.tagId),
+      };
+    });
 
     availableTags = rawCauses.map((c) => ({ tagId: c.tagId, title: c.title }));
   }
@@ -153,6 +162,7 @@ export default async function Dashboard() {
         text: questionSuggestions.text,
         createdAt: questionSuggestions.createdAt,
         citizenFirstName: citizens.firstName,
+        citizenAge: citizens.age,
       })
       .from(questionSuggestions)
       .innerJoin(citizens, eq(questionSuggestions.citizenId, citizens.id))
@@ -166,7 +176,7 @@ export default async function Dashboard() {
 
     pendingSuggestions = rawSuggestions.map((s) => ({
       id: s.id,
-      citizenFirstName: s.citizenFirstName,
+      citizenFirstName: s.citizenFirstName + (s.citizenAge ? `, ${s.citizenAge} år` : ""),
       text: s.text,
       createdAt: s.createdAt.toISOString(),
     }));
@@ -177,6 +187,10 @@ export default async function Dashboard() {
 
   return (
     <main className="max-w-4xl mx-auto p-6 space-y-8">
+      {impersonatingId && politician && (
+        <ImpersonationBanner politicianName={politician.name} />
+      )}
+
       <h1 className="text-3xl font-bold">
         {politician ? (
           <>
@@ -200,15 +214,29 @@ export default async function Dashboard() {
 
       {politician && (
         <>
+          {pendingSuggestions.length > 0 && (
+            <>
+              <h2 id="borgeres-spoergsmaal" className="text-2xl font-bold text-gray-900">
+                Borgeres spørgsmål
+                <span className="ml-2 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-full font-medium align-middle">
+                  {pendingSuggestions.length}
+                </span>
+              </h2>
+
+              <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <SuggestionList suggestions={pendingSuggestions} availableTags={availableTags} />
+              </section>
+            </>
+          )}
+
           <h2 className="text-2xl font-bold text-gray-900">Spørgsmål</h2>
 
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <QuestionForm
-              politicianId={politician.id}
-              disabled={false}
-              availableTags={availableTags}
-            />
-          </section>
+          <QuestionForm
+            politicianId={politician.id}
+            disabled={false}
+            availableTags={availableTags}
+            defaultUpvoteGoal={politician.defaultUpvoteGoal}
+          />
 
           {politicianQuestions.length > 0 && (
             <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -216,24 +244,9 @@ export default async function Dashboard() {
             </section>
           )}
 
-          <h2 id="borgeres-spoergsmaal" className="text-2xl font-bold text-gray-900">
-            Borgeres spørgsmål
-            {pendingSuggestions.length > 0 && (
-              <span className="ml-2 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-full font-medium align-middle">
-                {pendingSuggestions.length}
-              </span>
-            )}
-          </h2>
-
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <SuggestionList suggestions={pendingSuggestions} availableTags={availableTags} />
-          </section>
-
           <h2 className="text-2xl font-bold text-gray-900">Mærkesager</h2>
 
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <CauseForm politicianId={politician.id} />
-          </section>
+          <CauseForm politicianId={politician.id} />
 
           {politicianCauses.length > 0 && (
             <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -251,18 +264,23 @@ export default async function Dashboard() {
             politician
               ? {
                   name: politician.name,
-                  party: politician.party,
+                  partyId: politician.partyId,
                   email: politician.email,
                   slug: politician.slug,
+                  constituency: politician.constituency,
                   profilePhotoUrl: politician.profilePhotoUrl,
-                  partyLogoUrl: politician.partyLogoUrl,
-                  partyColor: politician.partyColor,
-                  partyColorLight: politician.partyColorLight,
-                  partyColorDark: politician.partyColorDark,
+                  bannerUrl: politician.bannerUrl,
+                  bannerBgColor: politician.bannerBgColor,
+                  heroLine1: politician.heroLine1,
+                  heroLine1Color: politician.heroLine1Color,
+                  heroLine2: politician.heroLine2,
+                  heroLine2Color: politician.heroLine2Color,
                   chatbaseId: politician.chatbaseId,
+                  defaultUpvoteGoal: politician.defaultUpvoteGoal,
                 }
               : null
           }
+          allParties={allParties}
           googleEmail={session.user.email!}
           googleName={session.user.name ?? ""}
         />

@@ -14,6 +14,14 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@fortawesome/fontawesome-svg-core": "^7.2.0",
+    "@fortawesome/free-regular-svg-icons": "^7.2.0",
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "@fortawesome/pro-duotone-svg-icons": "^7.2.0",
+    "@fortawesome/react-fontawesome": "^3.2.0",
     "@neondatabase/serverless": "^1.0.2",
     "@vercel/blob": "^2.3.1",
     "drizzle-orm": "^0.45.1",
@@ -21,7 +29,8 @@
     "next-auth": "^5.0.0-beta.30",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "resend": "^6.9.3"
+    "resend": "^6.9.3",
+    "svix": "^1.87.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

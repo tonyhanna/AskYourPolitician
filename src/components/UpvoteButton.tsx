@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { directUpvote } from "@/app/[partySlug]/[politicianSlug]/actions";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowUpToLine } from "@fortawesome/pro-duotone-svg-icons";
 
 export function UpvoteButton({
   questionId,
@@ -11,6 +13,8 @@ export function UpvoteButton({
   hasSession,
   partySlug,
   politicianSlug,
+  partyColor,
+  partyColorDark,
 }: {
   questionId: string;
   basePath: string;
@@ -18,19 +22,21 @@ export function UpvoteButton({
   hasSession: boolean;
   partySlug: string;
   politicianSlug: string;
+  partyColor?: string | null;
+  partyColorDark?: string | null;
 }) {
   const [pending, setPending] = useState(false);
 
+  const pillClass = "inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full cursor-pointer transition hover:opacity-70";
+  const pillStyle = { backgroundColor: partyColor || "#3B82F6", color: "#ffffff" };
+
   if (isUpvoted) {
     return (
-      <span className="inline-flex items-center gap-1 text-sm text-green-700 font-medium">
-        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fillRule="evenodd"
-            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-            clipRule="evenodd"
-          />
-        </svg>
+      <span
+        className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full"
+        style={pillStyle}
+      >
+        <FontAwesomeIcon icon={faArrowUpToLine} className="text-xs" />
         Upvoted
       </span>
     );
@@ -50,11 +56,10 @@ export function UpvoteButton({
           }
         }}
         disabled={pending}
-        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50 cursor-pointer"
+        className={`${pillClass} disabled:opacity-50`}
+        style={pillStyle}
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-        </svg>
+        <FontAwesomeIcon icon={faArrowUpToLine} className="text-xs" />
         {pending ? "Upvoter..." : "Upvote"}
       </button>
     );
@@ -63,11 +68,10 @@ export function UpvoteButton({
   return (
     <Link
       href={`${basePath}/upvote/${questionId}`}
-      className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 font-medium"
+      className={pillClass}
+      style={pillStyle}
     >
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-      </svg>
+      <FontAwesomeIcon icon={faArrowUpToLine} className="text-xs" />
       Upvote
     </Link>
   );
