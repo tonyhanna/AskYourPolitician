@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const wh = new Webhook(WEBHOOK_SECRET);
     const payload = wh.verify(body, headers) as {
       type: string;
-      data: { from: string; subject: string; text: string; html: string };
+      data: { from: string; subject: string; email_id: string };
     };
 
     // Only handle inbound emails
@@ -32,11 +32,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Ignored" }, { status: 200 });
     }
 
-    const { from, subject, email_id } = payload.data as {
-      from: string;
-      subject: string;
-      email_id: string;
-    };
+    const { from, subject, email_id } = payload.data;
 
     // Fetch full email content from Resend API
     const emailResponse = await fetch(`https://api.resend.com/emails/${email_id}`, {
