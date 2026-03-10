@@ -853,7 +853,7 @@ function QuestionCard({
             </>
           ) : (
             <>
-              {isAnsweredColumn ? (
+              {isAnsweredColumn && !question.goalReachedEmailSent ? (
                 <span className="ml-auto" />
               ) : (
                 <span className={`text-xs ml-auto ${question.goalReachedEmailSent ? "" : "transition-opacity duration-200 md:opacity-0 md:group-hover/card:opacity-100"}`} style={{ color: partyColor || "#3B82F6" }}>
@@ -866,13 +866,32 @@ function QuestionCard({
                   partySlug={partySlug}
                   politicianSlug={politicianSlug}
                 />
+              ) : question.goalReachedEmailSent && !question.isUpvoted ? (
+                <>
+                  <span
+                    className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
+                    style={{ backgroundColor: "#E8E7E5", color: "#7E7D7A" }}
+                  >
+                    Afventer svar
+                  </span>
+                  <UpvoteButton
+                    questionId={question.id}
+                    basePath={basePath}
+                    isUpvoted={false}
+                    hasSession={hasSession}
+                    partySlug={partySlug}
+                    politicianSlug={politicianSlug}
+                    partyColor={partyColor}
+                    partyColorDark={partyColorDark}
+                  />
+                </>
               ) : question.isUpvoted ? (
                 <CancelUpvoteButton
                   questionId={question.id}
                   partySlug={partySlug}
                   politicianSlug={politicianSlug}
                 />
-              ) : !isAnsweredColumn && !question.goalReachedEmailSent ? (
+              ) : !isAnsweredColumn ? (
                 <UpvoteButton
                   questionId={question.id}
                   basePath={basePath}
