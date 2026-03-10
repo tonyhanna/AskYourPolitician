@@ -564,11 +564,17 @@ function QuestionCard({
     setIsWatching(false);
   }, []);
 
+  // Clip ended — just stop playing, stay on last frame (hover remains)
+  const handleClipEnded = useCallback(() => {
+    setIsPlaying(false);
+  }, []);
+
   // Desktop: hover to reveal background + play clip (only when not watching full video)
   const handleMouseEnter = useCallback(() => {
     if (isWatching) return;
     if (hasBackground) setIsHovering(true);
     if (hasClip && videoRef.current) {
+      videoRef.current.currentTime = 0;
       videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
     }
   }, [hasClip, hasBackground, isWatching]);
@@ -686,9 +692,9 @@ function QuestionCard({
             ref={videoRef}
             src={question.answerClipUrl!}
             muted
-            loop
             playsInline
             preload="metadata"
+            onEnded={handleClipEnded}
             className="absolute inset-0 w-full h-full object-cover transition-all duration-300"
             style={{ zIndex: 0, filter: isHovering || isWatching ? "none" : "blur(8px)", transform: isHovering || isWatching ? "none" : "scale(1.1)" }}
           />

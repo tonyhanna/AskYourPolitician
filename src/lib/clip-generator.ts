@@ -1,12 +1,14 @@
 /**
  * Client-side video clip generator.
  *
- * Takes a video URL and generates a 5-second webm clip starting at ~50% of
- * the video duration.  Uses Canvas + MediaRecorder (no external deps).
+ * Takes a video URL and generates a 10-second webm clip starting at ~50% of
+ * the video duration.  Uses Canvas + MediaRecorder.
  */
 
+import fixWebmDuration from "fix-webm-duration";
+
 export interface ClipOptions {
-  /** Max clip duration in seconds (default 5) */
+  /** Max clip duration in seconds (default 10) */
   duration?: number;
   /** Max output width (default 480) */
   maxWidth?: number;
@@ -19,7 +21,7 @@ export interface ClipOptions {
 }
 
 const DEFAULTS: Required<ClipOptions> = {
-  duration: 5,
+  duration: 10,
   maxWidth: 1280,
   maxHeight: 720,
   fps: 30,
@@ -157,10 +159,16 @@ export async function generateVideoClip(
     recorder.onstop = () => resolve();
   });
 
-  const blob = new Blob(chunks, { type: mimeType });
+  let blob = new Blob(chunks, { type: mimeType });
 
   // Guard against corrupt/empty recordings (< 1 KB is not a valid clip)
   if (blob.size < 1024) return null;
+
+  // Fix missing/incorrect duration metadata in webm files — a known
+  // MediaRecorder bug where the header reports wrong duration.
+  if (mimeType.includes("webm")) {
+    blob = await fixWebmDuration(blob, actualDuration * 1000);
+  }
 
   const ext = mimeType.includes("webm") ? "webm" : "mp4";
   return new File([blob], `clip.${ext}`, { type: mimeType });
