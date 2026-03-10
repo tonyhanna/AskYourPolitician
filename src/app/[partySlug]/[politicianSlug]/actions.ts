@@ -51,8 +51,11 @@ export async function submitUpvote(formData: FormData): Promise<{ error?: string
         ...(age ? { age } : {}),
       })
       .returning();
-  } else if (age && !citizen.age) {
-    await db.update(citizens).set({ age }).where(eq(citizens.id, citizen.id));
+  } else {
+    await db
+      .update(citizens)
+      .set({ firstName, age })
+      .where(eq(citizens.id, citizen.id));
   }
 
   // Get the question text for the email
@@ -199,8 +202,11 @@ export async function submitSuggestion(formData: FormData) {
         ...(age ? { age } : {}),
       })
       .returning();
-  } else if (age && !citizen.age) {
-    await db.update(citizens).set({ age }).where(eq(citizens.id, citizen.id));
+  } else {
+    await db
+      .update(citizens)
+      .set({ firstName, age })
+      .where(eq(citizens.id, citizen.id));
   }
 
   // Create suggestion with pending_verification status
