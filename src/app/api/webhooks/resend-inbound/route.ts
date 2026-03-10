@@ -32,7 +32,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Ignored" }, { status: 200 });
     }
 
-    const { from, subject, text, html } = payload.data;
+    // Log full payload to debug field names
+    console.log("Inbound email payload keys:", JSON.stringify(Object.keys(payload.data)));
+    console.log("Inbound email payload:", JSON.stringify(payload.data).slice(0, 2000));
+
+    const data = payload.data as Record<string, unknown>;
+    const from = (data.from || data.sender || "") as string;
+    const subject = (data.subject || "") as string;
+    const html = (data.html || data.body || "") as string;
+    const text = (data.text || data.plain_text || data.content || "") as string;
 
     // Forward the inbound email to admin
     await resend.emails.send({
