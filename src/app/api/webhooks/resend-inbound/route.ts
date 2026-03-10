@@ -38,13 +38,12 @@ export async function POST(request: Request) {
     const emailResponse = await fetch(`https://api.resend.com/emails/${email_id}`, {
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
     });
-    const emailData = (await emailResponse.json()) as {
-      html?: string;
-      text?: string;
-    };
+    const emailData = await emailResponse.json();
+    console.log("Resend email API status:", emailResponse.status);
+    console.log("Resend email API response:", JSON.stringify(emailData).slice(0, 3000));
 
-    const html = emailData.html || "";
-    const text = emailData.text || "";
+    const html = (emailData as Record<string, string>).html || "";
+    const text = (emailData as Record<string, string>).text || "";
 
     // Forward the inbound email to admin
     await resend.emails.send({
