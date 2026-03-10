@@ -6,7 +6,7 @@ import { politicians, questions, questionTags, upvotes, citizens, answerHistory,
 import { sendAnswerNotificationEmail, sendSuggestionApprovedEmail, sendSuggestionRejectedEmail } from "@/lib/email";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { generateSlug } from "@/lib/utils";
-import { isBlobUrl, isFacebookUrl, isFacebookVideoUrl, isVideoPubliclyAccessible } from "@/lib/answer-utils";
+import { isBlobUrl } from "@/lib/answer-utils";
 import { del } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { getActivePolitician } from "@/lib/admin";
@@ -58,6 +58,7 @@ export async function updateSettings(formData: FormData) {
   const email = formData.get("email") as string;
   const profilePhotoUrl = (formData.get("profilePhotoUrl") as string) || null;
   const bannerUrl = (formData.get("bannerUrl") as string) || null;
+  const ogImageUrl = (formData.get("ogImageUrl") as string) || null;
   const bannerBgColor = (formData.get("bannerBgColor") as string)?.trim() || null;
   const constituency = (formData.get("constituency") as string)?.trim() || null;
   const heroLine1 = (formData.get("heroLine1") as string)?.trim() || null;
@@ -91,6 +92,9 @@ export async function updateSettings(formData: FormData) {
     if (politician.profilePhotoUrl && politician.profilePhotoUrl !== profilePhotoUrl && isBlobUrl(politician.profilePhotoUrl)) {
       oldBlobUrls.push(politician.profilePhotoUrl);
     }
+    if (politician.ogImageUrl && politician.ogImageUrl !== ogImageUrl && isBlobUrl(politician.ogImageUrl)) {
+      oldBlobUrls.push(politician.ogImageUrl);
+    }
 
     await db
       .update(politicians)
@@ -104,6 +108,7 @@ export async function updateSettings(formData: FormData) {
         constituency,
         profilePhotoUrl,
         bannerUrl,
+        ogImageUrl,
         bannerBgColor,
         heroLine1,
         heroLine1Color,
@@ -131,6 +136,7 @@ export async function updateSettings(formData: FormData) {
       constituency,
       profilePhotoUrl,
       bannerUrl,
+      ogImageUrl,
       bannerBgColor,
       heroLine1,
       heroLine1Color,
@@ -205,7 +211,7 @@ export async function deleteQuestion(questionId: string): Promise<{ error?: stri
 
   // Fetch question + answer history to collect blob URLs before deleting
   const [question] = await db
-    .select({ answerUrl: questions.answerUrl, answerPhotoUrl: questions.answerPhotoUrl })
+    .select({ answerUrl: questions.answerUrl, answerPhotoUrl: questions.answerPhotoUrl, answerClipUrl: questions.answerClipUrl })
     .from(questions)
     .where(
       and(
@@ -219,7 +225,7 @@ export async function deleteQuestion(questionId: string): Promise<{ error?: stri
   if (!question) return { error: "Spørgsmålet kan ikke slettes" };
 
   const history = await db
-    .select({ answerUrl: answerHistory.answerUrl, answerPhotoUrl: answerHistory.answerPhotoUrl })
+    .select({ answerUrl: answerHistory.answerUrl, answerPhotoUrl: answerHistory.answerPhotoUrl, answerClipUrl: answerHistory.answerClipUrl })
     .from(answerHistory)
     .where(eq(answerHistory.questionId, questionId));
 
@@ -228,6 +234,7 @@ export async function deleteQuestion(questionId: string): Promise<{ error?: stri
   for (const entry of [question, ...history]) {
     if (entry.answerUrl && isBlobUrl(entry.answerUrl)) blobUrls.push(entry.answerUrl);
     if (entry.answerPhotoUrl && isBlobUrl(entry.answerPhotoUrl)) blobUrls.push(entry.answerPhotoUrl);
+    if (entry.answerClipUrl && isBlobUrl(entry.answerClipUrl)) blobUrls.push(entry.answerClipUrl);
   }
 
   // Delete question (cascades to tags, upvotes, history, etc.)
@@ -250,39 +257,12 @@ export async function deleteQuestion(questionId: string): Promise<{ error?: stri
   return {};
 }
 
-export async function submitAnswerUrl(questionId: string, answerUrl: string, photoUrl?: string) {
+export async function submitAnswerUrl(questionId: string, answerUrl: string, photoUrl?: string, duration?: number, aspectRatio?: number) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
-  if (!answerUrl || !answerUrl.startsWith("http")) {
-    throw new Error("Ugyldig URL");
-  }
-
-  if (isFacebookUrl(answerUrl) && !isFacebookVideoUrl(answerUrl)) {
-    throw new Error("Kun Facebook video-links er understøttet (f.eks. facebook.com/watch, /videos/, /reel/ eller fb.watch)");
-  }
-
-  try {
-    const hostname = new URL(answerUrl).hostname.replace("www.", "");
-    if (hostname === "instagram.com") {
-      throw new Error("Instagram-links kan desværre ikke indlejres. Brug YouTube eller Facebook i stedet.");
-    }
-    if (hostname === "x.com" || hostname === "twitter.com") {
-      throw new Error("X/Twitter-links kan desværre ikke indlejres. Brug YouTube eller Facebook i stedet.");
-    }
-    if (/linkedin\.com/i.test(hostname)) {
-      throw new Error("LinkedIn-links kan desværre ikke indlejres. Brug YouTube eller Facebook i stedet.");
-    }
-  } catch (e) {
-    if (e instanceof Error && (e.message.includes("Instagram") || e.message.includes("X/Twitter") || e.message.includes("LinkedIn"))) throw e;
-  }
-
-  // Verify the video is publicly accessible
-  if (!isBlobUrl(answerUrl)) {
-    const isPublic = await isVideoPubliclyAccessible(answerUrl);
-    if (!isPublic) {
-      throw new Error("Videoen ser ud til at være privat eller utilgængelig. Sørg for at videoen er offentligt tilgængelig.");
-    }
+  if (!answerUrl || !isBlobUrl(answerUrl)) {
+    throw new Error("Ugyldig fil-URL");
   }
 
   const politician = await getActivePolitician();
@@ -304,11 +284,17 @@ export async function submitAnswerUrl(questionId: string, answerUrl: string, pho
 
   const isUpdate = !!question.answerUrl;
 
-  await db.insert(answerHistory).values({ questionId, answerUrl, answerPhotoUrl: photoUrl ?? null });
+  await db.insert(answerHistory).values({
+    questionId,
+    answerUrl,
+    answerPhotoUrl: photoUrl ?? null,
+    answerDuration: duration ?? null,
+    answerAspectRatio: aspectRatio ?? null,
+  });
 
   await db
     .update(questions)
-    .set({ answerUrl, answerPhotoUrl: photoUrl ?? null })
+    .set({ answerUrl, answerPhotoUrl: photoUrl ?? null, answerDuration: duration ?? null, answerAspectRatio: aspectRatio ?? null })
     .where(eq(questions.id, questionId));
 
   const upvoters = await db
@@ -322,9 +308,6 @@ export async function submitAnswerUrl(questionId: string, answerUrl: string, pho
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   const questionPageUrl = `${appUrl}/${politician.partySlug}/${politician.slug}/q/${questionId}`;
-  const emailAnswerUrl = isBlobUrl(answerUrl) || isFacebookVideoUrl(answerUrl)
-    ? questionPageUrl
-    : answerUrl;
 
   await Promise.allSettled(
     upvoters.map((citizen) =>
@@ -334,13 +317,62 @@ export async function submitAnswerUrl(questionId: string, answerUrl: string, pho
         politicianName: politician.name,
         partyName: politician.party,
         questionText: question.text,
-        answerUrl: emailAnswerUrl,
+        answerUrl: questionPageUrl,
         isUpdate,
       })
     )
   );
 
   revalidatePath("/politiker/dashboard");
+}
+
+export async function submitAnswerClipUrl(questionId: string, clipUrl: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  if (!clipUrl || !isBlobUrl(clipUrl)) {
+    throw new Error("Ugyldig clip-URL");
+  }
+
+  const politician = await getActivePolitician();
+  if (!politician) throw new Error("Politician not found");
+
+  const [question] = await db
+    .select({ id: questions.id })
+    .from(questions)
+    .where(
+      and(
+        eq(questions.id, questionId),
+        eq(questions.politicianId, politician.id)
+      )
+    )
+    .limit(1);
+
+  if (!question) throw new Error("Spørgsmål ikke fundet");
+
+  // Update clip URL on question
+  await db
+    .update(questions)
+    .set({ answerClipUrl: clipUrl })
+    .where(eq(questions.id, questionId));
+
+  // Update the latest answer history entry
+  const [latestHistory] = await db
+    .select({ id: answerHistory.id })
+    .from(answerHistory)
+    .where(eq(answerHistory.questionId, questionId))
+    .orderBy(sql`${answerHistory.createdAt} DESC`)
+    .limit(1);
+
+  if (latestHistory) {
+    await db
+      .update(answerHistory)
+      .set({ answerClipUrl: clipUrl })
+      .where(eq(answerHistory.id, latestHistory.id));
+  }
+
+  revalidatePath("/politiker/dashboard");
+  revalidatePath(`/${politician.partySlug}/${politician.slug}`);
 }
 
 export async function togglePinQuestion(questionId: string) {

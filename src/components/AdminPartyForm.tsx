@@ -50,7 +50,7 @@ export function AdminPartyForm({ party }: { party: PartyData }) {
     setUploadingLogo(true);
     try {
       const cropped = await cropToSquare(file);
-      const blob = await upload(cropped.name, cropped, { access: "public", handleUploadUrl: "/api/upload" });
+      const blob = await upload(`parties/${cropped.name}`, cropped, { access: "public", handleUploadUrl: "/api/upload" });
       setLogoUrl(blob.url);
     } catch (e) { alert(e instanceof Error ? e.message : "Upload fejlede"); }
     finally { setUploadingLogo(false); }

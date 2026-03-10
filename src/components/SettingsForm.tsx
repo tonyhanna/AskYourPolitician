@@ -12,6 +12,7 @@ type PoliticianData = {
   constituency: string | null;
   profilePhotoUrl: string | null;
   bannerUrl: string | null;
+  ogImageUrl: string | null;
   bannerBgColor: string | null;
   heroLine1: string | null;
   heroLine1Color: string | null;
@@ -65,8 +66,10 @@ export function SettingsForm({
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(politician?.profilePhotoUrl ?? "");
   const [uploadingProfile, setUploadingProfile] = useState(false);
   const [bannerUrl, setBannerUrl] = useState(politician?.bannerUrl ?? "");
+  const [ogImageUrl, setOgImageUrl] = useState(politician?.ogImageUrl ?? "");
   const [bannerBgColor, setBannerBgColor] = useState(politician?.bannerBgColor ?? "");
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [uploadingOg, setUploadingOg] = useState(false);
   const [heroLine1Color, setHeroLine1Color] = useState(politician?.heroLine1Color ?? "");
   const [heroLine2Color, setHeroLine2Color] = useState(politician?.heroLine2Color ?? "");
   const [chatbaseId, setChatbaseId] = useState(politician?.chatbaseId ?? "");
@@ -76,6 +79,7 @@ export function SettingsForm({
     setUrl: (url: string) => void,
     setUploading: (v: boolean) => void,
     crop = true,
+    folder = "politicians",
   ) {
     if (!file.type.startsWith("image/")) return;
     if (file.size > 10 * 1024 * 1024) {
@@ -85,7 +89,7 @@ export function SettingsForm({
     setUploading(true);
     try {
       const toUpload = crop ? await cropToSquare(file) : file;
-      const blob = await upload(toUpload.name, toUpload, {
+      const blob = await upload(`${folder}/${toUpload.name}`, toUpload, {
         access: "public",
         handleUploadUrl: "/api/upload",
       });
@@ -114,6 +118,7 @@ export function SettingsForm({
     <form action={handleSubmit} className="space-y-6">
       <input type="hidden" name="profilePhotoUrl" value={profilePhotoUrl} />
       <input type="hidden" name="bannerUrl" value={bannerUrl} />
+      <input type="hidden" name="ogImageUrl" value={ogImageUrl} />
       <input type="hidden" name="bannerBgColor" value={bannerBgColor} />
       <input type="hidden" name="heroLine1Color" value={heroLine1Color} />
       <input type="hidden" name="heroLine2Color" value={heroLine2Color} />
@@ -301,6 +306,50 @@ export function SettingsForm({
         </div>
       )}
 
+      {/* Socialt delingsbillede (OpenGraph) */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Socialt delingsbillede (OpenGraph)
+        </label>
+        {ogImageUrl ? (
+          <img
+            src={ogImageUrl}
+            alt="OpenGraph billede"
+            className="w-full max-w-md rounded-lg border border-gray-200 mb-2"
+            style={{ aspectRatio: "1200/630" }}
+          />
+        ) : (
+          <div className="w-full max-w-md rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs mb-2" style={{ aspectRatio: "1200/630" }}>
+            Intet delingsbillede
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer">
+            {uploadingOg ? "Uploader..." : "Vælg billede"}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploadingOg}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload(file, setOgImageUrl, setUploadingOg, false);
+              }}
+            />
+          </label>
+          {ogImageUrl && (
+            <button
+              type="button"
+              onClick={() => setOgImageUrl("")}
+              className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+            >
+              Fjern
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 mt-1">Anbefalet: 1200 × 630 px. Vises når dit link deles på sociale medier.</p>
+      </div>
+
       {/* Velkomsttekst */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -408,7 +457,7 @@ export function SettingsForm({
 
       <button
         type="submit"
-        disabled={pending || uploadingProfile || uploadingBanner}
+        disabled={pending || uploadingProfile || uploadingBanner || uploadingOg}
         className={`px-6 py-2 rounded-lg transition font-medium disabled:opacity-50 cursor-pointer ${
           saved
             ? "bg-green-600 text-white"

@@ -210,6 +210,7 @@ export async function updatePolitician(formData: FormData) {
   const heroLine2Color = (formData.get("heroLine2Color") as string)?.trim() || null;
   const profilePhotoUrl = (formData.get("profilePhotoUrl") as string) || null;
   const bannerUrl = (formData.get("bannerUrl") as string) || null;
+  const ogImageUrl = (formData.get("ogImageUrl") as string) || null;
   const bannerBgColor = (formData.get("bannerBgColor") as string)?.trim() || null;
   const chatbaseId = (formData.get("chatbaseId") as string)?.trim() || null;
   const defaultUpvoteGoal = parseInt(formData.get("defaultUpvoteGoal") as string) || 1000;
@@ -228,7 +229,7 @@ export async function updatePolitician(formData: FormData) {
 
   // Fetch old politician to compare blob URLs
   const [oldPolitician] = await db
-    .select({ bannerUrl: politicians.bannerUrl, profilePhotoUrl: politicians.profilePhotoUrl })
+    .select({ bannerUrl: politicians.bannerUrl, profilePhotoUrl: politicians.profilePhotoUrl, ogImageUrl: politicians.ogImageUrl })
     .from(politicians)
     .where(eq(politicians.id, politicianId))
     .limit(1);
@@ -239,6 +240,9 @@ export async function updatePolitician(formData: FormData) {
   }
   if (oldPolitician?.profilePhotoUrl && oldPolitician.profilePhotoUrl !== profilePhotoUrl && isBlobUrl(oldPolitician.profilePhotoUrl)) {
     oldBlobUrls.push(oldPolitician.profilePhotoUrl);
+  }
+  if (oldPolitician?.ogImageUrl && oldPolitician.ogImageUrl !== ogImageUrl && isBlobUrl(oldPolitician.ogImageUrl)) {
+    oldBlobUrls.push(oldPolitician.ogImageUrl);
   }
 
   await db
@@ -253,6 +257,7 @@ export async function updatePolitician(formData: FormData) {
       constituency,
       profilePhotoUrl,
       bannerUrl,
+      ogImageUrl,
       bannerBgColor,
       heroLine1,
       heroLine1Color,

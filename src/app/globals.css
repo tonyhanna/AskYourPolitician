@@ -24,3 +24,11 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Accordion arrow rotation */
+details summary::-webkit-details-marker {
+  display: none;
+}
+details[open] > summary .details-open-rotate {
+  transform: rotate(90deg);
+}

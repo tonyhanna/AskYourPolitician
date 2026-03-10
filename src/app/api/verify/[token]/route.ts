@@ -3,7 +3,7 @@ import { verificationTokens, upvotes, questions } from "@/db/schema";
 import { eq, and, gt, sql } from "drizzle-orm";
 import {
   createCitizenSession,
-  setCitizenSessionCookie,
+  setCitizenSessionCookieOnResponse,
 } from "@/lib/citizen-session";
 import { NextResponse } from "next/server";
 import { checkAndNotifyGoalReached } from "@/lib/goal-check";
@@ -54,12 +54,13 @@ export async function GET(
 
   // Create citizen session
   const sessionToken = await createCitizenSession(verification.citizenId);
-  await setCitizenSessionCookie(sessionToken);
 
   if (existingUpvote) {
-    return NextResponse.redirect(
+    const response = NextResponse.redirect(
       `${appUrl}/${verification.partySlug}/${verification.politicianSlug}?already_upvoted=true`
     );
+    setCitizenSessionCookieOnResponse(response, sessionToken);
+    return response;
   }
 
   // Create upvote
@@ -78,7 +79,9 @@ export async function GET(
 
   await checkAndNotifyGoalReached(verification.questionId);
 
-  return NextResponse.redirect(
+  const response = NextResponse.redirect(
     `${appUrl}/${verification.partySlug}/${verification.politicianSlug}?success=true`
   );
+  setCitizenSessionCookieOnResponse(response, sessionToken);
+  return response;
 }

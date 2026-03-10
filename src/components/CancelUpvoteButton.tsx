@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { cancelUpvote } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpToLine } from "@fortawesome/pro-duotone-svg-icons";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
 
 export function CancelUpvoteButton({
   questionId,
@@ -33,8 +33,8 @@ export function CancelUpvoteButton({
       className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full cursor-pointer transition hover:opacity-70 disabled:opacity-50"
       style={{ backgroundColor: "#E8E7E5", color: "#FF4105" }}
     >
-      <FontAwesomeIcon icon={faArrowUpToLine} className="text-xs" />
-      {cancelling ? "Annullerer..." : "Annullér"}
+      <FontAwesomeIcon icon={faXmark} className="text-xs" />
+      {cancelling ? "Fjerner..." : "Fjern upvote"}
     </button>
   );
 }

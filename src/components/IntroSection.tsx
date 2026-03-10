@@ -69,7 +69,7 @@ export function IntroSection({
             style={{
               backgroundColor: "#F6F6F5",
               borderRadius: "20px",
-              fontFamily: "var(--font-dm-sans)",
+              fontFamily: "var(--font-funnel-sans)",
               fontWeight: 500,
             }}
           >

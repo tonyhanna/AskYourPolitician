@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { cancelUpvote } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpToLine } from "@fortawesome/pro-duotone-svg-icons";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
 
 export function AwaitingAnswerButton({
   questionId,
@@ -27,17 +27,23 @@ export function AwaitingAnswerButton({
     }
   }
 
+  const showCancel = hovered || cancelling;
+
   return (
     <button
       onClick={handleCancel}
       disabled={cancelling}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full cursor-pointer transition disabled:opacity-50"
-      style={{ backgroundColor: "#E8E7E5", color: hovered || cancelling ? "#FF4105" : "#7E7D7A" }}
+      className="inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-full cursor-pointer transition disabled:opacity-50"
+      style={{
+        width: 110,
+        backgroundColor: "#E8E7E5",
+        color: showCancel ? "#FF4105" : "#7E7D7A",
+      }}
     >
-      <FontAwesomeIcon icon={faArrowUpToLine} className="text-xs" />
-      {cancelling ? "Annullerer..." : hovered ? "Annullér" : "Afventer svar..."}
+      {showCancel && <FontAwesomeIcon icon={faXmark} className="text-xs" />}
+      {cancelling ? "Fjerner..." : showCancel ? "Fjern upvote" : "Afventer svar"}
     </button>
   );
 }

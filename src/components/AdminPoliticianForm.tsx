@@ -13,6 +13,7 @@ type PoliticianData = {
   constituency: string | null;
   profilePhotoUrl: string | null;
   bannerUrl: string | null;
+  ogImageUrl: string | null;
   bannerBgColor: string | null;
   heroLine1: string | null;
   heroLine1Color: string | null;
@@ -57,8 +58,10 @@ export function AdminPoliticianForm({ politician, allParties }: { politician: Po
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(politician?.profilePhotoUrl ?? "");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [bannerUrl, setBannerUrl] = useState(politician?.bannerUrl ?? "");
+  const [ogImageUrl, setOgImageUrl] = useState(politician?.ogImageUrl ?? "");
   const [bannerBgColor, setBannerBgColor] = useState(politician?.bannerBgColor ?? "");
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [uploadingOg, setUploadingOg] = useState(false);
   const [heroLine1Color, setHeroLine1Color] = useState(politician?.heroLine1Color ?? "");
   const [heroLine2Color, setHeroLine2Color] = useState(politician?.heroLine2Color ?? "");
   const [chatbaseId, setChatbaseId] = useState(politician?.chatbaseId ?? "");
@@ -69,7 +72,7 @@ export function AdminPoliticianForm({ politician, allParties }: { politician: Po
     setUploadingPhoto(true);
     try {
       const cropped = await cropToSquare(file);
-      const blob = await upload(cropped.name, cropped, { access: "public", handleUploadUrl: "/api/upload" });
+      const blob = await upload(`politicians/${cropped.name}`, cropped, { access: "public", handleUploadUrl: "/api/upload" });
       setProfilePhotoUrl(blob.url);
     } catch (e) { alert(e instanceof Error ? e.message : "Upload fejlede"); }
     finally { setUploadingPhoto(false); }
@@ -80,10 +83,21 @@ export function AdminPoliticianForm({ politician, allParties }: { politician: Po
     if (file.size > 10 * 1024 * 1024) { alert("Maks 10 MB"); return; }
     setUploadingBanner(true);
     try {
-      const blob = await upload(file.name, file, { access: "public", handleUploadUrl: "/api/upload" });
+      const blob = await upload(`politicians/${file.name}`, file, { access: "public", handleUploadUrl: "/api/upload" });
       setBannerUrl(blob.url);
     } catch (e) { alert(e instanceof Error ? e.message : "Upload fejlede"); }
     finally { setUploadingBanner(false); }
+  }
+
+  async function handleOgUpload(file: File) {
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 10 * 1024 * 1024) { alert("Maks 10 MB"); return; }
+    setUploadingOg(true);
+    try {
+      const blob = await upload(`politicians/${file.name}`, file, { access: "public", handleUploadUrl: "/api/upload" });
+      setOgImageUrl(blob.url);
+    } catch (e) { alert(e instanceof Error ? e.message : "Upload fejlede"); }
+    finally { setUploadingOg(false); }
   }
 
   async function handleSubmit(formData: FormData) {
@@ -106,6 +120,7 @@ export function AdminPoliticianForm({ politician, allParties }: { politician: Po
       {politician && <input type="hidden" name="politicianId" value={politician.id} />}
       <input type="hidden" name="profilePhotoUrl" value={profilePhotoUrl} />
       <input type="hidden" name="bannerUrl" value={bannerUrl} />
+      <input type="hidden" name="ogImageUrl" value={ogImageUrl} />
       <input type="hidden" name="bannerBgColor" value={bannerBgColor} />
       <input type="hidden" name="heroLine1Color" value={heroLine1Color} />
       <input type="hidden" name="heroLine2Color" value={heroLine2Color} />
@@ -205,6 +220,27 @@ export function AdminPoliticianForm({ politician, allParties }: { politician: Po
         </div>
       )}
 
+      {/* Socialt delingsbillede (OpenGraph) */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Socialt delingsbillede (OpenGraph)</label>
+        {ogImageUrl ? (
+          <img src={ogImageUrl} alt="OpenGraph billede" className="w-full max-w-md rounded-lg border border-gray-200 mb-2" style={{ aspectRatio: "1200/630" }} />
+        ) : (
+          <div className="w-full max-w-md rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs mb-2" style={{ aspectRatio: "1200/630" }}>Intet delingsbillede</div>
+        )}
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer">
+            {uploadingOg ? "Uploader..." : "Vælg billede"}
+            <input type="file" accept="image/*" className="hidden" disabled={uploadingOg}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleOgUpload(f); }} />
+          </label>
+          {ogImageUrl && (
+            <button type="button" onClick={() => setOgImageUrl("")} className="text-xs text-red-600 hover:text-red-800 cursor-pointer">Fjern</button>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 mt-1">Anbefalet: 1200 × 630 px. Vises når linket deles på sociale medier.</p>
+      </div>
+
       {/* Velkomsttekst */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Velkomsttekst (valgfrit)</label>
@@ -276,7 +312,7 @@ export function AdminPoliticianForm({ politician, allParties }: { politician: Po
       </div>
 
       <div className="flex items-center gap-4">
-        <button type="submit" disabled={pending || uploadingPhoto || uploadingBanner || deleting}
+        <button type="submit" disabled={pending || uploadingPhoto || uploadingBanner || uploadingOg || deleting}
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 cursor-pointer">
           {pending ? "Gemmer..." : politician ? "Gem ændringer" : "Opret politiker"}
         </button>

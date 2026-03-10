@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import { submitSuggestion, directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
 
 type PoliticianTopBarProps = {
@@ -59,6 +60,14 @@ export function PoliticianTopBar({
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ firstName?: boolean; email?: boolean }>({});
+  const [introDismissed, setIntroDismissed] = useState(false);
+  useEffect(() => {
+    setIntroDismissed(localStorage.getItem("intro-dismissed") === "1");
+    const handler = () => setIntroDismissed(true);
+    window.addEventListener("intro-dismissed", handler);
+    return () => window.removeEventListener("intro-dismissed", handler);
+  }, []);
+
   const [isNarrow, setIsNarrow] = useState(false);
 
   useEffect(() => {
@@ -77,8 +86,11 @@ export function PoliticianTopBar({
   useEffect(() => {
     if (formActive) {
       setTimeout(() => {
-        if (mobileInputRef.current) mobileInputRef.current.focus();
-        else inputRef.current?.focus();
+        if (window.innerWidth >= 640) {
+          inputRef.current?.focus();
+        } else {
+          mobileInputRef.current?.focus();
+        }
       }, 50);
     }
   }, [formActive]);
@@ -175,7 +187,7 @@ export function PoliticianTopBar({
     <div
       ref={containerRef}
       className="sticky top-0 z-50 backdrop-blur-lg transition-colors duration-200"
-      style={{ backgroundColor: `${bgColor}${bgOpacitySuffix}`, fontFamily: "var(--font-dm-sans)", fontWeight: 500 }}
+      style={{ backgroundColor: `${bgColor}${bgOpacitySuffix}`, fontFamily: "var(--font-funnel-sans)", fontWeight: 500 }}
     >
       <style>{`
         .topbar-suggest-input::placeholder { color: var(--placeholder-color); opacity: 0.5; }
@@ -221,6 +233,25 @@ export function PoliticianTopBar({
               {partyName}
             </p>
           </div>
+
+          {/* Mobile-only: info button (between names and suggest) */}
+          {introDismissed && !formActive && (
+            <button
+              type="button"
+              onClick={() => {
+                setIntroDismissed(false);
+                window.dispatchEvent(new Event("show-intro"));
+              }}
+              className="sm:hidden ml-auto cursor-pointer hover:opacity-50 transition-opacity"
+              aria-label="Vis information"
+            >
+              <FontAwesomeIcon
+                icon={faCircleInfo}
+                className="text-lg"
+                style={{ color: "#FFFFFF" }}
+              />
+            </button>
+          )}
 
           {/* Desktop-only: expanded form input (replaces names on desktop) */}
           {formActive && (
@@ -279,6 +310,23 @@ export function PoliticianTopBar({
                 >
                   {constituency}
                 </span>
+              )}
+              {introDismissed && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIntroDismissed(false);
+                    window.dispatchEvent(new Event("show-intro"));
+                  }}
+                  className="cursor-pointer hover:opacity-50 transition-opacity"
+                  aria-label="Vis information"
+                >
+                  <FontAwesomeIcon
+                    icon={faCircleInfo}
+                    className="text-lg"
+                    style={{ color: "#FFFFFF" }}
+                  />
+                </button>
               )}
               {success ? (
                 <span

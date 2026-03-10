@@ -8,7 +8,7 @@ import {
 import { eq, and, gt } from "drizzle-orm";
 import {
   createCitizenSession,
-  setCitizenSessionCookie,
+  setCitizenSessionCookieOnResponse,
 } from "@/lib/citizen-session";
 import { sendNewSuggestionNotificationEmail } from "@/lib/email";
 import { NextResponse } from "next/server";
@@ -83,11 +83,11 @@ export async function GET(
     }
   }
 
-  // Create citizen session
+  // Create citizen session and set cookie on the redirect response
   const sessionToken = await createCitizenSession(verification.citizenId);
-  await setCitizenSessionCookie(sessionToken);
-
-  return NextResponse.redirect(
+  const response = NextResponse.redirect(
     `${appUrl}/${verification.partySlug}/${verification.politicianSlug}?suggestion_verified=true`
   );
+  setCitizenSessionCookieOnResponse(response, sessionToken);
+  return response;
 }

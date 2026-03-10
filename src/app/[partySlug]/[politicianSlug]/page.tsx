@@ -7,7 +7,6 @@ import { notFound } from "next/navigation";
 import { getCitizenFromSession } from "@/lib/citizen-session";
 import { SuccessBanner } from "@/components/SuccessBanner";
 import { QuestionFeedFilter } from "@/components/QuestionFeedFilter";
-import { citizenLogout } from "./actions";
 import { ChatbaseWidget } from "@/components/ChatbaseWidget";
 import { IntroSection } from "@/components/IntroSection";
 import { PoliticianTopBar } from "@/components/PoliticianTopBar";
@@ -20,7 +19,7 @@ export async function generateMetadata({
   const { partySlug, politicianSlug } = await params;
 
   const [politician] = await db
-    .select({ name: politicians.name, party: politicians.party })
+    .select({ name: politicians.name, party: politicians.party, ogImageUrl: politicians.ogImageUrl })
     .from(politicians)
     .where(
       and(
@@ -32,8 +31,16 @@ export async function generateMetadata({
 
   if (!politician) return { title: "Ikke fundet" };
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
   return {
     title: `${politician.name} / ${politician.party}`,
+    openGraph: {
+      title: `${politician.name} / ${politician.party}`,
+      url: `${appUrl}/${partySlug}/${politicianSlug}`,
+      type: "website",
+      ...(politician.ogImageUrl ? { images: [{ url: politician.ogImageUrl, width: 1200, height: 630 }] } : {}),
+    },
   };
 }
 
@@ -121,6 +128,9 @@ export default async function BorgerFeed({
     upvoteGoal: q.upvoteGoal,
     answerUrl: q.answerUrl,
     answerPhotoUrl: q.answerPhotoUrl,
+    answerClipUrl: q.answerClipUrl,
+    answerDuration: q.answerDuration ?? null,
+    answerAspectRatio: q.answerAspectRatio ?? null,
     goalReachedEmailSent: q.goalReachedEmailSent,
     suggestedBy: q.suggestedByCitizenId
       ? suggestedByNames.get(q.suggestedByCitizenId) ?? null
@@ -151,6 +161,9 @@ export default async function BorgerFeed({
 
   return (
     <>
+      <Suspense>
+        <SuccessBanner />
+      </Suspense>
       <PoliticianTopBar
         politicianName={politician.name}
         partyName={politician.party}
@@ -174,56 +187,28 @@ export default async function BorgerFeed({
         heroLine2={politician.heroLine2}
         heroLine2Color={resolvedHeroLine2Color}
       />
-      <main className="max-w-2xl mx-auto p-6">
-        <Suspense>
-          <SuccessBanner />
-        </Suspense>
+      <main className="px-6 py-6">
+      <QuestionFeedFilter
+        questions={feedQuestions}
+        allTags={[...allTagsSet]}
+        politicianFirstName={politicianFirstName}
+        politicianName={politician.name}
+        basePath={basePath}
+        appUrl={appUrl!}
+        hasSession={!!citizen}
+        partySlug={partySlug}
+        politicianSlug={politicianSlug}
+        partyColor={party?.color ?? null}
+        partyColorDark={party?.colorDark ?? null}
+        partyColorLight={party?.colorLight ?? null}
+        citizenEmail={citizen?.email ?? null}
+      />
 
-      {allQuestions.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">
-          Der er endnu ingen spørgsmål fra denne politiker.
-        </p>
-      ) : (
-        <QuestionFeedFilter
-          questions={feedQuestions}
-          allTags={[...allTagsSet]}
-          politicianFirstName={politicianFirstName}
-          politicianName={politician.name}
-          basePath={basePath}
-          appUrl={appUrl!}
-          hasSession={!!citizen}
-          partySlug={partySlug}
-          politicianSlug={politicianSlug}
-          partyColor={party?.color ?? null}
-          partyColorDark={party?.colorDark ?? null}
-          partyColorLight={party?.colorLight ?? null}
-        />
-      )}
-
-      {citizen && (
-        <div className="text-center mt-8 space-y-2" style={{ fontFamily: "var(--font-dm-sans)", fontWeight: 500 }}>
-          <p className="text-sm" style={{ color: "#7E7D7A" }}>
-            Logget ind som {citizen.email}
-          </p>
-          <form
-            action={async () => {
-              "use server";
-              await citizenLogout(partySlug, politicianSlug);
-            }}
-          >
-            <button
-              type="submit"
-              className="text-sm transition cursor-pointer hover:opacity-50"
-              style={{ color: party?.color || "#3B82F6" }}
-            >
-              Log ud
-            </button>
-          </form>
-        </div>
-      )}
-      {politician.chatbaseId && (
-        <ChatbaseWidget chatbotId={politician.chatbaseId} />
-      )}
+      <div className="max-w-2xl mx-auto">
+        {politician.chatbaseId && (
+          <ChatbaseWidget chatbotId={politician.chatbaseId} />
+        )}
+      </div>
     </main>
     </>
   );

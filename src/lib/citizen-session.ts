@@ -63,3 +63,21 @@ export async function setCitizenSessionCookie(token: string) {
     path: "/",
   });
 }
+
+/**
+ * Set citizen session cookie directly on a NextResponse object.
+ * Use this in route handlers that return NextResponse.redirect(),
+ * because cookies().set() doesn't persist through redirect responses.
+ */
+export function setCitizenSessionCookieOnResponse(
+  response: { cookies: { set: (name: string, value: string, options: Record<string, unknown>) => void } },
+  token: string
+) {
+  response.cookies.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: SESSION_DURATION_DAYS * 24 * 60 * 60,
+    path: "/",
+  });
+}

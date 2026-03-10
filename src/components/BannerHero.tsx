@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
  * Full-width banner that extends edge-to-edge.
  * Auto-detects background color from image corners, with optional override.
  * Renders as a top-level full-width element (outside max-w container).
- * Optionally overlays two lines of welcome text (right-aligned, DM Sans 50px).
+ * Optionally overlays two lines of welcome text (right-aligned, Funnel Sans).
  */
 export function BannerHero({
   bannerUrl,
@@ -95,9 +95,9 @@ export function BannerHero({
             <div className="flex flex-col text-left">
               {heroLine1 && (
                 <span
-                  className="leading-tight text-[clamp(16px,4vw,25px)]"
+                  className="leading-tight text-[22px] sm:text-[30px]"
                   style={{
-                    fontFamily: "var(--font-dm-sans)",
+                    fontFamily: "var(--font-funnel-sans)",
                     fontWeight: 500,
                     color: heroLine1Color || "#ffffff",
                   }}
@@ -107,9 +107,9 @@ export function BannerHero({
               )}
               {heroLine2 && (
                 <span
-                  className="leading-tight text-[clamp(16px,4vw,25px)]"
+                  className="leading-tight text-[22px] sm:text-[30px]"
                   style={{
-                    fontFamily: "var(--font-dm-sans)",
+                    fontFamily: "var(--font-funnel-sans)",
                     fontWeight: 500,
                     color: heroLine2Color || "#ffffff",
                   }}

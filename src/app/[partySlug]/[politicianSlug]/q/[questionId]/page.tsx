@@ -82,6 +82,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: `${politician.name} fra ${politician.party} — ${question.upvoteCount} upvotes`,
       url,
       type: "website",
+      ...(politician.ogImageUrl ? { images: [{ url: politician.ogImageUrl, width: 1200, height: 630 }] } : {}),
     },
   };
 }

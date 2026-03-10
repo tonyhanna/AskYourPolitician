@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { directUpvote } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpToLine } from "@fortawesome/pro-duotone-svg-icons";
+import { faArrowUp } from "@fortawesome/free-solid-svg-icons";
 
 export function UpvoteButton({
   questionId,
@@ -36,7 +36,7 @@ export function UpvoteButton({
         className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full"
         style={pillStyle}
       >
-        <FontAwesomeIcon icon={faArrowUpToLine} className="text-xs" />
+        <FontAwesomeIcon icon={faArrowUp} className="text-xs" />
         Upvoted
       </span>
     );
@@ -59,7 +59,7 @@ export function UpvoteButton({
         className={`${pillClass} disabled:opacity-50`}
         style={pillStyle}
       >
-        <FontAwesomeIcon icon={faArrowUpToLine} className="text-xs" />
+        <FontAwesomeIcon icon={faArrowUp} className="text-xs" />
         {pending ? "Upvoter..." : "Upvote"}
       </button>
     );
@@ -71,7 +71,7 @@ export function UpvoteButton({
       className={pillClass}
       style={pillStyle}
     >
-      <FontAwesomeIcon icon={faArrowUpToLine} className="text-xs" />
+      <FontAwesomeIcon icon={faArrowUp} className="text-xs" />
       Upvote
     </Link>
   );

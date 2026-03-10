@@ -8,6 +8,7 @@ import {
   varchar,
   boolean,
   uniqueIndex,
+  real,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "@auth/core/adapters";
 
@@ -103,6 +104,7 @@ export const politicians = pgTable("politicians", {
   email: varchar("email", { length: 255 }).notNull(),
   profilePhotoUrl: varchar("profile_photo_url", { length: 2048 }),
   bannerUrl: varchar("banner_url", { length: 2048 }),
+  ogImageUrl: varchar("og_image_url", { length: 2048 }),
   bannerBgColor: varchar("banner_bg_color", { length: 7 }),
   heroLine1: varchar("hero_line_1", { length: 255 }),
   heroLine1Color: varchar("hero_line_1_color", { length: 7 }),
@@ -126,6 +128,9 @@ export const questions = pgTable("questions", {
   goalReachedEmailSent: boolean("goal_reached_email_sent").notNull().default(false),
   answerUrl: varchar("answer_url", { length: 2048 }),
   answerPhotoUrl: varchar("answer_photo_url", { length: 2048 }),
+  answerClipUrl: varchar("answer_clip_url", { length: 2048 }),
+  answerDuration: real("answer_duration"),
+  answerAspectRatio: real("answer_aspect_ratio"),
   pinned: boolean("pinned").notNull().default(false),
   suggestedByCitizenId: uuid("suggested_by_citizen_id").references(
     () => citizens.id
@@ -210,6 +215,9 @@ export const answerHistory = pgTable("answer_history", {
     .references(() => questions.id, { onDelete: "cascade" }),
   answerUrl: varchar("answer_url", { length: 2048 }).notNull(),
   answerPhotoUrl: varchar("answer_photo_url", { length: 2048 }),
+  answerClipUrl: varchar("answer_clip_url", { length: 2048 }),
+  answerDuration: real("answer_duration"),
+  answerAspectRatio: real("answer_aspect_ratio"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -270,6 +270,7 @@ export default async function Dashboard() {
                   constituency: politician.constituency,
                   profilePhotoUrl: politician.profilePhotoUrl,
                   bannerUrl: politician.bannerUrl,
+                  ogImageUrl: politician.ogImageUrl,
                   bannerBgColor: politician.bannerBgColor,
                   heroLine1: politician.heroLine1,
                   heroLine1Color: politician.heroLine1Color,

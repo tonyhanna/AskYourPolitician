@@ -23,21 +23,28 @@ export function SuccessBanner() {
       setIsError(true);
       setVisible(true);
     }
+  }, [searchParams]);
+
+  useEffect(() => {
     if (visible) {
       const timer = setTimeout(() => setVisible(false), 5000);
       return () => clearTimeout(timer);
     }
-  }, [searchParams]);
+  }, [visible]);
 
   if (!visible || !message) return null;
 
   return (
     <div
-      className={`px-4 py-3 rounded-lg mb-6 text-sm font-medium border ${
-        isError
-          ? "bg-red-100 border-red-300 text-red-800"
-          : "bg-green-100 border-green-300 text-green-800"
-      }`}
+      className="w-full py-3 text-center text-sm transition-opacity duration-300 sticky top-0"
+      style={{
+        fontFamily: "var(--font-funnel-sans)",
+        fontWeight: 500,
+        backgroundColor: isError ? "#FEE2E2" : "#ffffff",
+        color: isError ? "#991B1B" : "#2E2E2E",
+        borderBottom: isError ? "2px solid #F87171" : "none",
+        zIndex: 60,
+      }}
     >
       {message}
     </div>

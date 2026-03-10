@@ -2,10 +2,43 @@
 
 import { useState } from "react";
 import { upload } from "@vercel/blob/client";
-import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion } from "@/app/politiker/dashboard/actions";
+import { deleteQuestion, editQuestion, submitAnswerUrl, submitAnswerClipUrl, togglePinQuestion } from "@/app/politiker/dashboard/actions";
+import { generateVideoClip } from "@/lib/clip-generator";
+import { compressVideo } from "@/lib/video-compressor";
 import { CopyLinkButton } from "./CopyLinkButton";
-import { isBlobUrl, getBlobMediaType, getYouTubeVideoId, isFacebookUrl, isFacebookVideoUrl } from "@/lib/answer-utils";
-import { AnswerPlayer } from "./AnswerPlayer";
+import { isBlobUrl, getBlobMediaType } from "@/lib/answer-utils";
+
+/** Read duration + aspect ratio from a media file using a temporary element. */
+function getMediaInfo(file: File): Promise<{ duration?: number; aspectRatio?: number }> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const isVideo = file.type.startsWith("video/");
+    const el = isVideo
+      ? document.createElement("video")
+      : document.createElement("audio");
+    el.preload = "metadata";
+    el.src = url;
+    el.onloadedmetadata = () => {
+      const d = el.duration;
+      let ar: number | undefined;
+      if (isVideo) {
+        const v = el as HTMLVideoElement;
+        if (v.videoWidth && v.videoHeight) {
+          ar = v.videoWidth / v.videoHeight;
+        }
+      }
+      URL.revokeObjectURL(url);
+      resolve({
+        duration: isFinite(d) && d > 0 ? d : undefined,
+        aspectRatio: ar,
+      });
+    };
+    el.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve({});
+    };
+  });
+}
 
 type Question = {
   id: string;
@@ -50,7 +83,6 @@ function QuestionItem({
   const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [answerUrlInput, setAnswerUrlInput] = useState("");
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
   const [editingAnswer, setEditingAnswer] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set(question.tags));
@@ -58,36 +90,75 @@ function QuestionItem({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [pendingAudioUrl, setPendingAudioUrl] = useState<string | null>(null);
+  const [pendingDuration, setPendingDuration] = useState<number | undefined>(undefined);
+  const [pendingAspectRatio, setPendingAspectRatio] = useState<number | undefined>(undefined);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoProgress, setPhotoProgress] = useState(0);
   const [pinning, setPinning] = useState(false);
-  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [compressing, setCompressing] = useState(false);
+  const [compressProgress, setCompressProgress] = useState(0);
+  const [clipGenerating, setClipGenerating] = useState(false);
+  const [clipError, setClipError] = useState<string | null>(null);
   const hasUpvotes = question.upvoteCount > 0;
 
   async function handleFileUpload(file: File) {
-    if (file.size > 250 * 1024 * 1024) {
-      setUploadError("Filen er for stor (maks 250 MB)");
+    if (file.size > 500 * 1024 * 1024) {
+      setUploadError("Filen er for stor (maks 500 MB)");
       return;
     }
     if (!file.type.startsWith("video/") && !file.type.startsWith("audio/")) {
       setUploadError("Kun video- og lydfiler er tilladt");
       return;
     }
-    setUploading(true);
+
     setUploadError(null);
+
+    // Read duration + aspect ratio from the original file before compression
+    let duration: number | undefined;
+    let aspectRatio: number | undefined;
+    try {
+      const info = await getMediaInfo(file);
+      duration = info.duration;
+      aspectRatio = info.aspectRatio;
+    } catch {
+      // Non-fatal — proceed without metadata
+    }
+
+    // Compress video files before uploading (skip for audio)
+    let fileToUpload = file;
+    if (file.type.startsWith("video/")) {
+      setCompressing(true);
+      setCompressProgress(0);
+      try {
+        fileToUpload = await compressVideo(file, undefined, (p) => setCompressProgress(p));
+      } catch (e) {
+        console.error("Video compression failed, uploading original:", e);
+        // Fall back to original file if compression fails
+      } finally {
+        setCompressing(false);
+        setCompressProgress(0);
+      }
+    }
+
+    setUploading(true);
     setUploadProgress(0);
     try {
-      const blob = await upload(file.name, file, {
+      const folder = file.type.startsWith("audio/") ? "answers/sound" : "answers/video";
+      const blob = await upload(`${folder}/${fileToUpload.name}`, fileToUpload, {
         access: "public",
         handleUploadUrl: "/api/upload",
         onUploadProgress: ({ percentage }) => setUploadProgress(percentage),
       });
       if (file.type.startsWith("audio/")) {
         setPendingAudioUrl(blob.url);
+        setPendingDuration(duration);
+        setPendingAspectRatio(aspectRatio);
       } else {
-        await submitAnswerUrl(question.id, blob.url);
+        await submitAnswerUrl(question.id, blob.url, undefined, duration, aspectRatio);
         setEditingAnswer(false);
+        // Generate clip in background (non-blocking)
+        generateClipInBackground(question.id, blob.url);
       }
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "Upload fejlede");
@@ -110,7 +181,16 @@ function QuestionItem({
     setUploadError(null);
     setPhotoProgress(0);
     try {
-      const blob = await upload(file.name, file, {
+      // Read photo aspect ratio
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      await new Promise<void>((resolve) => { img.onload = () => resolve(); img.onerror = () => resolve(); });
+      if (img.naturalWidth && img.naturalHeight) {
+        setPendingAspectRatio(img.naturalWidth / img.naturalHeight);
+      }
+      URL.revokeObjectURL(img.src);
+
+      const blob = await upload(`answers/photo/${file.name}`, file, {
         access: "public",
         handleUploadUrl: "/api/upload",
         onUploadProgress: ({ percentage }) => setPhotoProgress(percentage),
@@ -124,6 +204,28 @@ function QuestionItem({
     }
   }
 
+  async function generateClipInBackground(questionId: string, videoUrl: string) {
+    setClipGenerating(true);
+    setClipError(null);
+    try {
+      const clipFile = await generateVideoClip(videoUrl);
+      if (!clipFile) {
+        setClipGenerating(false);
+        return; // Browser doesn't support MediaRecorder — skip silently
+      }
+      const clipBlob = await upload(`answers/clips/${clipFile.name}`, clipFile, {
+        access: "public",
+        handleUploadUrl: "/api/upload",
+      });
+      await submitAnswerClipUrl(questionId, clipBlob.url);
+    } catch (e) {
+      console.error("Clip generation failed:", e);
+      setClipError(e instanceof Error ? e.message : "Klip-generering fejlede");
+    } finally {
+      setClipGenerating(false);
+    }
+  }
+
   async function handleSubmitAudioAnswer() {
     if (!pendingAudioUrl) return;
     if (editingAnswer) {
@@ -134,8 +236,10 @@ function QuestionItem({
     }
     setSubmittingAnswer(true);
     try {
-      await submitAnswerUrl(question.id, pendingAudioUrl, photoUrl ?? undefined);
+      await submitAnswerUrl(question.id, pendingAudioUrl, photoUrl ?? undefined, pendingDuration, pendingAspectRatio);
       setPendingAudioUrl(null);
+      setPendingDuration(undefined);
+      setPendingAspectRatio(undefined);
       setPhotoUrl(null);
       setEditingAnswer(false);
     } catch (e) {
@@ -333,14 +437,15 @@ function QuestionItem({
                       {question.answerUrl}
                     </a>
                   )}
+                  {clipGenerating && (
+                    <p className="text-xs text-amber-600 mt-1">Genererer forhåndsvisning...</p>
+                  )}
+                  {clipError && (
+                    <p className="text-xs text-red-500 mt-1">Forhåndsvisning fejlede: {clipError}</p>
+                  )}
                 </div>
                 <button
-                  onClick={() => {
-                    const isLink = !isBlobUrl(question.answerUrl!);
-                    setAnswerUrlInput(isLink ? question.answerUrl! : "");
-                    setShowLinkInput(isLink);
-                    setEditingAnswer(true);
-                  }}
+                  onClick={() => setEditingAnswer(true)}
                   className="text-sm text-blue-600 hover:text-blue-800 whitespace-nowrap cursor-pointer"
                 >
                   Redigér svar
@@ -355,206 +460,116 @@ function QuestionItem({
                 </p>
                 {editingAnswer && (
                   <button
-                    onClick={() => {
-                      setEditingAnswer(false);
-                      setAnswerUrlInput("");
-                      setShowLinkInput(false);
-                    }}
+                    onClick={() => setEditingAnswer(false)}
                     className="text-sm text-gray-600 hover:text-gray-800 cursor-pointer"
                   >
                     Annullér
                   </button>
                 )}
               </div>
-              {/* Render upload and link sections — order depends on whether editing a link answer */}
-              {(() => {
-                const linkFirst = editingAnswer && showLinkInput;
-
-                const uploadSection = (
-                  <div className={linkFirst ? "" : "mb-3"}>
-                    {pendingAudioUrl ? (
-                      <div className="space-y-3">
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                          <p className="text-sm text-green-800 font-medium">Lydfil klar til indsendelse</p>
-                        </div>
-                        <div>
-                          <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handlePhotoUpload(file);
-                              }}
-                              disabled={uploadingPhoto || submittingAnswer}
-                            />
-                            <span className="text-sm text-amber-700">
-                              Tilføj et billede af dig selv (valgfrit)
-                            </span>
-                          </label>
-                          {uploadingPhoto && (
-                            <div className="mt-2">
-                              <div className="w-full bg-amber-200 rounded-full h-2">
-                                <div
-                                  className="bg-blue-600 h-2 rounded-full transition-all"
-                                  style={{ width: `${photoProgress}%` }}
-                                />
-                              </div>
-                              <p className="text-xs text-amber-600 mt-1">
-                                Uploader billede... {Math.round(photoProgress)}%
-                              </p>
-                            </div>
-                          )}
-                          {photoUrl && (
-                            <div className="mt-2 flex items-center gap-2">
-                              <img src={photoUrl} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
-                              <button
-                                type="button"
-                                onClick={() => setPhotoUrl(null)}
-                                className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
-                              >
-                                Fjern billede
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          onClick={handleSubmitAudioAnswer}
-                          disabled={submittingAnswer || uploadingPhoto}
-                          className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer"
-                        >
-                          {submittingAnswer ? "Sender..." : `Indsend svar${photoUrl ? " med billede" : ""}`}
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
-                          <input
-                            type="file"
-                            accept="video/*,audio/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleFileUpload(file);
-                            }}
-                            disabled={uploading || submittingAnswer}
-                          />
-                          <span className="text-sm text-amber-700">
-                            Upload video eller lydfil (maks 250 MB)
-                          </span>
-                        </label>
-                        {uploading && (
-                          <div className="mt-2">
-                            <div className="w-full bg-amber-200 rounded-full h-2">
-                              <div
-                                className="bg-blue-600 h-2 rounded-full transition-all"
-                                style={{ width: `${uploadProgress}%` }}
-                              />
-                            </div>
-                            <p className="text-xs text-amber-600 mt-1">
-                              Uploader... {Math.round(uploadProgress)}%
-                            </p>
-                          </div>
-                        )}
-                      </>
-                    )}
-                    {uploadError && (
-                      <p className="text-sm text-red-600 mt-2">{uploadError}</p>
-                    )}
+              {pendingAudioUrl ? (
+                <div className="space-y-3">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-sm text-green-800 font-medium">Lydfil klar til indsendelse</p>
                   </div>
-                );
-
-                const linkSection = !showLinkInput ? (
-                  <button
-                    onClick={() => setShowLinkInput(true)}
-                    className="text-sm text-amber-700 hover:text-amber-900 cursor-pointer underline"
-                  >
-                    Send svar fra YouTube eller Facebook
-                  </button>
-                ) : (
-                  <div className={linkFirst ? "mb-3" : ""}>
-                    <div className="flex flex-col sm:flex-row gap-2 mb-3">
+                  <div>
+                    <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
                       <input
-                        type="url"
-                        placeholder="Link til video på YouTube eller Facebook..."
-                        value={answerUrlInput}
-                        onChange={(e) => setAnswerUrlInput(e.target.value)}
-                        disabled={uploading}
-                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handlePhotoUpload(file);
+                        }}
+                        disabled={uploadingPhoto || submittingAnswer}
                       />
-                      <div className="flex gap-2">
+                      <span className="text-sm text-amber-700">
+                        Tilføj et billede af dig selv
+                      </span>
+                    </label>
+                    {uploadingPhoto && (
+                      <div className="mt-2">
+                        <div className="w-full bg-amber-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all"
+                            style={{ width: `${photoProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-amber-600 mt-1">
+                          Uploader billede... {Math.round(photoProgress)}%
+                        </p>
+                      </div>
+                    )}
+                    {photoUrl && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <img src={photoUrl} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
                         <button
-                          onClick={async () => {
-                            if (!answerUrlInput) return;
-                            if (editingAnswer) {
-                              const confirmed = confirm(
-                                `Er du sikker på at du vil sende dette opdateret svar ud til ${question.upvoteCount} ${question.upvoteCount === 1 ? "borger" : "borgere"}?`
-                              );
-                              if (!confirmed) return;
-                            }
-                            setSubmittingAnswer(true);
-                            try {
-                              await submitAnswerUrl(question.id, answerUrlInput);
-                              setEditingAnswer(false);
-                            } catch (e) {
-                              alert(e instanceof Error ? e.message : "Der opstod en fejl");
-                            } finally {
-                              setSubmittingAnswer(false);
-                            }
-                          }}
-                          disabled={submittingAnswer || uploading || !answerUrlInput || (isFacebookUrl(answerUrlInput) && !isFacebookVideoUrl(answerUrlInput)) || /linkedin\.com/i.test(answerUrlInput) || /\b(x\.com|twitter\.com)\b/i.test(answerUrlInput) || /instagram\.com/i.test(answerUrlInput)}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                          type="button"
+                          onClick={() => setPhotoUrl(null)}
+                          className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
                         >
-                          {submittingAnswer ? "Sender..." : editingAnswer ? "Opdatér svar" : "Indsend svar"}
+                          Fjern billede
                         </button>
                       </div>
-                    </div>
-                    {answerUrlInput && isFacebookUrl(answerUrlInput) && !isFacebookVideoUrl(answerUrlInput) && (
-                      <p className="text-sm text-red-600 -mt-1 mb-2">
-                        Kun Facebook video-links understøttes (f.eks. /watch, /videos/, /reel/ eller fb.watch)
-                      </p>
                     )}
-                    {answerUrlInput && /instagram\.com/i.test(answerUrlInput) && (
-                      <p className="text-sm text-red-600 -mt-1 mb-2">
-                        Instagram-links kan desværre ikke indlejres. Brug YouTube eller Facebook i stedet.
-                      </p>
-                    )}
-                    {answerUrlInput && /\b(x\.com|twitter\.com)\b/i.test(answerUrlInput) && (
-                      <p className="text-sm text-red-600 -mt-1 mb-2">
-                        X/Twitter-links kan desværre ikke indlejres. Brug YouTube eller Facebook i stedet.
-                      </p>
-                    )}
-                    {answerUrlInput && /linkedin\.com/i.test(answerUrlInput) && (
-                      <p className="text-sm text-red-600 -mt-1 mb-2">
-                        LinkedIn-links kan desværre ikke indlejres. Brug YouTube eller Facebook i stedet.
-                      </p>
-                    )}
-                    {answerUrlInput && (getYouTubeVideoId(answerUrlInput) || isFacebookVideoUrl(answerUrlInput)) && (
-                      <div className="mb-3 rounded-lg overflow-hidden border border-amber-200">
-                        <p className="text-xs text-amber-700 font-medium px-3 py-1.5 bg-amber-100">
-                          Preview
-                        </p>
-                        <AnswerPlayer answerUrl={answerUrlInput} />
+                  </div>
+                  <button
+                    onClick={handleSubmitAudioAnswer}
+                    disabled={submittingAnswer || uploadingPhoto || !photoUrl}
+                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer"
+                  >
+                    {submittingAnswer ? "Sender..." : photoUrl ? "Indsend svar med billede" : "Upload et billede for at indsende"}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
+                    <input
+                      type="file"
+                      accept="video/*,audio/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(file);
+                      }}
+                      disabled={uploading || submittingAnswer}
+                    />
+                    <span className="text-sm text-amber-700">
+                      Upload video eller lydfil (maks 500 MB)
+                    </span>
+                  </label>
+                  {compressing && (
+                    <div className="mt-2">
+                      <div className="w-full bg-amber-200 rounded-full h-2">
+                        <div
+                          className="bg-purple-600 h-2 rounded-full transition-all"
+                          style={{ width: `${compressProgress * 100}%` }}
+                        />
                       </div>
-                    )}
-                  </div>
-                );
-
-                const separator = showLinkInput && (
-                  <div className="flex items-center gap-2 my-3">
-                    <div className="flex-1 border-t border-amber-300" />
-                    <span className="text-xs text-amber-600">eller</span>
-                    <div className="flex-1 border-t border-amber-300" />
-                  </div>
-                );
-
-                return linkFirst ? (
-                  <>{linkSection}{separator}{uploadSection}</>
-                ) : (
-                  <>{uploadSection}{separator}{linkSection}</>
-                );
-              })()}
+                      <p className="text-xs text-amber-600 mt-1">
+                        Komprimerer video... {Math.round(compressProgress * 100)}%
+                      </p>
+                    </div>
+                  )}
+                  {uploading && (
+                    <div className="mt-2">
+                      <div className="w-full bg-amber-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-amber-600 mt-1">
+                        Uploader... {Math.round(uploadProgress)}%
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+              {uploadError && (
+                <p className="text-sm text-red-600 mt-2">{uploadError}</p>
+              )}
             </div>
           )}
         </div>
