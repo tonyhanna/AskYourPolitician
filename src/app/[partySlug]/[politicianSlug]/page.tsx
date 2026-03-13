@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { db } from "@/db";
 import { politicians, parties, questions, questionTags, upvotes, citizens } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getCitizenFromSession } from "@/lib/citizen-session";
-import { SuccessBanner } from "@/components/SuccessBanner";
 import { QuestionFeedFilter } from "@/components/QuestionFeedFilter";
 import { ChatbaseWidget } from "@/components/ChatbaseWidget";
 import { IntroSection } from "@/components/IntroSection";
@@ -121,25 +119,29 @@ export default async function BorgerFeed({
   const allTagsSet = new Set<string>();
   tagsByQuestion.forEach((tags) => tags.forEach((t) => allTagsSet.add(t)));
 
-  const feedQuestions = allQuestions.map((q) => ({
-    id: q.id,
-    text: q.text,
-    upvoteCount: q.upvoteCount,
-    upvoteGoal: q.upvoteGoal,
-    answerUrl: q.answerUrl,
-    answerPhotoUrl: q.answerPhotoUrl,
-    answerClipUrl: q.answerClipUrl,
-    answerDuration: q.answerDuration ?? null,
-    answerAspectRatio: q.answerAspectRatio ?? null,
-    goalReachedEmailSent: q.goalReachedEmailSent,
-    suggestedBy: q.suggestedByCitizenId
-      ? suggestedByNames.get(q.suggestedByCitizenId) ?? null
-      : null,
-    tags: tagsByQuestion.get(q.id) ?? [],
-    isUpvoted: citizenUpvotedIds.has(q.id),
-    createdAt: q.createdAt.toISOString(),
-    pinned: q.pinned,
-  }));
+  const feedQuestions = allQuestions
+    .filter((q) => !(q.deadlineMissed && !q.answerUrl)) // Hide missed unanswered questions from citizens
+    .map((q) => ({
+      id: q.id,
+      text: q.text,
+      upvoteCount: q.upvoteCount,
+      upvoteGoal: q.upvoteGoal,
+      answerUrl: q.answerUrl,
+      answerPhotoUrl: q.answerPhotoUrl,
+      answerClipUrl: q.answerClipUrl,
+      answerDuration: q.answerDuration ?? null,
+      answerAspectRatio: q.answerAspectRatio ?? null,
+      goalReachedEmailSent: q.goalReachedEmailSent,
+      goalReachedAt: q.goalReachedAt ? q.goalReachedAt.toISOString() : null,
+      deadlineMissed: q.deadlineMissed,
+      suggestedBy: q.suggestedByCitizenId
+        ? suggestedByNames.get(q.suggestedByCitizenId) ?? null
+        : null,
+      tags: tagsByQuestion.get(q.id) ?? [],
+      isUpvoted: citizenUpvotedIds.has(q.id),
+      createdAt: q.createdAt.toISOString(),
+      pinned: q.pinned,
+    }));
 
   // Fetch party data (needed for top bar colors + hero color resolution)
   const [party] = politician.partyId
@@ -161,9 +163,6 @@ export default async function BorgerFeed({
 
   return (
     <>
-      <Suspense>
-        <SuccessBanner />
-      </Suspense>
       <PoliticianTopBar
         politicianName={politician.name}
         partyName={politician.party}
@@ -179,15 +178,15 @@ export default async function BorgerFeed({
         hasSession={!!citizen}
       />
       <IntroSection
-        politicianFirstName={politicianFirstName}
         bannerUrl={politician.bannerUrl}
         bannerBgColor={politician.bannerBgColor}
         heroLine1={politician.heroLine1}
         heroLine1Color={resolvedHeroLine1Color}
         heroLine2={politician.heroLine2}
         heroLine2Color={resolvedHeroLine2Color}
+        dismissButtonColor={party?.colorDark ?? null}
       />
-      <main className="px-6 py-6 pb-[100px]">
+      <main className="px-[15px] py-6 pb-0">
       <QuestionFeedFilter
         questions={feedQuestions}
         allTags={[...allTagsSet]}

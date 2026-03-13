@@ -1,10 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
+import { faInfo } from "@fortawesome/pro-duotone-svg-icons";
 import { submitSuggestion, directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
+import { SuccessBanner } from "./SuccessBanner";
 
 type PoliticianTopBarProps = {
   politicianName: string;
@@ -186,9 +188,17 @@ export function PoliticianTopBar({
   return (
     <div
       ref={containerRef}
-      className="sticky top-0 z-50 backdrop-blur-lg transition-colors duration-200"
-      style={{ backgroundColor: `${bgColor}${bgOpacitySuffix}`, fontFamily: "var(--font-funnel-sans)", fontWeight: 500 }}
+      className="sticky top-0 z-50 backdrop-blur-lg transition-colors duration-200 cursor-pointer"
+      style={{ backgroundColor: `${bgColor}${bgOpacitySuffix}`, fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest("button, a, input, textarea")) return;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }}
     >
+      <Suspense>
+        <SuccessBanner />
+      </Suspense>
       <style>{`
         .topbar-suggest-input::placeholder { color: var(--placeholder-color); opacity: 0.5; }
         .topbar-field::placeholder { color: var(--field-placeholder-color, #9ca3af); }
@@ -242,13 +252,13 @@ export function PoliticianTopBar({
                 setIntroDismissed(false);
                 window.dispatchEvent(new Event("show-intro"));
               }}
-              className="sm:hidden ml-auto cursor-pointer hover:opacity-50 transition-opacity"
+              className="sm:hidden ml-auto cursor-pointer hover:opacity-50 transition-opacity rounded-full flex items-center justify-center"
+              style={{ width: 24, height: 24, backgroundColor: "rgba(255,255,255,0.5)" }}
               aria-label="Vis information"
             >
               <FontAwesomeIcon
-                icon={faCircleInfo}
-                className="text-lg"
-                style={{ color: "#FFFFFF" }}
+                icon={faInfo}
+                style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }}
               />
             </button>
           )}
@@ -318,13 +328,13 @@ export function PoliticianTopBar({
                     setIntroDismissed(false);
                     window.dispatchEvent(new Event("show-intro"));
                   }}
-                  className="cursor-pointer hover:opacity-50 transition-opacity"
+                  className="cursor-pointer hover:opacity-50 transition-opacity rounded-full flex items-center justify-center"
+                  style={{ width: 24, height: 24, backgroundColor: "rgba(255,255,255,0.5)" }}
                   aria-label="Vis information"
                 >
                   <FontAwesomeIcon
-                    icon={faCircleInfo}
-                    className="text-lg"
-                    style={{ color: "#FFFFFF" }}
+                    icon={faInfo}
+                    style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }}
                   />
                 </button>
               )}

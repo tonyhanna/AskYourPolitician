@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Funnel_Sans } from "next/font/google";
+import { Inter, Figtree } from "next/font/google";
 import "./globals.css";
 
 // FontAwesome: prevent large icon flash on page load
@@ -11,10 +11,10 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-export const funnelSans = Funnel_Sans({
+export const figtree = Figtree({
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  variable: "--font-funnel-sans",
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-figtree",
 });
 
 export const metadata: Metadata = {
@@ -29,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="da">
-      <body className={`${inter.className} ${funnelSans.variable} antialiased`}>
+      <body className={`${inter.className} ${figtree.variable} antialiased`}>
         {children}
       </body>
     </html>

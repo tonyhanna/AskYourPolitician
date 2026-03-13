@@ -97,7 +97,7 @@ export function BannerHero({
                 <span
                   className="leading-tight text-[22px] sm:text-[30px]"
                   style={{
-                    fontFamily: "var(--font-funnel-sans)",
+                    fontFamily: "var(--font-figtree)",
                     fontWeight: 500,
                     color: heroLine1Color || "#ffffff",
                   }}
@@ -109,7 +109,7 @@ export function BannerHero({
                 <span
                   className="leading-tight text-[22px] sm:text-[30px]"
                   style={{
-                    fontFamily: "var(--font-funnel-sans)",
+                    fontFamily: "var(--font-figtree)",
                     fontWeight: 500,
                     color: heroLine2Color || "#ffffff",
                   }}

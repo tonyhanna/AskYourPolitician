@@ -294,7 +294,7 @@ export async function submitAnswerUrl(questionId: string, answerUrl: string, pho
 
   await db
     .update(questions)
-    .set({ answerUrl, answerPhotoUrl: photoUrl ?? null, answerDuration: duration ?? null, answerAspectRatio: aspectRatio ?? null })
+    .set({ answerUrl, answerPhotoUrl: photoUrl ?? null, answerDuration: duration ?? null, answerAspectRatio: aspectRatio ?? null, deadlineMissed: false })
     .where(eq(questions.id, questionId));
 
   const upvoters = await db

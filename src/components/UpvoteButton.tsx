@@ -15,6 +15,7 @@ export function UpvoteButton({
   politicianSlug,
   partyColor,
   partyColorDark,
+  onLoginUpvote,
 }: {
   questionId: string;
   basePath: string;
@@ -24,6 +25,7 @@ export function UpvoteButton({
   politicianSlug: string;
   partyColor?: string | null;
   partyColorDark?: string | null;
+  onLoginUpvote?: () => void;
 }) {
   const [pending, setPending] = useState(false);
 
@@ -49,6 +51,7 @@ export function UpvoteButton({
           setPending(true);
           try {
             await directUpvote(questionId, partySlug, politicianSlug);
+            window.dispatchEvent(new CustomEvent("upvote-banner", { detail: { message: "Din upvote er registreret" } }));
           } catch (e) {
             alert(e instanceof Error ? e.message : "Der opstod en fejl");
           } finally {
@@ -61,6 +64,19 @@ export function UpvoteButton({
       >
         <FontAwesomeIcon icon={faArrowUp} className="text-xs" />
         {pending ? "Upvoter..." : "Upvote"}
+      </button>
+    );
+  }
+
+  if (onLoginUpvote) {
+    return (
+      <button
+        onClick={onLoginUpvote}
+        className={`${pillClass} hover:opacity-70`}
+        style={pillStyle}
+      >
+        <FontAwesomeIcon icon={faArrowUp} className="text-xs" />
+        Upvote
       </button>
     );
   }

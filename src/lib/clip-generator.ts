@@ -1,8 +1,8 @@
 /**
  * Client-side video clip generator.
  *
- * Takes a video URL and generates a 10-second webm clip starting at ~50% of
- * the video duration.  Uses Canvas + MediaRecorder.
+ * Takes a video URL and generates a 10-second webm clip from the first 10
+ * seconds of the video.  Uses Canvas + MediaRecorder.
  */
 
 import fixWebmDuration from "fix-webm-duration";
@@ -73,11 +73,9 @@ export async function generateVideoClip(
     if (videoDuration <= 0) return null;
   }
 
-  // Calculate start time — centred around 50% of the video
-  const halfClip = duration / 2;
-  const midpoint = videoDuration * 0.5;
-  const startTime = Math.max(0, midpoint - halfClip);
-  const actualDuration = Math.min(duration, videoDuration - startTime);
+  // Take the first N seconds of the video
+  const startTime = 0;
+  const actualDuration = Math.min(duration, videoDuration);
 
   if (actualDuration <= 0) return null;
 

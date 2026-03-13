@@ -21,6 +21,7 @@ export function AwaitingAnswerButton({
     setCancelling(true);
     try {
       await cancelUpvote(questionId, partySlug, politicianSlug);
+      window.dispatchEvent(new CustomEvent("upvote-banner", { detail: { message: "Din upvote er fjernet" } }));
     } catch (e) {
       alert(e instanceof Error ? e.message : "Der opstod en fejl");
       setCancelling(false);

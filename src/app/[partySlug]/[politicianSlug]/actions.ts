@@ -158,7 +158,12 @@ export async function cancelUpvote(
   // Reset goalReachedEmailSent if count dropped below goal (only if unanswered)
   await db
     .update(questions)
-    .set({ goalReachedEmailSent: false })
+    .set({
+      goalReachedEmailSent: false,
+      goalReachedAt: null,
+      reminderEmailSent: false,
+      deadlineMissed: false,
+    })
     .where(
       and(
         eq(questions.id, questionId),

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { upload } from "@vercel/blob/client";
 import { deleteQuestion, editQuestion, submitAnswerUrl, submitAnswerClipUrl, togglePinQuestion } from "@/app/politiker/dashboard/actions";
 import { generateVideoClip } from "@/lib/clip-generator";
 import { compressVideo } from "@/lib/video-compressor";
 import { CopyLinkButton } from "./CopyLinkButton";
+import { SuggestionList } from "./SuggestionList";
 import { isBlobUrl, getBlobMediaType } from "@/lib/answer-utils";
 
 /** Read duration + aspect ratio from a media file using a temporary element. */
@@ -47,26 +48,82 @@ type Question = {
   upvoteCount: number;
   tags: string[];
   goalReached: boolean;
+  goalReachedAt: string | null;
+  deadlineMissed: boolean;
   answerUrl: string | null;
   answerPhotoUrl: string | null;
   suggestedBy: string | null;
   pinned: boolean;
 };
 
+type PendingSuggestion = {
+  id: string;
+  citizenFirstName: string;
+  text: string;
+  createdAt: string;
+};
+
 export function QuestionList({
   questions,
   availableTags,
   basePath,
+  pendingSuggestions = [],
 }: {
   questions: Question[];
   availableTags: { tagId: string; title: string }[];
   basePath: string;
+  pendingSuggestions?: PendingSuggestion[];
 }) {
+  const missed = questions.filter((q) => q.goalReached && !q.answerUrl && q.deadlineMissed);
+  const forUpvoting = questions.filter((q) => !q.goalReached && !q.answerUrl);
+  const unanswered = questions.filter((q) => q.goalReached && !q.answerUrl && !q.deadlineMissed);
+  const answered = questions.filter((q) => !!q.answerUrl);
+
   return (
-    <div className="space-y-4">
-      {questions.map((q) => (
-        <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
-      ))}
+    <div className="space-y-6">
+      {pendingSuggestions.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-700">
+            Spørgsmål til godkendelse
+            <span className="ml-2 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-full font-medium align-middle">
+              {pendingSuggestions.length}
+            </span>
+          </h3>
+          <SuggestionList suggestions={pendingSuggestions} availableTags={availableTags} />
+        </div>
+      )}
+      {missed.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-red-700">Missede spørgsmål</h3>
+          {missed.map((q) => (
+            <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+          ))}
+        </div>
+      )}
+      {unanswered.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-amber-800">Ubesvarede spørgsmål</h3>
+          {unanswered.map((q) => (
+            <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+          ))}
+        </div>
+      )}
+      {forUpvoting.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-700">Spørgsmål til upvoting</h3>
+          {forUpvoting.map((q) => (
+            <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+          ))}
+        </div>
+      )}
+      {answered.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-green-800">Besvarede spørgsmål</h3>
+          {answered.map((q) => (
+            <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -102,6 +159,22 @@ function QuestionItem({
   const [clipError, setClipError] = useState<string | null>(null);
   const hasUpvotes = question.upvoteCount > 0;
 
+  // Countdown timer for unanswered goal-reached questions
+  const [hoursLeft, setHoursLeft] = useState<number | null>(() => {
+    if (!question.goalReachedAt || question.answerUrl || question.deadlineMissed) return null;
+    const deadline = new Date(question.goalReachedAt).getTime() + 24 * 60 * 60 * 1000;
+    return Math.max(0, Math.ceil((deadline - Date.now()) / (1000 * 60 * 60)));
+  });
+
+  useEffect(() => {
+    if (!question.goalReachedAt || question.answerUrl || question.deadlineMissed) return;
+    const interval = setInterval(() => {
+      const deadline = new Date(question.goalReachedAt!).getTime() + 24 * 60 * 60 * 1000;
+      setHoursLeft(Math.max(0, Math.ceil((deadline - Date.now()) / (1000 * 60 * 60))));
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, [question.goalReachedAt, question.answerUrl, question.deadlineMissed]);
+
   async function handleFileUpload(file: File) {
     if (file.size > 500 * 1024 * 1024) {
       setUploadError("Filen er for stor (maks 500 MB)");
@@ -123,6 +196,12 @@ function QuestionItem({
       aspectRatio = info.aspectRatio;
     } catch {
       // Non-fatal — proceed without metadata
+    }
+
+    // Enforce portrait video — reject landscape and square
+    if (file.type.startsWith("video/") && aspectRatio && aspectRatio >= 1) {
+      setUploadError("Videoen skal være i portrait-format (9:16). Landscape- og kvadratiske videoer er ikke tilladt.");
+      return;
     }
 
     // Compress video files before uploading (skip for audio)
@@ -186,7 +265,14 @@ function QuestionItem({
       img.src = URL.createObjectURL(file);
       await new Promise<void>((resolve) => { img.onload = () => resolve(); img.onerror = () => resolve(); });
       if (img.naturalWidth && img.naturalHeight) {
-        setPendingAspectRatio(img.naturalWidth / img.naturalHeight);
+        const ar = img.naturalWidth / img.naturalHeight;
+        if (ar >= 1) {
+          URL.revokeObjectURL(img.src);
+          setUploadError("Billedet skal være i portrait-format (3:4). Landscape- og kvadratiske billeder er ikke tilladt.");
+          setUploadingPhoto(false);
+          return;
+        }
+        setPendingAspectRatio(ar);
       }
       URL.revokeObjectURL(img.src);
 
@@ -370,7 +456,7 @@ function QuestionItem({
   }
 
   return (
-    <div className={`border rounded-lg p-4 ${question.pinned ? "border-amber-300 bg-amber-50" : "border-gray-200"}`}>
+    <div className={`border rounded-lg p-4 ${question.deadlineMissed ? "border-red-300 bg-red-50" : question.pinned ? "border-amber-300 bg-amber-50" : "border-gray-200"}`}>
       <div className="flex items-start justify-between gap-2">
         <a
           href={`${basePath}/q/${question.id}`}
@@ -402,7 +488,11 @@ function QuestionItem({
         </button>
       </div>
       {question.suggestedBy && (
-        <p className="text-sm text-gray-500 mb-1">{question.suggestedBy}</p>
+        <p className="text-xs mb-1">
+          <span className="px-2 py-0.5 rounded-full" style={{ color: "#000000", backgroundColor: "#FFFFFF" }}>
+            {question.suggestedBy}
+          </span>
+        </p>
       )}
       <div className="flex flex-wrap items-center gap-2 mb-2">
         {question.tags.map((tag) => (
@@ -453,10 +543,18 @@ function QuestionItem({
               </div>
             </div>
           ) : (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <div className={`${question.deadlineMissed ? "bg-red-50 border border-red-200" : "bg-amber-50 border border-amber-200"} rounded-lg p-3`}>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-amber-800 font-medium">
-                  {editingAnswer ? "Opdatér dit svar" : "Målet er nået! Indsend dit svar (helst inden 24 timer)"}
+                <p className={`text-sm font-medium ${question.deadlineMissed ? "text-red-800" : "text-amber-800"}`}>
+                  {editingAnswer
+                    ? "Opdatér dit svar"
+                    : question.deadlineMissed
+                    ? "Fristen er udløbet! Indsend dit svar hurtigst muligt"
+                    : hoursLeft !== null && hoursLeft > 0
+                    ? `Målet er nået! Indsend dit svar (${hoursLeft}t tilbage)`
+                    : hoursLeft === 0
+                    ? "Fristen er udløbet! Indsend dit svar hurtigst muligt"
+                    : "Målet er nået! Indsend dit svar (helst inden 24 timer)"}
                 </p>
                 {editingAnswer && (
                   <button

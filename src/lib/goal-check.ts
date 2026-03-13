@@ -8,7 +8,7 @@ export async function checkAndNotifyGoalReached(questionId: string) {
   // Only one concurrent caller can succeed in flipping the flag.
   const [updated] = await db
     .update(questions)
-    .set({ goalReachedEmailSent: true })
+    .set({ goalReachedEmailSent: true, goalReachedAt: new Date() })
     .where(
       and(
         eq(questions.id, questionId),

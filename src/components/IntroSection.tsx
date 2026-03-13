@@ -1,29 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { BannerHero } from "./BannerHero";
 
 export function IntroSection({
-  politicianFirstName,
   bannerUrl,
   bannerBgColor,
   heroLine1,
   heroLine1Color,
   heroLine2,
   heroLine2Color,
+  dismissButtonColor,
 }: {
-  politicianFirstName: string;
   bannerUrl?: string | null;
   bannerBgColor?: string | null;
   heroLine1?: string | null;
   heroLine1Color?: string | null;
   heroLine2?: string | null;
   heroLine2Color?: string | null;
+  dismissButtonColor?: string | null;
 }) {
   const [dismissed, setDismissed] = useState(true); // default true to avoid flash
   const [loaded, setLoaded] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState<number>(0);
+
+  const measure = useCallback(() => {
+    if (contentRef.current) {
+      setContentHeight(contentRef.current.scrollHeight);
+    }
+  }, []);
 
   useEffect(() => {
     const d = localStorage.getItem("intro-dismissed") === "1";
@@ -31,7 +39,29 @@ export function IntroSection({
     setLoaded(true);
   }, []);
 
-  // Listen for "show-intro" event from info button in QuestionFeedFilter
+  // Measure height — re-measure on resize and when images inside load
+  useEffect(() => {
+    if (!contentRef.current) return;
+    measure();
+
+    // Listen for image loads inside the banner
+    const images = contentRef.current.querySelectorAll("img");
+    images.forEach((img) => {
+      if (img.complete) {
+        measure();
+      } else {
+        img.addEventListener("load", measure);
+      }
+    });
+
+    window.addEventListener("resize", measure);
+    return () => {
+      images.forEach((img) => img.removeEventListener("load", measure));
+      window.removeEventListener("resize", measure);
+    };
+  }, [loaded, bannerUrl, measure]);
+
+  // Listen for "show-intro" event from info button in PoliticianTopBar
   useEffect(() => {
     const handler = () => {
       setDismissed(false);
@@ -47,10 +77,19 @@ export function IntroSection({
     window.dispatchEvent(new Event("intro-dismissed"));
   }
 
+  if (!bannerUrl) return null;
+
+  const isVisible = loaded && !dismissed;
+
   return (
-    <>
-      {/* Banner */}
-      {bannerUrl && (
+    <div
+      className="overflow-hidden transition-all duration-500 ease-in-out"
+      style={{
+        maxHeight: isVisible ? (contentHeight || 1000) : 0,
+        opacity: isVisible ? 1 : 0,
+      }}
+    >
+      <div ref={contentRef} className="relative">
         <BannerHero
           bannerUrl={bannerUrl}
           bannerBgColor={bannerBgColor}
@@ -59,65 +98,19 @@ export function IntroSection({
           heroLine2={heroLine2}
           heroLine2Color={heroLine2Color}
         />
-      )}
-
-      {/* Intro box */}
-      {loaded && !dismissed && (
-        <div className="max-w-2xl mx-auto px-[15px] mt-4">
-          <div
-            className="relative p-6 pr-14"
-            style={{
-              backgroundColor: "#F6F6F5",
-              borderRadius: "20px",
-              fontFamily: "var(--font-funnel-sans)",
-              fontWeight: 500,
-            }}
-          >
-            {/* Close button */}
-            <button
-              onClick={dismiss}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-              style={{ backgroundColor: "#E8E7E5" }}
-              aria-label="Luk"
-            >
-              <FontAwesomeIcon
-                icon={faXmark}
-                className="text-sm"
-                style={{ color: "#7E7D7A" }}
-              />
-            </button>
-
-            {/* Title */}
-            <h3
-              className="mb-3"
-              style={{ color: "#7E7D7A", fontSize: "25px" }}
-            >
-              Første gang du er her?
-            </h3>
-
-            {/* Numbered list */}
-            <ol
-              className="list-decimal pl-6 space-y-1.5 text-base"
-              style={{ color: "#2E2E2E" }}
-            >
-              <li>
-                <strong>Upvote spørgsmål</strong> du synes er vigtige at få
-                besvaret af {politicianFirstName} — eller{" "}
-                <strong>foreslå dine egne spørgsmål</strong>
-              </li>
-              <li>
-                Når et spørgsmål når sit upvote-mål, vil {politicianFirstName}{" "}
-                besvare det
-              </li>
-              <li>Alle svar er enten i video eller lyd</li>
-              <li>
-                Hvis du upvoter et spørgsmål, får du en e-mail når det bliver
-                besvaret
-              </li>
-            </ol>
-          </div>
-        </div>
-      )}
-    </>
+        {/* Dismiss button */}
+        <button
+          onClick={dismiss}
+          className="absolute top-3 right-3 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+          style={{ width: 24, height: 24, backgroundColor: dismissButtonColor ? `${dismissButtonColor}80` : "rgba(0,0,0,0.5)", zIndex: 10 }}
+          aria-label="Luk banner"
+        >
+          <FontAwesomeIcon
+            icon={faXmark}
+            style={{ color: "#ffffff", fontSize: "13.5px" }}
+          />
+        </button>
+      </div>
+    </div>
   );
 }

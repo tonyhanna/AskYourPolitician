@@ -9,7 +9,6 @@ import { SettingsForm } from "@/components/SettingsForm";
 import { QuestionList } from "@/components/QuestionList";
 import { CauseForm } from "@/components/CauseForm";
 import { CauseList } from "@/components/CauseList";
-import { SuggestionList } from "@/components/SuggestionList";
 import { getActivePolitician, getImpersonatingPoliticianId } from "@/lib/admin";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 
@@ -42,6 +41,8 @@ export default async function Dashboard() {
     upvoteCount: number;
     tags: string[];
     goalReached: boolean;
+    goalReachedAt: string | null;
+    deadlineMissed: boolean;
     answerUrl: string | null;
     answerPhotoUrl: string | null;
     suggestedBy: string | null;
@@ -111,6 +112,8 @@ export default async function Dashboard() {
       upvoteCount: q.upvoteCount,
       tags: tagsByQuestion.get(q.id) ?? [],
       goalReached: q.goalReachedEmailSent,
+      goalReachedAt: q.goalReachedAt ? q.goalReachedAt.toISOString() : null,
+      deadlineMissed: q.deadlineMissed,
       answerUrl: q.answerUrl,
       answerPhotoUrl: q.answerPhotoUrl,
       suggestedBy: q.suggestedByCitizenId
@@ -214,21 +217,6 @@ export default async function Dashboard() {
 
       {politician && (
         <>
-          {pendingSuggestions.length > 0 && (
-            <>
-              <h2 id="borgeres-spoergsmaal" className="text-2xl font-bold text-gray-900">
-                Borgeres spørgsmål
-                <span className="ml-2 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-full font-medium align-middle">
-                  {pendingSuggestions.length}
-                </span>
-              </h2>
-
-              <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <SuggestionList suggestions={pendingSuggestions} availableTags={availableTags} />
-              </section>
-            </>
-          )}
-
           <h2 className="text-2xl font-bold text-gray-900">Spørgsmål</h2>
 
           <QuestionForm
@@ -238,9 +226,14 @@ export default async function Dashboard() {
             defaultUpvoteGoal={politician.defaultUpvoteGoal}
           />
 
-          {politicianQuestions.length > 0 && (
+          {(politicianQuestions.length > 0 || pendingSuggestions.length > 0) && (
             <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <QuestionList questions={politicianQuestions} availableTags={availableTags} basePath={uniqueUrl!} />
+              <QuestionList
+                questions={politicianQuestions}
+                availableTags={availableTags}
+                basePath={uniqueUrl!}
+                pendingSuggestions={pendingSuggestions}
+              />
             </section>
           )}
 

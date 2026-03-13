@@ -1,52 +1,98 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 
 export function SuccessBanner() {
   const searchParams = useSearchParams();
-  const [visible, setVisible] = useState(false);
   const [isError, setIsError] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [phase, setPhase] = useState<"hidden" | "entering" | "visible" | "exiting">("hidden");
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bannerRef = useRef<HTMLDivElement>(null);
 
+  const showBanner = useCallback((msg: string, error: boolean) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setMessage(msg);
+    setIsError(error);
+    setPhase("entering");
+    // Trigger reflow then start enter animation
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setPhase("visible");
+        timerRef.current = setTimeout(() => {
+          setPhase("exiting");
+        }, 5000);
+      });
+    });
+  }, []);
+
+  // URL param triggers — show banner once, then strip params so revalidation doesn't re-trigger
   useEffect(() => {
-    if (searchParams.get("success") === "true") {
-      setMessage("Din upvote er registreret!");
-      setIsError(false);
-      setVisible(true);
-    } else if (searchParams.get("suggestion_verified") === "true") {
-      setMessage("Dit forslag er bekræftet og sendt til politikeren!");
-      setIsError(false);
-      setVisible(true);
-    } else if (searchParams.get("already_upvoted") === "true") {
-      setMessage("Du har allerede upvotet dette spørgsmål");
-      setIsError(true);
-      setVisible(true);
-    }
-  }, [searchParams]);
+    const key = searchParams.get("success") === "true" ? "success"
+      : searchParams.get("suggestion_verified") === "true" ? "suggestion_verified"
+      : searchParams.get("already_upvoted") === "true" ? "already_upvoted"
+      : null;
+    if (!key) return;
 
+    if (key === "success") showBanner("Din upvote er registreret", false);
+    else if (key === "suggestion_verified") showBanner("Dit forslag er bekræftet og sendt til politikeren!", false);
+    else if (key === "already_upvoted") showBanner("Du har allerede upvotet dette spørgsmål", true);
+
+    // Remove the param from the URL so it won't fire again on revalidation
+    const url = new URL(window.location.href);
+    url.searchParams.delete(key);
+    window.history.replaceState({}, "", url.pathname + (url.search || ""));
+  }, [searchParams, showBanner]);
+
+  // Custom event triggers (from inline upvote/cancel)
   useEffect(() => {
-    if (visible) {
-      const timer = setTimeout(() => setVisible(false), 5000);
-      return () => clearTimeout(timer);
+    function handleUpvoteBanner(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      showBanner(detail.message, detail.isError ?? false);
     }
-  }, [visible]);
+    window.addEventListener("upvote-banner", handleUpvoteBanner);
+    return () => window.removeEventListener("upvote-banner", handleUpvoteBanner);
+  }, [showBanner]);
 
-  if (!visible || !message) return null;
+  // Cleanup timer
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  if (phase === "hidden" && !message) return null;
 
   return (
     <div
-      className="w-full py-3 text-center text-sm transition-opacity duration-300 sticky top-0"
+      ref={bannerRef}
+      className="w-full overflow-hidden"
       style={{
-        fontFamily: "var(--font-funnel-sans)",
-        fontWeight: 500,
-        backgroundColor: isError ? "#FEE2E2" : "#ffffff",
-        color: isError ? "#991B1B" : "#2E2E2E",
-        borderBottom: isError ? "2px solid #F87171" : "none",
+        maxHeight: phase === "entering" ? 0 : phase === "exiting" ? 0 : 60,
+        opacity: phase === "visible" ? 1 : 0,
+        transition: "max-height 300ms ease, opacity 300ms ease",
         zIndex: 60,
       }}
+      onTransitionEnd={() => {
+        if (phase === "exiting") {
+          setPhase("hidden");
+          setMessage(null);
+        }
+      }}
     >
-      {message}
+      <div
+        className="w-full py-3 text-center text-sm"
+        style={{
+          fontFamily: "var(--font-figtree)",
+          fontWeight: 500,
+          backgroundColor: isError ? "#FEE2E2" : "#ffffff",
+          color: isError ? "#991B1B" : "#2E2E2E",
+          borderBottom: "none",
+        }}
+      >
+        {message}
+      </div>
     </div>
   );
 }

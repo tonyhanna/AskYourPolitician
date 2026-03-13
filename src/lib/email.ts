@@ -133,6 +133,77 @@ export async function sendGoalReachedEmail({
   console.log("Goal reached email sent:", data?.id);
 }
 
+export async function sendDeadlineReminderEmail({
+  to,
+  politicianName,
+  questionText,
+  upvoteCount,
+  hoursLeft,
+  dashboardUrl,
+}: {
+  to: string;
+  politicianName: string;
+  questionText: string;
+  upvoteCount: number;
+  hoursLeft: number;
+  dashboardUrl: string;
+}) {
+  const { error } = await resend.emails.send({
+    from: `Introkrati <${FROM_EMAIL}>`,
+    replyTo: REPLY_TO,
+    to,
+    subject: `Påmindelse: ${hoursLeft} ${hoursLeft === 1 ? "time" : "timer"} tilbage til at svare`,
+    html: `
+      <h2>Hej ${politicianName},</h2>
+      <p>Du har kun <strong>${hoursLeft} ${hoursLeft === 1 ? "time" : "timer"}</strong> tilbage til at svare på dette spørgsmål med ${upvoteCount} ${upvoteCount === 1 ? "upvote" : "upvotes"}:</p>
+      <blockquote style="border-left:4px solid #f59e0b;padding-left:16px;color:#374151;">"${questionText}"</blockquote>
+      <p>Borgerne venter på dit svar!</p>
+      <a href="${dashboardUrl}"
+         style="background:#f59e0b;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;">
+        Gå til dashboard og svar
+      </a>
+      ${EMAIL_FOOTER}
+    `,
+  });
+
+  if (error) {
+    console.error("Resend error (deadline reminder):", error);
+    throw new Error(`Kunne ikke sende påmindelse: ${error.message}`);
+  }
+}
+
+export async function sendDeadlineMissedEmail({
+  to,
+  firstName,
+  politicianName,
+  partyName,
+  questionText,
+}: {
+  to: string;
+  firstName: string;
+  politicianName: string;
+  partyName: string;
+  questionText: string;
+}) {
+  const { error } = await resend.emails.send({
+    from: `Introkrati <${FROM_EMAIL}>`,
+    replyTo: REPLY_TO,
+    to,
+    subject: `${politicianName} nåede desværre ikke at svare i tide`,
+    html: `
+      <h2>Hej ${firstName},</h2>
+      <p>${politicianName} fra ${partyName} nåede desværre ikke at besvare dette spørgsmål inden for fristen:</p>
+      <blockquote style="border-left:4px solid #ef4444;padding-left:16px;color:#374151;">"${questionText}"</blockquote>
+      <p>Der er dog stadig håb for en besvarelse — politikeren kan stadig vælge at svare på et senere tidspunkt, og du vil blive notificeret, hvis det sker.</p>
+      ${EMAIL_FOOTER}
+    `,
+  });
+
+  if (error) {
+    console.error("Resend error (deadline missed):", error);
+  }
+}
+
 export async function sendNewSuggestionNotificationEmail({
   to,
   politicianName,
