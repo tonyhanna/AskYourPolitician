@@ -944,6 +944,8 @@ function PinnedQuestionCard({
   const [isWatching, setIsWatching] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const isWatchingRef = useRef(false);
+  useEffect(() => { isWatchingRef.current = isWatching; }, [isWatching]);
 
   // Hover clip: play forward on hover, reset to start on leave
   useEffect(() => {
@@ -969,18 +971,18 @@ function PinnedQuestionCard({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          if (!isWatching && clipRef.current && thumbnailClipUrl) {
+          if (!isWatchingRef.current && clipRef.current && thumbnailClipUrl) {
             clipRef.current.currentTime = 0;
             clipRef.current.play().catch(() => {});
           }
         } else {
           // Pause clip
-          if (clipRef.current && thumbnailClipUrl && !isWatching) {
+          if (clipRef.current && thumbnailClipUrl && !isWatchingRef.current) {
             clipRef.current.pause();
             clipRef.current.currentTime = 0;
           }
           // Pause full video/audio when scrolled out of view
-          if (isWatching) {
+          if (isWatchingRef.current) {
             fullVideoRef.current?.pause();
             audioRef.current?.pause();
           }
@@ -990,7 +992,7 @@ function PinnedQuestionCard({
     );
     observer.observe(wrap);
     return () => observer.disconnect();
-  }, [thumbnailClipUrl, isWatching]);
+  }, [thumbnailClipUrl]);
 
   // Stop if another card started playing
   useEffect(() => {
@@ -1243,7 +1245,7 @@ function PinnedQuestionCard({
               ref={fullVideoRef}
               src={question.answerUrl!}
               playsInline
-              preload="none"
+              preload="metadata"
               onEnded={handleFullVideoEnded}
               onWaiting={handleWaiting}
               onPlaying={handlePlaying}
@@ -1344,6 +1346,8 @@ function AnsweredQuestionCard({
   const [isHovering, setIsHovering] = useState(false);
   const [isWatching, setIsWatching] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+  const isWatchingRef = useRef(false);
+  useEffect(() => { isWatchingRef.current = isWatching; }, [isWatching]);
 
   // Share/copy state
   const [copied, setCopied] = useState(false);
@@ -1408,18 +1412,18 @@ function AnsweredQuestionCard({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          if (!isWatching && clipRef.current && clipUrl) {
+          if (!isWatchingRef.current && clipRef.current && clipUrl) {
             clipRef.current.currentTime = 0;
             clipRef.current.play().catch(() => {});
           }
         } else {
           // Pause clip
-          if (clipRef.current && clipUrl && !isWatching) {
+          if (clipRef.current && clipUrl && !isWatchingRef.current) {
             clipRef.current.pause();
             clipRef.current.currentTime = 0;
           }
           // Pause full video/audio when scrolled out of view
-          if (isWatching) {
+          if (isWatchingRef.current) {
             fullVideoRef.current?.pause();
             audioRef.current?.pause();
           }
@@ -1429,7 +1433,7 @@ function AnsweredQuestionCard({
     );
     observer.observe(card);
     return () => observer.disconnect();
-  }, [clipUrl, isWatching]);
+  }, [clipUrl]);
 
   // Click to play/pause full video
   const handleClick = useCallback(() => {
@@ -1548,6 +1552,7 @@ function AnsweredQuestionCard({
         <img
           src={photoUrl}
           alt=""
+          loading="eager"
           className="absolute inset-0 w-full h-full object-cover"
         />
       ) : (
@@ -1605,7 +1610,7 @@ function AnsweredQuestionCard({
           ref={fullVideoRef}
           src={question.answerUrl!}
           playsInline
-          preload="none"
+          preload="metadata"
           onEnded={handleEnded}
           onWaiting={() => setIsBuffering(true)}
           onPlaying={() => setIsBuffering(false)}
