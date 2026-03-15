@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { db } from "@/db";
 import { politicians, parties, questions, questionTags, upvotes, citizens } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
@@ -47,39 +47,7 @@ export async function generateMetadata({
   };
 }
 
-/** Dynamic viewport with party-colored theme-color for Safari/Chrome mobile browser bar */
-export async function generateViewport({
-  params,
-}: {
-  params: Promise<{ partySlug: string; politicianSlug: string }>;
-}): Promise<Viewport> {
-  const { partySlug, politicianSlug } = await params;
 
-  const [politician] = await db
-    .select({ partyId: politicians.partyId })
-    .from(politicians)
-    .where(
-      and(
-        eq(politicians.partySlug, partySlug),
-        eq(politicians.slug, politicianSlug)
-      )
-    )
-    .limit(1);
-
-  let partyColor: string | null = null;
-  if (politician?.partyId) {
-    const [party] = await db
-      .select({ color: parties.color })
-      .from(parties)
-      .where(eq(parties.id, politician.partyId))
-      .limit(1);
-    partyColor = party?.color ?? null;
-  }
-
-  return {
-    ...(partyColor ? { themeColor: partyColor } : {}),
-  };
-}
 
 export default async function BorgerFeed({
   params,
@@ -202,9 +170,11 @@ export default async function BorgerFeed({
 
   return (
     <>
-      {/* Set body/html background to party color for Safari/Chrome overscroll + toolbar */}
+      {/* SSR theme-color meta tag for Safari/Chrome mobile toolbar */}
+      {party?.color && <meta name="theme-color" content={party.color} />}
+      {/* Set <html> background for top overscroll rubber-band area */}
       {party?.color && <ThemeColorSetter color={party.color} />}
-      {/* Top bar: sticky at top of viewport */}
+      {/* Sticky wrapper: top bar + hero banner stay fixed at top until banner is dismissed */}
       <div className="sticky top-0 z-50" style={{ backgroundColor: party?.color ?? undefined }}>
         <PoliticianTopBar
           politicianName={politician.name}
@@ -220,19 +190,18 @@ export default async function BorgerFeed({
           politicianSlug={politicianSlug}
           hasSession={!!citizen}
         />
+        <IntroSection
+          bannerUrl={politician.bannerUrl}
+          bannerBgColor={politician.bannerBgColor}
+          heroLine1={politician.heroLine1}
+          heroLine1Color={resolvedHeroLine1Color}
+          heroLine2={politician.heroLine2}
+          heroLine2Color={resolvedHeroLine2Color}
+          dismissButtonColor={party?.colorDark ?? null}
+          politicianSlug={politicianSlug}
+        />
       </div>
-      {/* Hero banner: scrolls normally, dismissed by user */}
-      <IntroSection
-        bannerUrl={politician.bannerUrl}
-        bannerBgColor={politician.bannerBgColor}
-        heroLine1={politician.heroLine1}
-        heroLine1Color={resolvedHeroLine1Color}
-        heroLine2={politician.heroLine2}
-        heroLine2Color={resolvedHeroLine2Color}
-        dismissButtonColor={party?.colorDark ?? null}
-        politicianSlug={politicianSlug}
-      />
-      <main className="px-[15px] py-6 pb-0 bg-white">
+      <main className="px-[15px] py-6 pb-0 bg-white min-h-screen">
       <QuestionFeedFilter
         questions={feedQuestions}
         allTags={[...allTagsSet]}

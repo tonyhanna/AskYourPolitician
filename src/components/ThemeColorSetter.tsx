@@ -3,48 +3,22 @@
 import { useEffect } from "react";
 
 /**
- * Sets party color on both <body> and <html> backgrounds + <meta name="theme-color">.
+ * Sets party color on <html> background for top overscroll rubber-band area.
+ * Does NOT touch <body> to avoid coloring the bottom of the page.
  *
- * Safari 26+ (iOS 26): ignores theme-color meta tag entirely. Instead derives toolbar
- * color from CSS background-color of position:sticky/fixed elements near viewport top,
- * with fallback to <body> background-color. <html> bg is ignored by Safari.
+ * The <meta name="theme-color"> for Safari/Chrome toolbar is rendered
+ * server-side in page.tsx JSX (must be in initial HTML for Safari).
  *
- * Chrome mobile: still uses theme-color meta tag for toolbar.
- *
- * Overscroll rubber-band: determined by <body> background-color on both browsers.
+ * Safari 26+: derives toolbar color from CSS background-color of
+ * position:sticky/fixed elements near viewport top (handled by sticky wrapper).
  */
 export function ThemeColorSetter({ color }: { color: string }) {
   useEffect(() => {
-    const body = document.body;
     const html = document.documentElement;
-    const prevBodyBg = body.style.backgroundColor;
-    const prevHtmlBg = html.style.backgroundColor;
-
-    // Set both body and html background for maximum browser coverage
-    body.style.backgroundColor = color;
+    const prev = html.style.backgroundColor;
     html.style.backgroundColor = color;
-
-    // Set or create <meta name="theme-color"> for Chrome mobile toolbar
-    let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
-    const prevThemeColor = meta?.content ?? null;
-    if (meta) {
-      meta.content = color;
-    } else {
-      meta = document.createElement("meta");
-      meta.name = "theme-color";
-      meta.content = color;
-      document.head.appendChild(meta);
-    }
-
     return () => {
-      body.style.backgroundColor = prevBodyBg;
-      html.style.backgroundColor = prevHtmlBg;
-      const m = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
-      if (m && prevThemeColor !== null) {
-        m.content = prevThemeColor;
-      } else if (m && prevThemeColor === null) {
-        m.remove();
-      }
+      html.style.backgroundColor = prev;
     };
   }, [color]);
 
