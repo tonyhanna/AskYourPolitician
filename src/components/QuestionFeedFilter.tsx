@@ -963,14 +963,14 @@ function PinnedQuestionCard({
     }
   }, [isHovering, isWatching, thumbnailClipUrl]);
 
-  // Mobile: autoplay clip when visible, pause everything when scrolled away
+  // Mobile: autoplay clip when visible, pause/resume everything on scroll
   useEffect(() => {
     const wrap = thumbnailWrapRef.current;
     if (!wrap) return;
     const isTouch = window.matchMedia("(pointer: coarse)").matches;
     if (!isTouch) return;
 
-    let inViewport = false; // Track viewport state for async canplay callback
+    let inViewport = false;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -978,13 +978,15 @@ function PinnedQuestionCard({
         const clip = clipRef.current;
 
         if (entry.isIntersecting) {
-          if (!isWatchingRef.current && clip && thumbnailClipUrl) {
-            // ALWAYS force-reload on mobile viewport entry.
-            // iOS WebKit silently releases decoders for off-screen videos;
-            // play() may resolve but produce no output. load() guarantees
-            // a fresh decoder + data pipeline from cache.
-            clip.oncanplay = () => {
-              clip.oncanplay = null;
+          if (isWatchingRef.current) {
+            // Resume full video/audio that was paused by scroll-away
+            fullVideoRef.current?.play().catch(() => {});
+            audioRef.current?.play().catch(() => {});
+          } else if (clip && thumbnailClipUrl) {
+            // Force-reload clip on mobile viewport entry (iOS releases decoders).
+            // Use canplaythrough to ensure FULL clip is buffered before playing.
+            clip.oncanplaythrough = () => {
+              clip.oncanplaythrough = null;
               if (inViewport && !isWatchingRef.current) {
                 clip.currentTime = 0;
                 clip.play().catch(() => {});
@@ -994,10 +996,9 @@ function PinnedQuestionCard({
           }
         } else {
           if (clip && thumbnailClipUrl && !isWatchingRef.current) {
-            clip.oncanplay = null; // Cancel any pending play
+            clip.oncanplaythrough = null;
             clip.pause();
           }
-          // Pause full video/audio when scrolled out of view
           if (isWatchingRef.current) {
             fullVideoRef.current?.pause();
             audioRef.current?.pause();
@@ -1026,14 +1027,22 @@ function PinnedQuestionCard({
     e.preventDefault();
 
     if (isWatching) {
-      fullVideoRef.current?.pause();
-      audioRef.current?.pause();
+      // Check if video/audio was paused (e.g. by scroll-away) → resume instead of stopping
+      const vid = fullVideoRef.current;
+      const aud = audioRef.current;
+      if ((vid && vid.paused && vid.currentTime > 0) || (aud && aud.paused && aud.currentTime > 0)) {
+        vid?.play().catch(() => {});
+        aud?.play().catch(() => {});
+        return;
+      }
+      vid?.pause();
+      aud?.pause();
       setIsWatching(false);
       setPlayingId(null);
     } else if (hasVideoAnswer) {
       // Stop clip to free mobile video decoder before starting full video
       if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
-      requestAnimationFrame(() => { if (bufferingRef.current) bufferingRef.current.style.opacity = "1"; });
+      // Let onWaiting/onPlaying handle spinner — don't force-show it
       if (fullVideoRef.current) {
         fullVideoRef.current.currentTime = 0;
         fullVideoRef.current.play().catch(() => {});
@@ -1104,27 +1113,31 @@ function PinnedQuestionCard({
     setPlayingId(null);
   }, [setPlayingId]);
 
-  // Progress bar — smooth rAF loop while watching
+  // Progress bar — timeupdate events (~4/sec) + CSS transition for smooth visual
+  // Zero JS between events = no main-thread blocking = no audio stutter
   useEffect(() => {
     if (!isWatching) {
-      if (progressBarRef.current) progressBarRef.current.style.transform = "scaleX(0)";
+      if (progressBarRef.current) {
+        progressBarRef.current.style.transition = "none";
+        progressBarRef.current.style.transform = "scaleX(0)";
+      }
       return;
     }
 
-    let rafId: number;
-    const tick = () => {
-      const el = hasVideoAnswer ? fullVideoRef.current : audioRef.current;
-      if (el && progressBarRef.current) {
-        const total = question.answerDuration ?? el.duration;
-        if (total && isFinite(total) && total > 0) {
-          const fraction = Math.min(el.currentTime / total, 1);
-          progressBarRef.current.style.transform = `scaleX(${fraction})`;
-        }
+    const el = hasVideoAnswer ? fullVideoRef.current : audioRef.current;
+    const bar = progressBarRef.current;
+    if (!el || !bar) return;
+
+    bar.style.transition = "transform 300ms linear";
+    const onTimeUpdate = () => {
+      const total = question.answerDuration ?? el.duration;
+      if (total && isFinite(total) && total > 0) {
+        const fraction = Math.min(el.currentTime / total, 1);
+        bar.style.transform = `scaleX(${fraction})`;
       }
-      rafId = requestAnimationFrame(tick);
     };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
+    el.addEventListener("timeupdate", onTimeUpdate);
+    return () => el.removeEventListener("timeupdate", onTimeUpdate);
   }, [isWatching, hasVideoAnswer, question.answerDuration]);
 
   return (
@@ -1207,8 +1220,8 @@ function PinnedQuestionCard({
           className={`flex-shrink-0 relative w-[90vw] self-center lg:self-auto lg:w-[337px] ${hasPlayableMedia ? "cursor-pointer" : ""}`}
           style={{ borderRadius: 20, overflow: "hidden", aspectRatio: "3/4", scrollMarginTop: 170 }}
           onClick={hasPlayableMedia ? handleThumbnailClick : undefined}
-          onMouseEnter={() => hasPlayableMedia && setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
+          onMouseEnter={() => { if (hasPlayableMedia && !window.matchMedia("(pointer: coarse)").matches) setIsHovering(true); }}
+          onMouseLeave={() => { if (!window.matchMedia("(pointer: coarse)").matches) setIsHovering(false); }}
         >
           {/* Dark overlay + play icon on hover */}
           {hasPlayableMedia && !isWatching && (
@@ -1304,20 +1317,31 @@ function PinnedQuestionCard({
           )}
 
           {/* Temporary version indicator — remove after mobile debugging */}
-          <span style={{ position: "absolute", bottom: 4, right: 6, fontSize: 9, color: "rgba(255,255,255,0.5)", zIndex: 99, fontFamily: "monospace", pointerEvents: "none" }}>v5</span>
+          <span style={{ position: "absolute", bottom: 4, right: 6, fontSize: 9, color: "rgba(255,255,255,0.5)", zIndex: 99, fontFamily: "monospace", pointerEvents: "none" }}>v6</span>
 
           {/* Thumbnail visual */}
           {thumbnailClipUrl ? (
-            <video
-              ref={clipRef}
-              src={thumbnailClipUrl}
-              muted
-              playsInline
-              preload="auto"
-              poster={thumbnailPhotoUrl || undefined}
-              className="w-full h-full object-cover"
-              style={{ borderRadius: 20 }}
-            />
+            <>
+              {/* Poster image behind video — prevents white flash during load() */}
+              {thumbnailPhotoUrl && (
+                <img
+                  src={thumbnailPhotoUrl}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{ borderRadius: 20, zIndex: 0 }}
+                />
+              )}
+              <video
+                ref={clipRef}
+                src={thumbnailClipUrl}
+                muted
+                playsInline
+                preload="auto"
+                poster={thumbnailPhotoUrl || undefined}
+                className="w-full h-full object-cover"
+                style={{ borderRadius: 20, position: "relative", zIndex: 1 }}
+              />
+            </>
           ) : (
             <img
               src={thumbnailPhotoUrl!}
@@ -1444,9 +1468,8 @@ function AnsweredQuestionCard({
 
         if (entry.isIntersecting) {
           if (!isWatchingRef.current && clip && clipUrl) {
-            // ALWAYS force-reload on mobile viewport entry.
-            clip.oncanplay = () => {
-              clip.oncanplay = null;
+            clip.oncanplaythrough = () => {
+              clip.oncanplaythrough = null;
               if (inViewport && !isWatchingRef.current) {
                 clip.currentTime = 0;
                 clip.play().catch(() => {});
@@ -1456,10 +1479,9 @@ function AnsweredQuestionCard({
           }
         } else {
           if (clip && clipUrl && !isWatchingRef.current) {
-            clip.oncanplay = null;
+            clip.oncanplaythrough = null;
             clip.pause();
           }
-          // Pause full video/audio when scrolled out of view
           if (isWatchingRef.current) {
             fullVideoRef.current?.pause();
             audioRef.current?.pause();
@@ -1476,14 +1498,21 @@ function AnsweredQuestionCard({
   const handleClick = useCallback(() => {
     if (!hasPlayableMedia) return;
     if (isWatching) {
-      fullVideoRef.current?.pause();
-      audioRef.current?.pause();
+      // Check if video/audio was paused (e.g. by scroll-away) → resume
+      const vid = fullVideoRef.current;
+      const aud = audioRef.current;
+      if ((vid && vid.paused && vid.currentTime > 0) || (aud && aud.paused && aud.currentTime > 0)) {
+        vid?.play().catch(() => {});
+        aud?.play().catch(() => {});
+        return;
+      }
+      vid?.pause();
+      aud?.pause();
       setIsWatching(false);
       setPlayingId(null);
     } else if (hasVideoAnswer) {
       // Stop clip to free mobile video decoder before starting full video
       if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
-      requestAnimationFrame(() => { if (bufferingRef.current) bufferingRef.current.style.opacity = "1"; });
       if (fullVideoRef.current) {
         fullVideoRef.current.currentTime = 0;
         fullVideoRef.current.play().catch(() => {});
@@ -1545,26 +1574,28 @@ function AnsweredQuestionCard({
     setPlayingId(null);
   }, [setPlayingId]);
 
-  // Progress bar
+  // Progress bar — timeupdate (~4/sec) + CSS transition for smooth visual
   useEffect(() => {
     if (!isWatching) {
-      if (progressBarRef.current) progressBarRef.current.style.transform = "scaleX(0)";
+      if (progressBarRef.current) {
+        progressBarRef.current.style.transition = "none";
+        progressBarRef.current.style.transform = "scaleX(0)";
+      }
       return;
     }
-    let rafId: number;
-    const tick = () => {
-      const el = hasVideoAnswer ? fullVideoRef.current : audioRef.current;
-      if (el && progressBarRef.current) {
-        const total = question.answerDuration ?? el.duration;
-        if (total && isFinite(total) && total > 0) {
-          const fraction = Math.min(el.currentTime / total, 1);
-          progressBarRef.current.style.transform = `scaleX(${fraction})`;
-        }
+    const el = hasVideoAnswer ? fullVideoRef.current : audioRef.current;
+    const bar = progressBarRef.current;
+    if (!el || !bar) return;
+    bar.style.transition = "transform 300ms linear";
+    const onTimeUpdate = () => {
+      const total = question.answerDuration ?? el.duration;
+      if (total && isFinite(total) && total > 0) {
+        const fraction = Math.min(el.currentTime / total, 1);
+        bar.style.transform = `scaleX(${fraction})`;
       }
-      rafId = requestAnimationFrame(tick);
     };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
+    el.addEventListener("timeupdate", onTimeUpdate);
+    return () => el.removeEventListener("timeupdate", onTimeUpdate);
   }, [isWatching, hasVideoAnswer, question.answerDuration]);
 
   return (
@@ -1573,8 +1604,8 @@ function AnsweredQuestionCard({
       className={`relative ${hasPlayableMedia ? "cursor-pointer" : ""}`}
       style={{ aspectRatio: "3/4", borderRadius: 20, overflow: "hidden", scrollMarginTop: 170 }}
       onClick={hasPlayableMedia ? handleClick : undefined}
-      onMouseEnter={() => hasPlayableMedia && setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
+      onMouseEnter={() => { if (hasPlayableMedia && !window.matchMedia("(pointer: coarse)").matches) setIsHovering(true); }}
+      onMouseLeave={() => { if (!window.matchMedia("(pointer: coarse)").matches) setIsHovering(false); }}
     >
       {/* Thumbnail clip/photo */}
       {clipUrl ? (
