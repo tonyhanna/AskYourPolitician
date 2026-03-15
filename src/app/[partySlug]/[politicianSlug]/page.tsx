@@ -181,8 +181,11 @@ export default async function BorgerFeed({
       )}
       {/* Client-side fallback for SPA navigations */}
       {party?.color && <ThemeColorSetter color={party.color} />}
-      {/* Top bar: sticky, always visible at top */}
-      <div className="sticky top-0 z-50" style={{ backgroundColor: party?.color ?? undefined }}>
+      {/* White wrapper covers green body bg so it only shows in overscroll */}
+      <div className="bg-white min-h-[100dvh]">
+      {/* Top bar: sticky, will-change:transform fixes Chrome 3px shrink.
+          No backgroundColor here — lets backdrop-blur in PoliticianTopBar work. */}
+      <div className="sticky top-0 z-50" style={{ willChange: "transform" }}>
         <PoliticianTopBar
           politicianName={politician.name}
           partyName={politician.party}
@@ -211,7 +214,7 @@ export default async function BorgerFeed({
           politicianSlug={politicianSlug}
         />
       </div>
-      <main className="px-[15px] py-6 pb-0 bg-white min-h-screen">
+      <main className="px-[15px] py-6 pb-0">
       <QuestionFeedFilter
         questions={feedQuestions}
         allTags={[...allTagsSet]}
@@ -228,12 +231,13 @@ export default async function BorgerFeed({
         citizenEmail={citizen?.email ?? null}
       />
 
-      <div className="max-w-2xl mx-auto">
-        {politician.chatbaseId && (
-          <ChatbaseWidget chatbotId={politician.chatbaseId} />
-        )}
+        <div className="max-w-2xl mx-auto">
+          {politician.chatbaseId && (
+            <ChatbaseWidget chatbotId={politician.chatbaseId} />
+          )}
+        </div>
+      </main>
       </div>
-    </main>
     </>
   );
 }
