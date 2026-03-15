@@ -189,7 +189,7 @@ export function PoliticianTopBar({
   return (
     <div
       ref={containerRef}
-      className="sticky top-0 z-50 backdrop-blur-lg transition-colors duration-200 cursor-pointer"
+      className="backdrop-blur-lg transition-colors duration-200 cursor-pointer"
       style={{ backgroundColor: `${bgColor}${bgOpacitySuffix}`, fontFamily: "var(--font-figtree)", fontWeight: 500 }}
       onClick={(e) => {
         const target = e.target as HTMLElement;

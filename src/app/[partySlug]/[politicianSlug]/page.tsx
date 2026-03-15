@@ -180,30 +180,33 @@ export default async function BorgerFeed({
 
   return (
     <>
-      <PoliticianTopBar
-        politicianName={politician.name}
-        partyName={politician.party}
-        profilePhotoUrl={politician.profilePhotoUrl}
-        partyLogoUrl={party?.logoUrl ?? null}
-        constituency={politician.constituency}
-        partyColor={party?.color ?? null}
-        partyColorDark={party?.colorDark ?? null}
-        partyColorLight={party?.colorLight ?? null}
-        politicianId={politician.id}
-        partySlug={partySlug}
-        politicianSlug={politicianSlug}
-        hasSession={!!citizen}
-      />
-      <IntroSection
-        bannerUrl={politician.bannerUrl}
-        bannerBgColor={politician.bannerBgColor}
-        heroLine1={politician.heroLine1}
-        heroLine1Color={resolvedHeroLine1Color}
-        heroLine2={politician.heroLine2}
-        heroLine2Color={resolvedHeroLine2Color}
-        dismissButtonColor={party?.colorDark ?? null}
-        politicianSlug={politicianSlug}
-      />
+      {/* Sticky wrapper: top bar + hero banner stay fixed at top until banner is dismissed */}
+      <div className="sticky top-0 z-50">
+        <PoliticianTopBar
+          politicianName={politician.name}
+          partyName={politician.party}
+          profilePhotoUrl={politician.profilePhotoUrl}
+          partyLogoUrl={party?.logoUrl ?? null}
+          constituency={politician.constituency}
+          partyColor={party?.color ?? null}
+          partyColorDark={party?.colorDark ?? null}
+          partyColorLight={party?.colorLight ?? null}
+          politicianId={politician.id}
+          partySlug={partySlug}
+          politicianSlug={politicianSlug}
+          hasSession={!!citizen}
+        />
+        <IntroSection
+          bannerUrl={politician.bannerUrl}
+          bannerBgColor={politician.bannerBgColor}
+          heroLine1={politician.heroLine1}
+          heroLine1Color={resolvedHeroLine1Color}
+          heroLine2={politician.heroLine2}
+          heroLine2Color={resolvedHeroLine2Color}
+          dismissButtonColor={party?.colorDark ?? null}
+          politicianSlug={politicianSlug}
+        />
+      </div>
       <main className="px-[15px] py-6 pb-0">
       <QuestionFeedFilter
         questions={feedQuestions}
