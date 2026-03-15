@@ -942,9 +942,9 @@ function PinnedQuestionCard({
   const progressBarRef = useRef<HTMLDivElement>(null);
   const clipRef = useRef<HTMLVideoElement>(null);
   const [isWatching, setIsWatching] = useState(false);
-  const [isBuffering, setIsBuffering] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const isWatchingRef = useRef(false);
+  const bufferingRef = useRef<HTMLDivElement>(null);
   useEffect(() => { isWatchingRef.current = isWatching; }, [isWatching]);
 
   // Hover clip: play forward on hover, reset to start on leave
@@ -972,14 +972,15 @@ function PinnedQuestionCard({
       ([entry]) => {
         if (entry.isIntersecting) {
           if (!isWatchingRef.current && clipRef.current && thumbnailClipUrl) {
-            clipRef.current.currentTime = 0;
-            clipRef.current.play().catch(() => {});
+            const clip = clipRef.current;
+            if (clip.ended || clip.readyState === 0) clip.load();
+            clip.currentTime = 0;
+            clip.play().catch(() => {});
           }
         } else {
           // Pause clip
           if (clipRef.current && thumbnailClipUrl && !isWatchingRef.current) {
             clipRef.current.pause();
-            clipRef.current.currentTime = 0;
           }
           // Pause full video/audio when scrolled out of view
           if (isWatchingRef.current) {
@@ -1000,7 +1001,7 @@ function PinnedQuestionCard({
       fullVideoRef.current?.pause();
       audioRef.current?.pause();
       setIsWatching(false);
-      setIsBuffering(false);
+      if (bufferingRef.current) bufferingRef.current.style.opacity = "0";
     }
   }, [playingId, question.id, isWatching]);
 
@@ -1013,10 +1014,9 @@ function PinnedQuestionCard({
       fullVideoRef.current?.pause();
       audioRef.current?.pause();
       setIsWatching(false);
-      setIsBuffering(false);
       setPlayingId(null);
     } else if (hasVideoAnswer) {
-      setIsBuffering(true);
+      requestAnimationFrame(() => { if (bufferingRef.current) bufferingRef.current.style.opacity = "1"; });
       if (fullVideoRef.current) {
         fullVideoRef.current.currentTime = 0;
         fullVideoRef.current.play().catch(() => {});
@@ -1069,16 +1069,15 @@ function PinnedQuestionCard({
 
   const handleFullVideoEnded = useCallback(() => {
     setIsWatching(false);
-    setIsBuffering(false);
     setPlayingId(null);
   }, [setPlayingId]);
 
   const handleWaiting = useCallback(() => {
-    setIsBuffering(true);
+    if (bufferingRef.current) bufferingRef.current.style.opacity = "1";
   }, []);
 
   const handlePlaying = useCallback(() => {
-    setIsBuffering(false);
+    if (bufferingRef.current) bufferingRef.current.style.opacity = "0";
   }, []);
 
   const handleAudioEnded = useCallback(() => {
@@ -1250,15 +1249,16 @@ function PinnedQuestionCard({
               onWaiting={handleWaiting}
               onPlaying={handlePlaying}
               className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
-              style={{ zIndex: isWatching ? 3 : 0, opacity: isWatching ? 1 : 0, borderRadius: 20 }}
+              style={{ zIndex: isWatching ? 3 : 0, opacity: isWatching ? 1 : 0 }}
             />
           )}
 
-          {/* Buffering spinner */}
-          {isWatching && isBuffering && (
+          {/* Buffering spinner — ref-controlled to avoid re-renders during playback */}
+          {isWatching && (
             <div
+              ref={bufferingRef}
               className="absolute inset-0 flex items-center justify-center"
-              style={{ zIndex: 4 }}
+              style={{ zIndex: 4, opacity: 0, pointerEvents: "none", transition: "opacity 150ms" }}
             >
               <svg
                 className="animate-spin h-10 w-10 text-white"
@@ -1345,8 +1345,8 @@ function AnsweredQuestionCard({
 
   const [isHovering, setIsHovering] = useState(false);
   const [isWatching, setIsWatching] = useState(false);
-  const [isBuffering, setIsBuffering] = useState(false);
   const isWatchingRef = useRef(false);
+  const bufferingRef = useRef<HTMLDivElement>(null);
   useEffect(() => { isWatchingRef.current = isWatching; }, [isWatching]);
 
   // Share/copy state
@@ -1373,7 +1373,7 @@ function AnsweredQuestionCard({
       fullVideoRef.current?.pause();
       audioRef.current?.pause();
       setIsWatching(false);
-      setIsBuffering(false);
+      if (bufferingRef.current) bufferingRef.current.style.opacity = "0";
     }
   }, [playingId, question.id, isWatching]);
 
@@ -1413,14 +1413,15 @@ function AnsweredQuestionCard({
       ([entry]) => {
         if (entry.isIntersecting) {
           if (!isWatchingRef.current && clipRef.current && clipUrl) {
-            clipRef.current.currentTime = 0;
-            clipRef.current.play().catch(() => {});
+            const clip = clipRef.current;
+            if (clip.ended || clip.readyState === 0) clip.load();
+            clip.currentTime = 0;
+            clip.play().catch(() => {});
           }
         } else {
           // Pause clip
           if (clipRef.current && clipUrl && !isWatchingRef.current) {
             clipRef.current.pause();
-            clipRef.current.currentTime = 0;
           }
           // Pause full video/audio when scrolled out of view
           if (isWatchingRef.current) {
@@ -1442,10 +1443,9 @@ function AnsweredQuestionCard({
       fullVideoRef.current?.pause();
       audioRef.current?.pause();
       setIsWatching(false);
-      setIsBuffering(false);
       setPlayingId(null);
     } else if (hasVideoAnswer) {
-      setIsBuffering(true);
+      requestAnimationFrame(() => { if (bufferingRef.current) bufferingRef.current.style.opacity = "1"; });
       if (fullVideoRef.current) {
         fullVideoRef.current.currentTime = 0;
         fullVideoRef.current.play().catch(() => {});
@@ -1502,7 +1502,6 @@ function AnsweredQuestionCard({
 
   const handleEnded = useCallback(() => {
     setIsWatching(false);
-    setIsBuffering(false);
     setPlayingId(null);
   }, [setPlayingId]);
 
@@ -1612,16 +1611,16 @@ function AnsweredQuestionCard({
           playsInline
           preload="metadata"
           onEnded={handleEnded}
-          onWaiting={() => setIsBuffering(true)}
-          onPlaying={() => setIsBuffering(false)}
+          onWaiting={() => { if (bufferingRef.current) bufferingRef.current.style.opacity = "1"; }}
+          onPlaying={() => { if (bufferingRef.current) bufferingRef.current.style.opacity = "0"; }}
           className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
-          style={{ zIndex: isWatching ? 3 : 0, opacity: isWatching ? 1 : 0, borderRadius: 20 }}
+          style={{ zIndex: isWatching ? 3 : 0, opacity: isWatching ? 1 : 0 }}
         />
       )}
 
-      {/* Buffering spinner */}
-      {isWatching && isBuffering && (
-        <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 4 }}>
+      {/* Buffering spinner — ref-controlled to avoid re-renders during playback */}
+      {isWatching && (
+        <div ref={bufferingRef} className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 4, opacity: 0, pointerEvents: "none", transition: "opacity 150ms" }}>
           <svg className="animate-spin h-10 w-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
