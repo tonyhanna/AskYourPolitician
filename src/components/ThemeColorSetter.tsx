@@ -3,18 +3,28 @@
 import { useEffect } from "react";
 
 /**
- * Sets the <html> background-color AND <meta name="theme-color"> to the party color.
- * - background-color: makes Safari/Chrome rubber-band over-scroll show party color
- * - theme-color meta: colors the Safari/Chrome mobile toolbar/status bar area
+ * Sets party color on both <body> and <html> backgrounds + <meta name="theme-color">.
+ *
+ * Safari 26+ (iOS 26): ignores theme-color meta tag entirely. Instead derives toolbar
+ * color from CSS background-color of position:sticky/fixed elements near viewport top,
+ * with fallback to <body> background-color. <html> bg is ignored by Safari.
+ *
+ * Chrome mobile: still uses theme-color meta tag for toolbar.
+ *
+ * Overscroll rubber-band: determined by <body> background-color on both browsers.
  */
 export function ThemeColorSetter({ color }: { color: string }) {
   useEffect(() => {
-    // Set html background for rubber-band over-scroll area
+    const body = document.body;
     const html = document.documentElement;
-    const prevBg = html.style.backgroundColor;
+    const prevBodyBg = body.style.backgroundColor;
+    const prevHtmlBg = html.style.backgroundColor;
+
+    // Set both body and html background for maximum browser coverage
+    body.style.backgroundColor = color;
     html.style.backgroundColor = color;
 
-    // Set or create <meta name="theme-color"> for mobile browser toolbar
+    // Set or create <meta name="theme-color"> for Chrome mobile toolbar
     let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
     const prevThemeColor = meta?.content ?? null;
     if (meta) {
@@ -27,7 +37,8 @@ export function ThemeColorSetter({ color }: { color: string }) {
     }
 
     return () => {
-      html.style.backgroundColor = prevBg;
+      body.style.backgroundColor = prevBodyBg;
+      html.style.backgroundColor = prevHtmlBg;
       const m = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
       if (m && prevThemeColor !== null) {
         m.content = prevThemeColor;

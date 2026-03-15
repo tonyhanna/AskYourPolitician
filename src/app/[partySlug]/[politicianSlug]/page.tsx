@@ -202,10 +202,10 @@ export default async function BorgerFeed({
 
   return (
     <>
-      {/* Set <html> background to party color for Safari rubber-band over-scroll area */}
+      {/* Set body/html background to party color for Safari/Chrome overscroll + toolbar */}
       {party?.color && <ThemeColorSetter color={party.color} />}
-      {/* Sticky wrapper: top bar + hero banner stay fixed at top until banner is dismissed */}
-      <div className="sticky top-0 z-50">
+      {/* Top bar: sticky at top of viewport */}
+      <div className="sticky top-0 z-50" style={{ backgroundColor: party?.color ?? undefined }}>
         <PoliticianTopBar
           politicianName={politician.name}
           partyName={politician.party}
@@ -220,18 +220,19 @@ export default async function BorgerFeed({
           politicianSlug={politicianSlug}
           hasSession={!!citizen}
         />
-        <IntroSection
-          bannerUrl={politician.bannerUrl}
-          bannerBgColor={politician.bannerBgColor}
-          heroLine1={politician.heroLine1}
-          heroLine1Color={resolvedHeroLine1Color}
-          heroLine2={politician.heroLine2}
-          heroLine2Color={resolvedHeroLine2Color}
-          dismissButtonColor={party?.colorDark ?? null}
-          politicianSlug={politicianSlug}
-        />
       </div>
-      <main className="px-[15px] py-6 pb-0">
+      {/* Hero banner: scrolls normally, dismissed by user */}
+      <IntroSection
+        bannerUrl={politician.bannerUrl}
+        bannerBgColor={politician.bannerBgColor}
+        heroLine1={politician.heroLine1}
+        heroLine1Color={resolvedHeroLine1Color}
+        heroLine2={politician.heroLine2}
+        heroLine2Color={resolvedHeroLine2Color}
+        dismissButtonColor={party?.colorDark ?? null}
+        politicianSlug={politicianSlug}
+      />
+      <main className="px-[15px] py-6 pb-0 bg-white">
       <QuestionFeedFilter
         questions={feedQuestions}
         allTags={[...allTagsSet]}

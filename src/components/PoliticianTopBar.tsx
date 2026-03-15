@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useEffect, useState, useRef } from "react";
+import { flushSync } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { faCommentLines } from "@fortawesome/pro-solid-svg-icons";
@@ -86,17 +87,11 @@ export function PoliticianTopBar({
   const mobileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Focus input when form activates
+  // Focus desktop input when form activates (mobile focus is handled
+  // synchronously via flushSync in the button click handler)
   useEffect(() => {
-    if (formActive) {
-      // Use requestAnimationFrame to ensure the conditionally-rendered input is in the DOM
-      requestAnimationFrame(() => {
-        if (window.innerWidth >= 640) {
-          inputRef.current?.focus();
-        } else {
-          mobileInputRef.current?.focus();
-        }
-      });
+    if (formActive && window.innerWidth >= 640) {
+      inputRef.current?.focus();
     }
   }, [formActive]);
 
@@ -275,7 +270,10 @@ export function PoliticianTopBar({
                   if (formActive) {
                     resetForm();
                   } else {
-                    setFormActive(true);
+                    // flushSync forces synchronous render so the input is in the DOM
+                    // before we focus it — required for iOS to open the keyboard
+                    flushSync(() => setFormActive(true));
+                    mobileInputRef.current?.focus();
                   }
                 }}
                 className="cursor-pointer transition-opacity rounded-full flex items-center justify-center"
