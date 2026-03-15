@@ -662,6 +662,7 @@ function QuestionCard({
             muted
             playsInline
             preload="metadata"
+            poster={question.answerPhotoUrl || undefined}
             onEnded={handleClipEnded}
             className="absolute inset-0 w-full h-full object-cover transition-all duration-300"
             style={{ zIndex: 0, filter: isHovering || isWatching ? "none" : "blur(8px)", transform: isHovering || isWatching ? "none" : "scale(1.1)" }}
@@ -952,11 +953,44 @@ function PinnedQuestionCard({
     if (isHovering && !isWatching) {
       clip.currentTime = 0;
       clip.play().catch(() => {});
-    } else {
+    } else if (!isWatching) {
       clip.pause();
       clip.currentTime = 0;
     }
   }, [isHovering, isWatching, thumbnailClipUrl]);
+
+  // Mobile: autoplay clip when visible, pause everything when scrolled away
+  useEffect(() => {
+    const wrap = thumbnailWrapRef.current;
+    if (!wrap) return;
+    const isTouch = window.matchMedia("(pointer: coarse)").matches;
+    if (!isTouch) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          if (!isWatching && clipRef.current && thumbnailClipUrl) {
+            clipRef.current.currentTime = 0;
+            clipRef.current.play().catch(() => {});
+          }
+        } else {
+          // Pause clip
+          if (clipRef.current && thumbnailClipUrl && !isWatching) {
+            clipRef.current.pause();
+            clipRef.current.currentTime = 0;
+          }
+          // Pause full video/audio when scrolled out of view
+          if (isWatching) {
+            fullVideoRef.current?.pause();
+            audioRef.current?.pause();
+          }
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(wrap);
+    return () => observer.disconnect();
+  }, [thumbnailClipUrl, isWatching]);
 
   // Stop if another card started playing
   useEffect(() => {
@@ -1254,6 +1288,7 @@ function PinnedQuestionCard({
               muted
               playsInline
               preload="metadata"
+              poster={thumbnailPhotoUrl || undefined}
               className="w-full h-full object-cover"
               style={{ borderRadius: 20 }}
             />
@@ -1357,11 +1392,44 @@ function AnsweredQuestionCard({
     if (isHovering && !isWatching) {
       clip.currentTime = 0;
       clip.play().catch(() => {});
-    } else {
+    } else if (!isWatching) {
       clip.pause();
       clip.currentTime = 0;
     }
   }, [isHovering, isWatching, clipUrl]);
+
+  // Mobile: autoplay clip when visible, pause everything when scrolled away
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+    const isTouch = window.matchMedia("(pointer: coarse)").matches;
+    if (!isTouch) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          if (!isWatching && clipRef.current && clipUrl) {
+            clipRef.current.currentTime = 0;
+            clipRef.current.play().catch(() => {});
+          }
+        } else {
+          // Pause clip
+          if (clipRef.current && clipUrl && !isWatching) {
+            clipRef.current.pause();
+            clipRef.current.currentTime = 0;
+          }
+          // Pause full video/audio when scrolled out of view
+          if (isWatching) {
+            fullVideoRef.current?.pause();
+            audioRef.current?.pause();
+          }
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [clipUrl, isWatching]);
 
   // Click to play/pause full video
   const handleClick = useCallback(() => {
@@ -1473,6 +1541,7 @@ function AnsweredQuestionCard({
           muted
           playsInline
           preload="metadata"
+          poster={photoUrl || undefined}
           className="absolute inset-0 w-full h-full object-cover"
         />
       ) : photoUrl ? (

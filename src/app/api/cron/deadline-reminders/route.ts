@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { questions, politicians, upvotes, citizens } from "@/db/schema";
 import { eq, and, sql, isNull } from "drizzle-orm";
-import { sendDeadlineReminderEmail, sendDeadlineMissedEmail } from "@/lib/email";
+import { sendDeadlineMissedEmail, sendDailyMissedSummaryEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -16,72 +16,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let remindersSent = 0;
   let missedProcessed = 0;
+  let summariesSent = 0;
 
-  // ── A) Send reminder emails (2 hours before deadline = 22h after goalReachedAt) ──
-  const reminderQuestions = await db
-    .select({
-      id: questions.id,
-      text: questions.text,
-      upvoteCount: questions.upvoteCount,
-      goalReachedAt: questions.goalReachedAt,
-      politicianId: questions.politicianId,
-    })
-    .from(questions)
-    .where(
-      and(
-        eq(questions.goalReachedEmailSent, true),
-        isNull(questions.answerUrl),
-        eq(questions.reminderEmailSent, false),
-        eq(questions.deadlineMissed, false),
-        sql`${questions.goalReachedAt} IS NOT NULL`,
-        sql`${questions.goalReachedAt} + interval '22 hours' <= now()`
-      )
-    );
-
-  for (const q of reminderQuestions) {
-    const [politician] = await db
-      .select()
-      .from(politicians)
-      .where(eq(politicians.id, q.politicianId))
-      .limit(1);
-
-    if (!politician) continue;
-
-    const deadlineMs =
-      new Date(q.goalReachedAt!).getTime() + 24 * 60 * 60 * 1000;
-    const hoursLeft = Math.max(
-      0,
-      Math.round((deadlineMs - Date.now()) / (1000 * 60 * 60))
-    );
-
-    try {
-      await sendDeadlineReminderEmail({
-        to: politician.email,
-        politicianName: politician.name,
-        questionText: q.text,
-        upvoteCount: q.upvoteCount,
-        hoursLeft,
-        dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/politiker/dashboard`,
-      });
-
-      await db
-        .update(questions)
-        .set({ reminderEmailSent: true })
-        .where(eq(questions.id, q.id));
-
-      remindersSent++;
-    } catch (error) {
-      console.error(
-        `Failed to send reminder for question ${q.id}:`,
-        error
-      );
-    }
-  }
-
-  // ── B) Process missed deadlines (24h after goalReachedAt) ──
-  const missedQuestions = await db
+  // ── A) Mark newly missed deadlines (24h after goalReachedAt) + notify upvoters ──
+  const newlyMissedQuestions = await db
     .select({
       id: questions.id,
       text: questions.text,
@@ -99,7 +38,7 @@ export async function GET(request: Request) {
       )
     );
 
-  for (const q of missedQuestions) {
+  for (const q of newlyMissedQuestions) {
     const [politician] = await db
       .select()
       .from(politicians)
@@ -139,8 +78,60 @@ export async function GET(request: Request) {
     missedProcessed++;
   }
 
+  // ── B) Daily summary to politicians: all missed + unanswered questions ──
+  const allMissedQuestions = await db
+    .select({
+      id: questions.id,
+      text: questions.text,
+      upvoteCount: questions.upvoteCount,
+      politicianId: questions.politicianId,
+    })
+    .from(questions)
+    .where(
+      and(
+        eq(questions.deadlineMissed, true),
+        isNull(questions.answerUrl)
+      )
+    );
+
+  // Group by politician
+  const byPolitician = new Map<string, typeof allMissedQuestions>();
+  for (const q of allMissedQuestions) {
+    const list = byPolitician.get(q.politicianId) || [];
+    list.push(q);
+    byPolitician.set(q.politicianId, list);
+  }
+
+  for (const [politicianId, missedList] of byPolitician) {
+    const [politician] = await db
+      .select()
+      .from(politicians)
+      .where(eq(politicians.id, politicianId))
+      .limit(1);
+
+    if (!politician) continue;
+
+    try {
+      await sendDailyMissedSummaryEmail({
+        to: politician.email,
+        politicianName: politician.name,
+        questions: missedList.map((q) => ({
+          text: q.text,
+          upvoteCount: q.upvoteCount,
+        })),
+        dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/politiker/dashboard`,
+      });
+      summariesSent++;
+    } catch (error) {
+      console.error(
+        `Failed to send daily missed summary to ${politician.email}:`,
+        error
+      );
+    }
+  }
+
   return NextResponse.json({
-    remindersSent,
     missedProcessed,
+    summariesSent,
   });
 }

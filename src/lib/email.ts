@@ -133,33 +133,37 @@ export async function sendGoalReachedEmail({
   console.log("Goal reached email sent:", data?.id);
 }
 
-export async function sendDeadlineReminderEmail({
+export async function sendDailyMissedSummaryEmail({
   to,
   politicianName,
-  questionText,
-  upvoteCount,
-  hoursLeft,
+  questions,
   dashboardUrl,
 }: {
   to: string;
   politicianName: string;
-  questionText: string;
-  upvoteCount: number;
-  hoursLeft: number;
+  questions: { text: string; upvoteCount: number }[];
   dashboardUrl: string;
 }) {
+  const count = questions.length;
+  const questionsHtml = questions
+    .map(
+      (q) =>
+        `<blockquote style="border-left:4px solid #ef4444;padding-left:16px;color:#374151;margin-bottom:12px;">"${q.text}" <span style="color:#9ca3af;">(${q.upvoteCount} ${q.upvoteCount === 1 ? "upvote" : "upvotes"})</span></blockquote>`
+    )
+    .join("");
+
   const { error } = await resend.emails.send({
     from: `Introkrati <${FROM_EMAIL}>`,
     replyTo: REPLY_TO,
     to,
-    subject: `Påmindelse: ${hoursLeft} ${hoursLeft === 1 ? "time" : "timer"} tilbage til at svare`,
+    subject: `${count} ${count === 1 ? "spørgsmål" : "spørgsmål"} venter stadig på dit svar`,
     html: `
       <h2>Hej ${politicianName},</h2>
-      <p>Du har kun <strong>${hoursLeft} ${hoursLeft === 1 ? "time" : "timer"}</strong> tilbage til at svare på dette spørgsmål med ${upvoteCount} ${upvoteCount === 1 ? "upvote" : "upvotes"}:</p>
-      <blockquote style="border-left:4px solid #f59e0b;padding-left:16px;color:#374151;">"${questionText}"</blockquote>
-      <p>Borgerne venter på dit svar!</p>
+      <p>Du har ${count} ${count === 1 ? "spørgsmål" : "spørgsmål"} hvor fristen er overskredet, og borgerne stadig venter på svar:</p>
+      ${questionsHtml}
+      <p>Det er aldrig for sent at svare — borgerne bliver notificeret, så snart du gør.</p>
       <a href="${dashboardUrl}"
-         style="background:#f59e0b;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;">
+         style="background:#ef4444;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;">
         Gå til dashboard og svar
       </a>
       ${EMAIL_FOOTER}
@@ -167,8 +171,8 @@ export async function sendDeadlineReminderEmail({
   });
 
   if (error) {
-    console.error("Resend error (deadline reminder):", error);
-    throw new Error(`Kunne ikke sende påmindelse: ${error.message}`);
+    console.error("Resend error (daily missed summary):", error);
+    throw new Error(`Kunne ikke sende daglig opsummering: ${error.message}`);
   }
 }
 
