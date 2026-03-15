@@ -44,7 +44,7 @@ export function PoliticianTopBar({
   const partyTextColor = partyColorLight ?? "#93C5FD";
   const constituencyColor = partyColorDark ?? "#1E3A5F";
 
-  // Scroll-based opacity
+  // Scroll-based opacity (kept for potential future use)
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -53,8 +53,6 @@ export function PoliticianTopBar({
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  const bgOpacitySuffix = scrolled ? "cc" : "f2";
 
   // Form interaction state
   const [formActive, setFormActive] = useState(false);
@@ -187,8 +185,8 @@ export function PoliticianTopBar({
   return (
     <div
       ref={containerRef}
-      className="backdrop-blur-lg transition-colors duration-200 cursor-pointer"
-      style={{ backgroundColor: `${bgColor}${bgOpacitySuffix}`, fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+      className="transition-colors duration-200 cursor-pointer"
+      style={{ backgroundColor: bgColor, fontFamily: "var(--font-figtree)", fontWeight: 500 }}
       onClick={(e) => {
         const target = e.target as HTMLElement;
         if (target.closest("button, a, input, textarea")) return;
