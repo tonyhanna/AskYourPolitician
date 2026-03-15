@@ -182,7 +182,7 @@ export default async function BorgerFeed({
       {/* Client-side fallback for SPA navigations */}
       {party?.color && <ThemeColorSetter color={party.color} />}
       {/* Top bar: sticky, always visible at top */}
-      <div className="sticky top-0 z-50" style={{ backgroundColor: party?.color ?? undefined, backfaceVisibility: "hidden" }}>
+      <div className="sticky top-0 z-50" style={{ backgroundColor: party?.color ?? undefined }}>
         <PoliticianTopBar
           politicianName={politician.name}
           partyName={politician.party}
