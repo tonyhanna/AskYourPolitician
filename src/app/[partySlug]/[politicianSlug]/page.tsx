@@ -172,7 +172,14 @@ export default async function BorgerFeed({
     <>
       {/* SSR theme-color meta tag for Safari/Chrome mobile toolbar */}
       {party?.color && <meta name="theme-color" content={party.color} />}
-      {/* Set <html> background for top overscroll rubber-band area */}
+      {/* SSR style for <html> background — must be in initial HTML for Safari toolbar */}
+      {party?.color && (
+        <style
+          precedence="theme"
+          href={`theme-${partySlug}`}
+        >{`html{background-color:${party.color}}`}</style>
+      )}
+      {/* Client-side fallback for SPA navigations */}
       {party?.color && <ThemeColorSetter color={party.color} />}
       {/* Top bar: sticky, always visible at top */}
       <div className="sticky top-0 z-50" style={{ backgroundColor: party?.color ?? undefined }}>
