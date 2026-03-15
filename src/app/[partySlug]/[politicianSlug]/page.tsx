@@ -191,8 +191,8 @@ export default async function BorgerFeed({
           hasSession={!!citizen}
         />
       </div>
-      {/* Hero banner: separate sticky, slides behind topbar (lower z-index) */}
-      <div className="sticky top-0 z-40">
+      {/* Hero banner: scrolls normally, disappears behind sticky topbar */}
+      <div className="relative z-40">
         <IntroSection
           bannerUrl={politician.bannerUrl}
           bannerBgColor={politician.bannerBgColor}
