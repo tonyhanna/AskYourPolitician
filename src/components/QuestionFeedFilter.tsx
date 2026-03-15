@@ -1821,6 +1821,128 @@ function AnsweredQuestionCard({
   );
 }
 
+/** Mobile carousel with touch swipe support and no hover states */
+function MobileCarousel({
+  questions,
+  basePath,
+  appUrl,
+  partyColor,
+  partyColorDark,
+  playingId,
+  setPlayingId,
+  currentIndex,
+  setCurrentIndex,
+}: {
+  questions: FeedQuestion[];
+  basePath: string;
+  appUrl: string;
+  partyColor?: string | null;
+  partyColorDark?: string | null;
+  playingId: string | null;
+  setPlayingId: (id: string | null) => void;
+  currentIndex: number;
+  setCurrentIndex: (fn: (i: number) => number) => void;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef(0);
+  const touchDeltaX = useRef(0);
+  const isSwiping = useRef(false);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchDeltaX.current = 0;
+    isSwiping.current = true;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isSwiping.current) return;
+    touchDeltaX.current = e.touches[0].clientX - touchStartX.current;
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isSwiping.current) return;
+    isSwiping.current = false;
+    const threshold = 50;
+    if (touchDeltaX.current < -threshold) {
+      // Swiped left → next
+      setCurrentIndex((i) => Math.min(questions.length - 1, i + 1));
+    } else if (touchDeltaX.current > threshold) {
+      // Swiped right → previous
+      setCurrentIndex((i) => Math.max(0, i - 1));
+    }
+    touchDeltaX.current = 0;
+  }, [questions.length, setCurrentIndex]);
+
+  return (
+    <div className="lg:hidden">
+      <div
+        className="overflow-hidden"
+        style={{ borderRadius: 20 }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div
+          ref={trackRef}
+          className="flex transition-transform duration-300 ease-in-out"
+          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+        >
+          {questions.map((q, i) => (
+            <div key={q.id} className="w-full flex-shrink-0">
+              <AnsweredQuestionCard
+                question={q}
+                basePath={basePath}
+                appUrl={appUrl}
+                partyColor={partyColor}
+                partyColorDark={partyColorDark}
+                playingId={playingId}
+                setPlayingId={setPlayingId}
+                isVisible={i === currentIndex}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+      {questions.length > 1 && (
+        <div className="flex justify-center gap-3 mt-3">
+          <button
+            onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+            disabled={currentIndex === 0}
+            className="rounded-full flex items-center justify-center cursor-pointer disabled:opacity-30"
+            style={{
+              width: 40,
+              height: 40,
+              backgroundColor: partyColor || "#00D564",
+            }}
+            aria-label="Forrige"
+          >
+            <FontAwesomeIcon
+              icon={faChevronLeft}
+              style={{ color: partyColorDark || "#0E412E", fontSize: 18 }}
+            />
+          </button>
+          <button
+            onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
+            disabled={currentIndex === questions.length - 1}
+            className="rounded-full flex items-center justify-center cursor-pointer disabled:opacity-30"
+            style={{
+              width: 40,
+              height: 40,
+              backgroundColor: partyColor || "#00D564",
+            }}
+            aria-label="Næste"
+          >
+            <FontAwesomeIcon
+              icon={faChevronRight}
+              style={{ color: partyColorDark || "#0E412E", fontSize: 18 }}
+            />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Carousel for answered questions — grid on desktop, swipeable on mobile */
 function AnsweredQuestionsCarousel({
   questions,
@@ -1945,76 +2067,18 @@ function AnsweredQuestionsCarousel({
         )}
       </div>
 
-      {/* Mobile: single card carousel */}
-      <div className="lg:hidden">
-        <div className="overflow-hidden" style={{ borderRadius: 20 }}>
-          <div
-            className="flex transition-transform duration-300 ease-in-out"
-            style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-          >
-            {questions.map((q, i) => (
-              <div key={q.id} className="w-full flex-shrink-0">
-                <AnsweredQuestionCard
-                  question={q}
-                  basePath={basePath}
-                  appUrl={appUrl}
-                  partyColor={partyColor}
-                  partyColorDark={partyColorDark}
-                  playingId={playingId}
-                  setPlayingId={setPlayingId}
-                  isVisible={i === currentIndex}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-        {questions.length > 1 && (
-          <div className="flex justify-center gap-3 mt-3">
-            <button
-              onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-              disabled={currentIndex === 0}
-              className="rounded-full flex items-center justify-center cursor-pointer disabled:opacity-30"
-              style={{
-                width: 40,
-                height: 40,
-                backgroundColor: hoverArrow === "mobile-left" ? (partyColorDark || "#0E412E") : (partyColor || "#00D564"),
-              }}
-              onMouseEnter={() => setHoverArrow("mobile-left")}
-              onMouseLeave={() => setHoverArrow(null)}
-              aria-label="Forrige"
-            >
-              <FontAwesomeIcon
-                icon={faChevronLeft}
-                style={{
-                  color: hoverArrow === "mobile-left" ? (partyColor || "#00D564") : (partyColorDark || "#0E412E"),
-                  fontSize: 18,
-                }}
-              />
-            </button>
-            <button
-              onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
-              disabled={currentIndex === questions.length - 1}
-              className="rounded-full flex items-center justify-center cursor-pointer disabled:opacity-30"
-              style={{
-                width: 40,
-                height: 40,
-                backgroundColor: hoverArrow === "mobile-right" ? (partyColorDark || "#0E412E") : (partyColor || "#00D564"),
-              }}
-              onMouseEnter={() => setHoverArrow("mobile-right")}
-              onMouseLeave={() => setHoverArrow(null)}
-              aria-label="Næste"
-            >
-              <FontAwesomeIcon
-                icon={faChevronRight}
-                style={{
-                  color: hoverArrow === "mobile-right" ? (partyColor || "#00D564") : (partyColorDark || "#0E412E"),
-                  fontSize: 18,
-                }}
-              />
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Mobile: single card carousel with swipe support */}
+      <MobileCarousel
+        questions={questions}
+        basePath={basePath}
+        appUrl={appUrl}
+        partyColor={partyColor}
+        partyColorDark={partyColorDark}
+        playingId={playingId}
+        setPlayingId={setPlayingId}
+        currentIndex={currentIndex}
+        setCurrentIndex={setCurrentIndex}
+      />
     </div>
   );
 }

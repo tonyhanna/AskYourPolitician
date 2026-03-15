@@ -93,7 +93,7 @@ export function UpvoteModal({
     border: `1.5px solid ${dark}40`,
     borderRadius: 10,
     padding: "10px 14px",
-    fontSize: 14,
+    fontSize: 16, // Must be >= 16px to prevent iOS Safari auto-zoom on focus
     color: dark,
     fontFamily: "var(--font-figtree)",
     outline: "none",

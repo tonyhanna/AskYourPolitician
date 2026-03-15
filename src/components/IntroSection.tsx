@@ -13,6 +13,7 @@ export function IntroSection({
   heroLine2,
   heroLine2Color,
   dismissButtonColor,
+  politicianSlug,
 }: {
   bannerUrl?: string | null;
   bannerBgColor?: string | null;
@@ -21,7 +22,9 @@ export function IntroSection({
   heroLine2?: string | null;
   heroLine2Color?: string | null;
   dismissButtonColor?: string | null;
+  politicianSlug: string;
 }) {
+  const storageKey = `intro-dismissed:${politicianSlug}`;
   const [dismissed, setDismissed] = useState(true); // default true to avoid flash
   const [loaded, setLoaded] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -34,10 +37,10 @@ export function IntroSection({
   }, []);
 
   useEffect(() => {
-    const d = localStorage.getItem("intro-dismissed") === "1";
+    const d = localStorage.getItem(storageKey) === "1";
     setDismissed(d);
     setLoaded(true);
-  }, []);
+  }, [storageKey]);
 
   // Measure height — re-measure on resize and when images inside load
   useEffect(() => {
@@ -65,15 +68,15 @@ export function IntroSection({
   useEffect(() => {
     const handler = () => {
       setDismissed(false);
-      localStorage.removeItem("intro-dismissed");
+      localStorage.removeItem(storageKey);
     };
     window.addEventListener("show-intro", handler);
     return () => window.removeEventListener("show-intro", handler);
-  }, []);
+  }, [storageKey]);
 
   function dismiss() {
     setDismissed(true);
-    localStorage.setItem("intro-dismissed", "1");
+    localStorage.setItem(storageKey, "1");
     window.dispatchEvent(new Event("intro-dismissed"));
   }
 

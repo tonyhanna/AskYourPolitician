@@ -17,7 +17,12 @@ export async function generateMetadata({
   const { partySlug, politicianSlug } = await params;
 
   const [politician] = await db
-    .select({ name: politicians.name, party: politicians.party, ogImageUrl: politicians.ogImageUrl })
+    .select({
+      name: politicians.name,
+      party: politicians.party,
+      ogImageUrl: politicians.ogImageUrl,
+      partyId: politicians.partyId,
+    })
     .from(politicians)
     .where(
       and(
@@ -29,6 +34,17 @@ export async function generateMetadata({
 
   if (!politician) return { title: "Ikke fundet" };
 
+  // Fetch party color for theme-color meta tag (Safari mobile top bar)
+  let partyColor: string | null = null;
+  if (politician.partyId) {
+    const [party] = await db
+      .select({ color: parties.color })
+      .from(parties)
+      .where(eq(parties.id, politician.partyId))
+      .limit(1);
+    partyColor = party?.color ?? null;
+  }
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
   return {
@@ -39,6 +55,7 @@ export async function generateMetadata({
       type: "website",
       ...(politician.ogImageUrl ? { images: [{ url: politician.ogImageUrl, width: 1200, height: 630 }] } : {}),
     },
+    ...(partyColor ? { themeColor: partyColor } : {}),
   };
 }
 
@@ -185,6 +202,7 @@ export default async function BorgerFeed({
         heroLine2={politician.heroLine2}
         heroLine2Color={resolvedHeroLine2Color}
         dismissButtonColor={party?.colorDark ?? null}
+        politicianSlug={politicianSlug}
       />
       <main className="px-[15px] py-6 pb-0">
       <QuestionFeedFilter

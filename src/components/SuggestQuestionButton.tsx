@@ -27,11 +27,12 @@ export function SuggestQuestionButton({
   const [error, setError] = useState<string | null>(null);
   const [infoDismissed, setInfoDismissed] = useState(false);
 
+  const introStorageKey = `intro-dismissed:${politicianSlug}`;
   useEffect(() => {
-    if (localStorage.getItem("intro-dismissed") === "1") {
+    if (localStorage.getItem(introStorageKey) === "1") {
       setInfoDismissed(true);
     }
-  }, []);
+  }, [introStorageKey]);
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -94,13 +95,13 @@ export function SuggestQuestionButton({
             <li>Hvis du har upvoted spørgsmål, får du en e-mail</li>
           </ol>
           <button
-            onClick={() => { setInfoDismissed(true); localStorage.setItem("intro-dismissed", "1"); }}
+            onClick={() => { setInfoDismissed(true); localStorage.setItem(introStorageKey, "1"); }}
             className="mt-3 bg-blue-600 text-white text-sm font-medium px-4 py-1.5 rounded-full hover:bg-blue-700 transition cursor-pointer"
           >
             Jeg forstår
           </button>
           <button
-            onClick={() => { setInfoDismissed(true); localStorage.setItem("intro-dismissed", "1"); }}
+            onClick={() => { setInfoDismissed(true); localStorage.setItem(introStorageKey, "1"); }}
             className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 cursor-pointer"
             aria-label="Luk"
           >
@@ -134,7 +135,7 @@ export function SuggestQuestionButton({
           {infoDismissed && !showExpanded && (
             <button
               type="button"
-              onClick={() => { setInfoDismissed(false); localStorage.removeItem("intro-dismissed"); }}
+              onClick={() => { setInfoDismissed(false); localStorage.removeItem(introStorageKey); }}
               className="ml-auto text-blue-500 hover:text-blue-700 transition cursor-pointer shrink-0"
               aria-label="Vis information"
             >

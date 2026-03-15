@@ -62,13 +62,14 @@ export function PoliticianTopBar({
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ firstName?: boolean; email?: boolean }>({});
+  const introStorageKey = `intro-dismissed:${politicianSlug}`;
   const [introDismissed, setIntroDismissed] = useState(false);
   useEffect(() => {
-    setIntroDismissed(localStorage.getItem("intro-dismissed") === "1");
+    setIntroDismissed(localStorage.getItem(introStorageKey) === "1");
     const handler = () => setIntroDismissed(true);
     window.addEventListener("intro-dismissed", handler);
     return () => window.removeEventListener("intro-dismissed", handler);
-  }, []);
+  }, [introStorageKey]);
 
   const [isNarrow, setIsNarrow] = useState(false);
 
