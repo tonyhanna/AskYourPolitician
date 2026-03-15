@@ -1236,7 +1236,7 @@ function PinnedQuestionCard({
         <div
           ref={thumbnailWrapRef}
           className={`flex-shrink-0 relative w-[90vw] self-center lg:self-auto lg:w-[337px] ${hasPlayableMedia ? "cursor-pointer" : ""}`}
-          style={{ borderRadius: 20, overflow: "hidden", aspectRatio: "3/4", scrollMarginTop: 170, backgroundColor: partyColorDark || "#1a1a1a" }}
+          style={{ borderRadius: 20, overflow: "hidden", aspectRatio: "3/4", scrollMarginTop: 170 }}
           onClick={hasPlayableMedia ? handleThumbnailClick : undefined}
           onMouseEnter={() => { if (hasPlayableMedia && !window.matchMedia("(pointer: coarse)").matches) setIsHovering(true); }}
           onMouseLeave={() => { if (!window.matchMedia("(pointer: coarse)").matches) setIsHovering(false); }}
@@ -1624,7 +1624,7 @@ function AnsweredQuestionCard({
     <div
       ref={cardRef}
       className={`relative ${hasPlayableMedia ? "cursor-pointer" : ""}`}
-      style={{ aspectRatio: "3/4", borderRadius: 20, overflow: "hidden", scrollMarginTop: 170, backgroundColor: partyColorDark || "#1a1a1a" }}
+      style={{ aspectRatio: "3/4", borderRadius: 20, overflow: "hidden", scrollMarginTop: 170 }}
       onClick={hasPlayableMedia ? handleClick : undefined}
       onMouseEnter={() => { if (hasPlayableMedia && !window.matchMedia("(pointer: coarse)").matches) setIsHovering(true); }}
       onMouseLeave={() => { if (!window.matchMedia("(pointer: coarse)").matches) setIsHovering(false); }}
