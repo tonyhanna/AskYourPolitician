@@ -955,7 +955,7 @@ function PinnedQuestionCard({
     if (isHovering && !isWatching) {
       clip.currentTime = 0;
       clip.play().catch(() => {});
-    } else if (!isWatching) {
+    } else {
       clip.pause();
       clip.currentTime = 0;
     }
@@ -973,9 +973,12 @@ function PinnedQuestionCard({
         if (entry.isIntersecting) {
           if (!isWatchingRef.current && clipRef.current && thumbnailClipUrl) {
             const clip = clipRef.current;
-            if (clip.ended || clip.readyState === 0) clip.load();
             clip.currentTime = 0;
-            clip.play().catch(() => {});
+            clip.play().catch(() => {
+              // On mobile Safari, play() can reject after clip.ended — reload and retry
+              clip.load();
+              clip.play().catch(() => {});
+            });
           }
         } else {
           // Pause clip
@@ -1016,6 +1019,8 @@ function PinnedQuestionCard({
       setIsWatching(false);
       setPlayingId(null);
     } else if (hasVideoAnswer) {
+      // Stop clip to free mobile video decoder before starting full video
+      if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
       requestAnimationFrame(() => { if (bufferingRef.current) bufferingRef.current.style.opacity = "1"; });
       if (fullVideoRef.current) {
         fullVideoRef.current.currentTime = 0;
@@ -1041,6 +1046,8 @@ function PinnedQuestionCard({
         }
       });
     } else if (hasAudioAnswer) {
+      // Stop clip to free mobile video decoder before starting audio playback
+      if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(() => {});
@@ -1396,7 +1403,7 @@ function AnsweredQuestionCard({
     if (isHovering && !isWatching) {
       clip.currentTime = 0;
       clip.play().catch(() => {});
-    } else if (!isWatching) {
+    } else {
       clip.pause();
       clip.currentTime = 0;
     }
@@ -1414,9 +1421,12 @@ function AnsweredQuestionCard({
         if (entry.isIntersecting) {
           if (!isWatchingRef.current && clipRef.current && clipUrl) {
             const clip = clipRef.current;
-            if (clip.ended || clip.readyState === 0) clip.load();
             clip.currentTime = 0;
-            clip.play().catch(() => {});
+            clip.play().catch(() => {
+              // On mobile Safari, play() can reject after clip.ended — reload and retry
+              clip.load();
+              clip.play().catch(() => {});
+            });
           }
         } else {
           // Pause clip
@@ -1445,6 +1455,8 @@ function AnsweredQuestionCard({
       setIsWatching(false);
       setPlayingId(null);
     } else if (hasVideoAnswer) {
+      // Stop clip to free mobile video decoder before starting full video
+      if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
       requestAnimationFrame(() => { if (bufferingRef.current) bufferingRef.current.style.opacity = "1"; });
       if (fullVideoRef.current) {
         fullVideoRef.current.currentTime = 0;
@@ -1473,6 +1485,8 @@ function AnsweredQuestionCard({
         }
       });
     } else if (hasAudioAnswer) {
+      // Stop clip to free mobile video decoder before starting audio playback
+      if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(() => {});
