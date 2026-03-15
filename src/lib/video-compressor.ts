@@ -214,11 +214,16 @@ export async function compressVideo(
 function getSupportedMimeType(): string | null {
   if (typeof MediaRecorder === "undefined") return null;
 
+  // Prefer MP4/H.264 — it's universally supported on all devices including iOS.
+  // WebM (VP8/VP9) is NOT supported on iOS Safari/Chrome (WebKit), so if a
+  // video is compressed in desktop Chrome (which picks VP9) and then played
+  // on an iPhone, it will stutter or fail entirely.
   const candidates = [
+    "video/mp4;codecs=avc1",
+    "video/mp4",
     "video/webm;codecs=vp9",
     "video/webm;codecs=vp8",
     "video/webm",
-    "video/mp4",
   ];
 
   for (const mime of candidates) {

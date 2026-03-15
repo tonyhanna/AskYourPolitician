@@ -1335,7 +1335,7 @@ function PinnedQuestionCard({
           )}
 
           {/* Temporary version indicator — remove after mobile debugging */}
-          <span style={{ position: "absolute", bottom: 4, right: 6, fontSize: 9, color: "rgba(255,255,255,0.5)", zIndex: 99, fontFamily: "monospace", pointerEvents: "none" }}>v7</span>
+          <span style={{ position: "absolute", bottom: 4, right: 6, fontSize: 9, color: "rgba(255,255,255,0.5)", zIndex: 99, fontFamily: "monospace", pointerEvents: "none" }}>v8</span>
 
           {/* Thumbnail visual */}
           {thumbnailClipUrl ? (

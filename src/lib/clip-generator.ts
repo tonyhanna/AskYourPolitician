@@ -175,11 +175,16 @@ export async function generateVideoClip(
 function getSupportedMimeType(): string | null {
   if (typeof MediaRecorder === "undefined") return null;
 
+  // Prefer MP4/H.264 — it's universally supported on all devices including iOS.
+  // WebM (VP8/VP9) is NOT supported on iOS Safari/Chrome (WebKit), so if a
+  // clip is generated in desktop Chrome (which picks VP8) and then played on
+  // an iPhone, it will stutter or fail entirely.
   const candidates = [
+    "video/mp4;codecs=avc1",
+    "video/mp4",
     "video/webm;codecs=vp8",
     "video/webm;codecs=vp9",
     "video/webm",
-    "video/mp4",
   ];
 
   for (const mime of candidates) {
