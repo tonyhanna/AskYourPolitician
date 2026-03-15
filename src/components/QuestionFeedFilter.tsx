@@ -947,10 +947,12 @@ function PinnedQuestionCard({
   const bufferingRef = useRef<HTMLDivElement>(null);
   useEffect(() => { isWatchingRef.current = isWatching; }, [isWatching]);
 
-  // Hover clip: play forward on hover, reset to start on leave
+  // Hover clip: play forward on hover, reset to start on leave (desktop only)
   useEffect(() => {
     const clip = clipRef.current;
     if (!clip || !thumbnailClipUrl) return;
+    // On touch devices, IntersectionObserver handles clip playback — skip hover logic entirely
+    if (window.matchMedia("(pointer: coarse)").matches) return;
 
     if (isHovering && !isWatching) {
       clip.currentTime = 0;
@@ -974,11 +976,20 @@ function PinnedQuestionCard({
           if (!isWatchingRef.current && clipRef.current && thumbnailClipUrl) {
             const clip = clipRef.current;
             clip.currentTime = 0;
-            clip.play().catch(() => {
-              // On mobile Safari, play() can reject after clip.ended — reload and retry
-              clip.load();
-              clip.play().catch(() => {});
-            });
+            const p = clip.play();
+            if (p) {
+              p.catch(() => {
+                // iOS WebKit releases decoder for off-screen videos —
+                // reload and wait for data before retrying play
+                const onReady = () => {
+                  clip.removeEventListener("canplay", onReady);
+                  clip.currentTime = 0;
+                  clip.play().catch(() => {});
+                };
+                clip.addEventListener("canplay", onReady);
+                clip.load();
+              });
+            }
           }
         } else {
           // Pause clip
@@ -1095,7 +1106,7 @@ function PinnedQuestionCard({
   // Progress bar — smooth rAF loop while watching
   useEffect(() => {
     if (!isWatching) {
-      if (progressBarRef.current) progressBarRef.current.style.width = "0%";
+      if (progressBarRef.current) progressBarRef.current.style.transform = "scaleX(0)";
       return;
     }
 
@@ -1105,8 +1116,8 @@ function PinnedQuestionCard({
       if (el && progressBarRef.current) {
         const total = question.answerDuration ?? el.duration;
         if (total && isFinite(total) && total > 0) {
-          const pct = Math.min((el.currentTime / total) * 100, 100);
-          progressBarRef.current.style.width = `${pct}%`;
+          const fraction = Math.min(el.currentTime / total, 1);
+          progressBarRef.current.style.transform = `scaleX(${fraction})`;
         }
       }
       rafId = requestAnimationFrame(tick);
@@ -1231,15 +1242,17 @@ function PinnedQuestionCard({
           {isWatching && (
             <div
               className="absolute"
-              style={{ zIndex: 5, bottom: 35, left: 30, right: 30, height: 4, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 9999, mixBlendMode: "difference" }}
+              style={{ zIndex: 5, bottom: 35, left: 30, right: 30, height: 4, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 9999, mixBlendMode: "difference", overflow: "hidden" }}
             >
               <div
                 ref={progressBarRef}
                 style={{
                   height: "100%",
-                  width: "0%",
+                  width: "100%",
                   backgroundColor: "#ffffff",
-                  borderRadius: 9999,
+                  transformOrigin: "left",
+                  transform: "scaleX(0)",
+                  willChange: "transform",
                 }}
               />
             </div>
@@ -1396,10 +1409,12 @@ function AnsweredQuestionCard({
     }
   }, [isVisible, isWatching, playingId, question.id]);
 
-  // Hover clip: play forward on hover, reset on leave (skip when watching)
+  // Hover clip: play forward on hover, reset on leave (desktop only)
   useEffect(() => {
     const clip = clipRef.current;
     if (!clip || !clipUrl) return;
+    // On touch devices, IntersectionObserver handles clip playback — skip hover logic entirely
+    if (window.matchMedia("(pointer: coarse)").matches) return;
     if (isHovering && !isWatching) {
       clip.currentTime = 0;
       clip.play().catch(() => {});
@@ -1422,11 +1437,20 @@ function AnsweredQuestionCard({
           if (!isWatchingRef.current && clipRef.current && clipUrl) {
             const clip = clipRef.current;
             clip.currentTime = 0;
-            clip.play().catch(() => {
-              // On mobile Safari, play() can reject after clip.ended — reload and retry
-              clip.load();
-              clip.play().catch(() => {});
-            });
+            const p = clip.play();
+            if (p) {
+              p.catch(() => {
+                // iOS WebKit releases decoder for off-screen videos —
+                // reload and wait for data before retrying play
+                const onReady = () => {
+                  clip.removeEventListener("canplay", onReady);
+                  clip.currentTime = 0;
+                  clip.play().catch(() => {});
+                };
+                clip.addEventListener("canplay", onReady);
+                clip.load();
+              });
+            }
           }
         } else {
           // Pause clip
@@ -1522,7 +1546,7 @@ function AnsweredQuestionCard({
   // Progress bar
   useEffect(() => {
     if (!isWatching) {
-      if (progressBarRef.current) progressBarRef.current.style.width = "0%";
+      if (progressBarRef.current) progressBarRef.current.style.transform = "scaleX(0)";
       return;
     }
     let rafId: number;
@@ -1531,8 +1555,8 @@ function AnsweredQuestionCard({
       if (el && progressBarRef.current) {
         const total = question.answerDuration ?? el.duration;
         if (total && isFinite(total) && total > 0) {
-          const pct = Math.min((el.currentTime / total) * 100, 100);
-          progressBarRef.current.style.width = `${pct}%`;
+          const fraction = Math.min(el.currentTime / total, 1);
+          progressBarRef.current.style.transform = `scaleX(${fraction})`;
         }
       }
       rafId = requestAnimationFrame(tick);
@@ -1608,11 +1632,11 @@ function AnsweredQuestionCard({
       {isWatching && (
         <div
           className="absolute"
-          style={{ zIndex: 5, bottom: 25, left: 20, right: 20, height: 4, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 9999, mixBlendMode: "difference" }}
+          style={{ zIndex: 5, bottom: 25, left: 20, right: 20, height: 4, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 9999, mixBlendMode: "difference", overflow: "hidden" }}
         >
           <div
             ref={progressBarRef}
-            style={{ height: "100%", width: "0%", backgroundColor: "#ffffff", borderRadius: 9999 }}
+            style={{ height: "100%", width: "100%", backgroundColor: "#ffffff", transformOrigin: "left", transform: "scaleX(0)", willChange: "transform" }}
           />
         </div>
       )}
