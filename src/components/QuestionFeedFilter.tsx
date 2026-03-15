@@ -971,11 +971,25 @@ function PinnedQuestionCard({
     if (!isTouch) return;
 
     let inViewport = false;
+    let checkTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const doReload = (clip: HTMLVideoElement) => {
+      // Fallback: reload video and wait for enough data to play
+      clip.oncanplay = () => {
+        clip.oncanplay = null;
+        if (inViewport && !isWatchingRef.current) {
+          clip.currentTime = 0;
+          clip.play().catch(() => {});
+        }
+      };
+      clip.load();
+    };
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         inViewport = entry.isIntersecting;
         const clip = clipRef.current;
+        if (checkTimer) { clearTimeout(checkTimer); checkTimer = null; }
 
         if (entry.isIntersecting) {
           if (isWatchingRef.current) {
@@ -983,20 +997,24 @@ function PinnedQuestionCard({
             fullVideoRef.current?.play().catch(() => {});
             audioRef.current?.play().catch(() => {});
           } else if (clip && thumbnailClipUrl) {
-            // Force-reload clip on mobile viewport entry (iOS releases decoders).
-            // Use canplaythrough to ensure FULL clip is buffered before playing.
-            clip.oncanplaythrough = () => {
-              clip.oncanplaythrough = null;
-              if (inViewport && !isWatchingRef.current) {
-                clip.currentTime = 0;
-                clip.play().catch(() => {});
+            // Try direct play first (fast, no flash, uses preloaded data).
+            // Hover effect is disabled on mobile so nothing interferes.
+            clip.currentTime = 0;
+            const p = clip.play();
+            if (p) {
+              p.catch(() => doReload(clip));
+            }
+            // Safety: if play() resolved but video isn't advancing (iOS
+            // decoder released), fall back to reload after 400ms.
+            checkTimer = setTimeout(() => {
+              if (clip.currentTime < 0.05 && !clip.paused && !clip.ended && inViewport && !isWatchingRef.current) {
+                doReload(clip);
               }
-            };
-            clip.load();
+            }, 400);
           }
         } else {
           if (clip && thumbnailClipUrl && !isWatchingRef.current) {
-            clip.oncanplaythrough = null;
+            clip.oncanplay = null;
             clip.pause();
           }
           if (isWatchingRef.current) {
@@ -1008,7 +1026,7 @@ function PinnedQuestionCard({
       { threshold: 0.3 }
     );
     observer.observe(wrap);
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); if (checkTimer) clearTimeout(checkTimer); };
   }, [thumbnailClipUrl]);
 
   // Stop if another card started playing
@@ -1317,31 +1335,20 @@ function PinnedQuestionCard({
           )}
 
           {/* Temporary version indicator — remove after mobile debugging */}
-          <span style={{ position: "absolute", bottom: 4, right: 6, fontSize: 9, color: "rgba(255,255,255,0.5)", zIndex: 99, fontFamily: "monospace", pointerEvents: "none" }}>v6</span>
+          <span style={{ position: "absolute", bottom: 4, right: 6, fontSize: 9, color: "rgba(255,255,255,0.5)", zIndex: 99, fontFamily: "monospace", pointerEvents: "none" }}>v7</span>
 
           {/* Thumbnail visual */}
           {thumbnailClipUrl ? (
-            <>
-              {/* Poster image behind video — prevents white flash during load() */}
-              {thumbnailPhotoUrl && (
-                <img
-                  src={thumbnailPhotoUrl}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover"
-                  style={{ borderRadius: 20, zIndex: 0 }}
-                />
-              )}
-              <video
-                ref={clipRef}
-                src={thumbnailClipUrl}
-                muted
-                playsInline
-                preload="auto"
-                poster={thumbnailPhotoUrl || undefined}
-                className="w-full h-full object-cover"
-                style={{ borderRadius: 20, position: "relative", zIndex: 1 }}
-              />
-            </>
+            <video
+              ref={clipRef}
+              src={thumbnailClipUrl}
+              muted
+              playsInline
+              preload="auto"
+              poster={thumbnailPhotoUrl || undefined}
+              className="w-full h-full object-cover"
+              style={{ borderRadius: 20 }}
+            />
           ) : (
             <img
               src={thumbnailPhotoUrl!}
@@ -1460,26 +1467,41 @@ function AnsweredQuestionCard({
     if (!isTouch) return;
 
     let inViewport = false;
+    let checkTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const doReload = (clip: HTMLVideoElement) => {
+      clip.oncanplay = () => {
+        clip.oncanplay = null;
+        if (inViewport && !isWatchingRef.current) {
+          clip.currentTime = 0;
+          clip.play().catch(() => {});
+        }
+      };
+      clip.load();
+    };
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         inViewport = entry.isIntersecting;
         const clip = clipRef.current;
+        if (checkTimer) { clearTimeout(checkTimer); checkTimer = null; }
 
         if (entry.isIntersecting) {
           if (!isWatchingRef.current && clip && clipUrl) {
-            clip.oncanplaythrough = () => {
-              clip.oncanplaythrough = null;
-              if (inViewport && !isWatchingRef.current) {
-                clip.currentTime = 0;
-                clip.play().catch(() => {});
+            clip.currentTime = 0;
+            const p = clip.play();
+            if (p) {
+              p.catch(() => doReload(clip));
+            }
+            checkTimer = setTimeout(() => {
+              if (clip.currentTime < 0.05 && !clip.paused && !clip.ended && inViewport && !isWatchingRef.current) {
+                doReload(clip);
               }
-            };
-            clip.load();
+            }, 400);
           }
         } else {
           if (clip && clipUrl && !isWatchingRef.current) {
-            clip.oncanplaythrough = null;
+            clip.oncanplay = null;
             clip.pause();
           }
           if (isWatchingRef.current) {
@@ -1491,7 +1513,7 @@ function AnsweredQuestionCard({
       { threshold: 0.3 }
     );
     observer.observe(card);
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); if (checkTimer) clearTimeout(checkTimer); };
   }, [clipUrl]);
 
   // Click to play/pause full video
