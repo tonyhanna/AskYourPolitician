@@ -174,7 +174,7 @@ export default async function BorgerFeed({
       {party?.color && <meta name="theme-color" content={party.color} />}
       {/* Set <html> background for top overscroll rubber-band area */}
       {party?.color && <ThemeColorSetter color={party.color} />}
-      {/* Sticky wrapper: top bar + hero banner stay fixed at top until banner is dismissed */}
+      {/* Top bar: sticky, always visible at top */}
       <div className="sticky top-0 z-50" style={{ backgroundColor: party?.color ?? undefined }}>
         <PoliticianTopBar
           politicianName={politician.name}
@@ -190,6 +190,9 @@ export default async function BorgerFeed({
           politicianSlug={politicianSlug}
           hasSession={!!citizen}
         />
+      </div>
+      {/* Hero banner: separate sticky, slides behind topbar (lower z-index) */}
+      <div className="sticky top-0 z-40">
         <IntroSection
           bannerUrl={politician.bannerUrl}
           bannerBgColor={politician.bannerBgColor}
