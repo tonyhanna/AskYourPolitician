@@ -89,13 +89,14 @@ export function PoliticianTopBar({
   // Focus input when form activates
   useEffect(() => {
     if (formActive) {
-      setTimeout(() => {
+      // Use requestAnimationFrame to ensure the conditionally-rendered input is in the DOM
+      requestAnimationFrame(() => {
         if (window.innerWidth >= 640) {
           inputRef.current?.focus();
         } else {
           mobileInputRef.current?.focus();
         }
-      }, 50);
+      });
     }
   }, [formActive]);
 
