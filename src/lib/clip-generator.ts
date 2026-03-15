@@ -28,16 +28,22 @@ const DEFAULTS: Required<ClipOptions> = {
   videoBitsPerSecond: 2_500_000,
 };
 
+export interface ClipResult {
+  clip: File;
+  poster: File;
+}
+
 /**
  * Generate a short video clip from a source video URL.
  *
- * Returns a `File` (webm or mp4) or `null` if the browser doesn't support
- * MediaRecorder with a video codec.
+ * Returns a clip `File` (webm or mp4) and a poster `File` (jpeg of first
+ * frame), or `null` if the browser doesn't support MediaRecorder with a
+ * video codec.
  */
 export async function generateVideoClip(
   videoUrl: string,
   opts?: ClipOptions,
-): Promise<File | null> {
+): Promise<ClipResult | null> {
   const { duration, maxWidth, maxHeight, fps, videoBitsPerSecond } = {
     ...DEFAULTS,
     ...opts,
@@ -107,6 +113,16 @@ export async function generateVideoClip(
   // the video to actually render a frame before we begin recording.
   ctx.drawImage(video, 0, 0, w, h);
 
+  // Capture the first frame as a JPEG poster image.
+  // This is used as a static thumbnail that loads instantly on the citizen
+  // page while the clip video is still downloading.
+  const posterBlob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.85);
+  });
+  const posterFile = posterBlob
+    ? new File([posterBlob], "poster.jpg", { type: "image/jpeg" })
+    : null;
+
   await video.play();
 
   // Wait until the video has rendered at least one frame (canplay +
@@ -169,7 +185,16 @@ export async function generateVideoClip(
   }
 
   const ext = mimeType.includes("webm") ? "webm" : "mp4";
-  return new File([blob], `clip.${ext}`, { type: mimeType });
+  const clip = new File([blob], `clip.${ext}`, { type: mimeType });
+
+  // If poster capture failed, create one from the clip's last canvas state
+  const poster = posterFile ?? new File(
+    [await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.85))],
+    "poster.jpg",
+    { type: "image/jpeg" },
+  );
+
+  return { clip, poster };
 }
 
 function getSupportedMimeType(): string | null {

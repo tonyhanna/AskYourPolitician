@@ -326,7 +326,7 @@ export async function submitAnswerUrl(questionId: string, answerUrl: string, pho
   revalidatePath("/politiker/dashboard");
 }
 
-export async function submitAnswerClipUrl(questionId: string, clipUrl: string) {
+export async function submitAnswerClipUrl(questionId: string, clipUrl: string, posterUrl?: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -350,10 +350,15 @@ export async function submitAnswerClipUrl(questionId: string, clipUrl: string) {
 
   if (!question) throw new Error("Spørgsmål ikke fundet");
 
-  // Update clip URL on question
+  // Update clip URL (and poster if provided) on question
+  const updateData: Record<string, string> = { answerClipUrl: clipUrl };
+  if (posterUrl && isBlobUrl(posterUrl)) {
+    updateData.answerPhotoUrl = posterUrl;
+  }
+
   await db
     .update(questions)
-    .set({ answerClipUrl: clipUrl })
+    .set(updateData)
     .where(eq(questions.id, questionId));
 
   // Update the latest answer history entry
@@ -365,9 +370,13 @@ export async function submitAnswerClipUrl(questionId: string, clipUrl: string) {
     .limit(1);
 
   if (latestHistory) {
+    const historyUpdate: Record<string, string> = { answerClipUrl: clipUrl };
+    if (posterUrl && isBlobUrl(posterUrl)) {
+      historyUpdate.answerPhotoUrl = posterUrl;
+    }
     await db
       .update(answerHistory)
-      .set({ answerClipUrl: clipUrl })
+      .set(historyUpdate)
       .where(eq(answerHistory.id, latestHistory.id));
   }
 

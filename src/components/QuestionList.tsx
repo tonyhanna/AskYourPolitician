@@ -294,16 +294,23 @@ function QuestionItem({
     setClipGenerating(true);
     setClipError(null);
     try {
-      const clipFile = await generateVideoClip(videoUrl);
-      if (!clipFile) {
+      const result = await generateVideoClip(videoUrl);
+      if (!result) {
         setClipGenerating(false);
         return; // Browser doesn't support MediaRecorder — skip silently
       }
-      const clipBlob = await upload(`answers/clips/${clipFile.name}`, clipFile, {
-        access: "public",
-        handleUploadUrl: "/api/upload",
-      });
-      await submitAnswerClipUrl(questionId, clipBlob.url);
+      // Upload clip and poster in parallel
+      const [clipBlob, posterBlob] = await Promise.all([
+        upload(`answers/clips/${result.clip.name}`, result.clip, {
+          access: "public",
+          handleUploadUrl: "/api/upload",
+        }),
+        upload(`answers/posters/${result.poster.name}`, result.poster, {
+          access: "public",
+          handleUploadUrl: "/api/upload",
+        }),
+      ]);
+      await submitAnswerClipUrl(questionId, clipBlob.url, posterBlob.url);
     } catch (e) {
       console.error("Clip generation failed:", e);
       setClipError(e instanceof Error ? e.message : "Klip-generering fejlede");
