@@ -970,31 +970,32 @@ function PinnedQuestionCard({
     const isTouch = window.matchMedia("(pointer: coarse)").matches;
     if (!isTouch) return;
 
+    let inViewport = false; // Track viewport state for async canplay callback
+
     const observer = new IntersectionObserver(
       ([entry]) => {
+        inViewport = entry.isIntersecting;
+        const clip = clipRef.current;
+
         if (entry.isIntersecting) {
-          if (!isWatchingRef.current && clipRef.current && thumbnailClipUrl) {
-            const clip = clipRef.current;
-            clip.currentTime = 0;
-            const p = clip.play();
-            if (p) {
-              p.catch(() => {
-                // iOS WebKit releases decoder for off-screen videos —
-                // reload and wait for data before retrying play
-                const onReady = () => {
-                  clip.removeEventListener("canplay", onReady);
-                  clip.currentTime = 0;
-                  clip.play().catch(() => {});
-                };
-                clip.addEventListener("canplay", onReady);
-                clip.load();
-              });
-            }
+          if (!isWatchingRef.current && clip && thumbnailClipUrl) {
+            // ALWAYS force-reload on mobile viewport entry.
+            // iOS WebKit silently releases decoders for off-screen videos;
+            // play() may resolve but produce no output. load() guarantees
+            // a fresh decoder + data pipeline from cache.
+            clip.oncanplay = () => {
+              clip.oncanplay = null;
+              if (inViewport && !isWatchingRef.current) {
+                clip.currentTime = 0;
+                clip.play().catch(() => {});
+              }
+            };
+            clip.load();
           }
         } else {
-          // Pause clip
-          if (clipRef.current && thumbnailClipUrl && !isWatchingRef.current) {
-            clipRef.current.pause();
+          if (clip && thumbnailClipUrl && !isWatchingRef.current) {
+            clip.oncanplay = null; // Cancel any pending play
+            clip.pause();
           }
           // Pause full video/audio when scrolled out of view
           if (isWatchingRef.current) {
@@ -1264,7 +1265,7 @@ function PinnedQuestionCard({
               ref={fullVideoRef}
               src={question.answerUrl!}
               playsInline
-              preload="metadata"
+              preload="auto"
               onEnded={handleFullVideoEnded}
               onWaiting={handleWaiting}
               onPlaying={handlePlaying}
@@ -1302,6 +1303,9 @@ function PinnedQuestionCard({
             />
           )}
 
+          {/* Temporary version indicator — remove after mobile debugging */}
+          <span style={{ position: "absolute", bottom: 4, right: 6, fontSize: 9, color: "rgba(255,255,255,0.5)", zIndex: 99, fontFamily: "monospace", pointerEvents: "none" }}>v5</span>
+
           {/* Thumbnail visual */}
           {thumbnailClipUrl ? (
             <video
@@ -1309,7 +1313,7 @@ function PinnedQuestionCard({
               src={thumbnailClipUrl}
               muted
               playsInline
-              preload="metadata"
+              preload="auto"
               poster={thumbnailPhotoUrl || undefined}
               className="w-full h-full object-cover"
               style={{ borderRadius: 20 }}
@@ -1431,31 +1435,29 @@ function AnsweredQuestionCard({
     const isTouch = window.matchMedia("(pointer: coarse)").matches;
     if (!isTouch) return;
 
+    let inViewport = false;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
+        inViewport = entry.isIntersecting;
+        const clip = clipRef.current;
+
         if (entry.isIntersecting) {
-          if (!isWatchingRef.current && clipRef.current && clipUrl) {
-            const clip = clipRef.current;
-            clip.currentTime = 0;
-            const p = clip.play();
-            if (p) {
-              p.catch(() => {
-                // iOS WebKit releases decoder for off-screen videos —
-                // reload and wait for data before retrying play
-                const onReady = () => {
-                  clip.removeEventListener("canplay", onReady);
-                  clip.currentTime = 0;
-                  clip.play().catch(() => {});
-                };
-                clip.addEventListener("canplay", onReady);
-                clip.load();
-              });
-            }
+          if (!isWatchingRef.current && clip && clipUrl) {
+            // ALWAYS force-reload on mobile viewport entry.
+            clip.oncanplay = () => {
+              clip.oncanplay = null;
+              if (inViewport && !isWatchingRef.current) {
+                clip.currentTime = 0;
+                clip.play().catch(() => {});
+              }
+            };
+            clip.load();
           }
         } else {
-          // Pause clip
-          if (clipRef.current && clipUrl && !isWatchingRef.current) {
-            clipRef.current.pause();
+          if (clip && clipUrl && !isWatchingRef.current) {
+            clip.oncanplay = null;
+            clip.pause();
           }
           // Pause full video/audio when scrolled out of view
           if (isWatchingRef.current) {
@@ -1581,7 +1583,7 @@ function AnsweredQuestionCard({
           src={clipUrl}
           muted
           playsInline
-          preload="metadata"
+          preload="auto"
           poster={photoUrl || undefined}
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -1647,7 +1649,7 @@ function AnsweredQuestionCard({
           ref={fullVideoRef}
           src={question.answerUrl!}
           playsInline
-          preload="metadata"
+          preload="auto"
           onEnded={handleEnded}
           onWaiting={() => { if (bufferingRef.current) bufferingRef.current.style.opacity = "1"; }}
           onPlaying={() => { if (bufferingRef.current) bufferingRef.current.style.opacity = "0"; }}
