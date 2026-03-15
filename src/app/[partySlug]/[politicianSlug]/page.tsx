@@ -177,12 +177,12 @@ export default async function BorgerFeed({
         <style
           precedence="theme"
           href={`theme-${partySlug}`}
-        >{`html{background-color:${party.color}}`}</style>
+        >{`html,html body{background-color:${party.color}}`}</style>
       )}
       {/* Client-side fallback for SPA navigations */}
       {party?.color && <ThemeColorSetter color={party.color} />}
       {/* Top bar: sticky with solid party-color background */}
-      <div className="sticky top-0 z-50" style={{ backgroundColor: party?.color ?? undefined }}>
+      <div className="sticky top-0 z-50" style={{ backgroundColor: party?.color ?? undefined, willChange: "transform" }}>
         <PoliticianTopBar
           politicianName={politician.name}
           partyName={politician.party}

@@ -3,8 +3,7 @@
 import { useEffect } from "react";
 
 /**
- * Sets party color on <html> background for top overscroll rubber-band area.
- * Does NOT touch <body> to avoid coloring the bottom of the page.
+ * Sets party color on <html> and <body> background for overscroll rubber-band areas.
  *
  * The <meta name="theme-color"> for Safari/Chrome toolbar is rendered
  * server-side in page.tsx JSX (must be in initial HTML for Safari).
@@ -15,10 +14,14 @@ import { useEffect } from "react";
 export function ThemeColorSetter({ color }: { color: string }) {
   useEffect(() => {
     const html = document.documentElement;
-    const prev = html.style.backgroundColor;
+    const body = document.body;
+    const prevHtml = html.style.backgroundColor;
+    const prevBody = body.style.backgroundColor;
     html.style.backgroundColor = color;
+    body.style.backgroundColor = color;
     return () => {
-      html.style.backgroundColor = prev;
+      html.style.backgroundColor = prevHtml;
+      body.style.backgroundColor = prevBody;
     };
   }, [color]);
 
