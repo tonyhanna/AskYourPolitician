@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { db } from "@/db";
 import { politicians, parties, questions, questionTags, upvotes, citizens } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
@@ -8,6 +8,7 @@ import { QuestionFeedFilter } from "@/components/QuestionFeedFilter";
 import { ChatbaseWidget } from "@/components/ChatbaseWidget";
 import { IntroSection } from "@/components/IntroSection";
 import { PoliticianTopBar } from "@/components/PoliticianTopBar";
+import { ThemeColorSetter } from "@/components/ThemeColorSetter";
 
 export async function generateMetadata({
   params,
@@ -21,7 +22,6 @@ export async function generateMetadata({
       name: politicians.name,
       party: politicians.party,
       ogImageUrl: politicians.ogImageUrl,
-      partyId: politicians.partyId,
     })
     .from(politicians)
     .where(
@@ -34,17 +34,6 @@ export async function generateMetadata({
 
   if (!politician) return { title: "Ikke fundet" };
 
-  // Fetch party color for theme-color meta tag (Safari mobile top bar)
-  let partyColor: string | null = null;
-  if (politician.partyId) {
-    const [party] = await db
-      .select({ color: parties.color })
-      .from(parties)
-      .where(eq(parties.id, politician.partyId))
-      .limit(1);
-    partyColor = party?.color ?? null;
-  }
-
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
   return {
@@ -55,6 +44,39 @@ export async function generateMetadata({
       type: "website",
       ...(politician.ogImageUrl ? { images: [{ url: politician.ogImageUrl, width: 1200, height: 630 }] } : {}),
     },
+  };
+}
+
+/** Dynamic viewport with party-colored theme-color for Safari/Chrome mobile browser bar */
+export async function generateViewport({
+  params,
+}: {
+  params: Promise<{ partySlug: string; politicianSlug: string }>;
+}): Promise<Viewport> {
+  const { partySlug, politicianSlug } = await params;
+
+  const [politician] = await db
+    .select({ partyId: politicians.partyId })
+    .from(politicians)
+    .where(
+      and(
+        eq(politicians.partySlug, partySlug),
+        eq(politicians.slug, politicianSlug)
+      )
+    )
+    .limit(1);
+
+  let partyColor: string | null = null;
+  if (politician?.partyId) {
+    const [party] = await db
+      .select({ color: parties.color })
+      .from(parties)
+      .where(eq(parties.id, politician.partyId))
+      .limit(1);
+    partyColor = party?.color ?? null;
+  }
+
+  return {
     ...(partyColor ? { themeColor: partyColor } : {}),
   };
 }
@@ -180,6 +202,8 @@ export default async function BorgerFeed({
 
   return (
     <>
+      {/* Set <html> background to party color for Safari rubber-band over-scroll area */}
+      {party?.color && <ThemeColorSetter color={party.color} />}
       {/* Sticky wrapper: top bar + hero banner stay fixed at top until banner is dismissed */}
       <div className="sticky top-0 z-50">
         <PoliticianTopBar

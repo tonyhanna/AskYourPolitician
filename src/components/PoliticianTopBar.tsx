@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faCommentLines } from "@fortawesome/pro-solid-svg-icons";
 import { faInfo } from "@fortawesome/pro-duotone-svg-icons";
 import { submitSuggestion, directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { SuccessBanner } from "./SuccessBanner";
@@ -61,7 +62,7 @@ export function PoliticianTopBar({
   const [pending, setPending] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{ firstName?: boolean; email?: boolean }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ firstName?: boolean; email?: boolean; emailInvalid?: boolean }>({});
   const introStorageKey = `intro-dismissed:${politicianSlug}`;
   const [introDismissed, setIntroDismissed] = useState(false);
   useEffect(() => {
@@ -143,9 +144,10 @@ export function PoliticianTopBar({
 
     // Validate identity fields when panel is open
     if (!hasSession && showIdentity) {
-      const errors: { firstName?: boolean; email?: boolean } = {};
+      const errors: { firstName?: boolean; email?: boolean; emailInvalid?: boolean } = {};
       if (!firstName.trim()) errors.firstName = true;
       if (!email.trim()) errors.email = true;
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.emailInvalid = true;
       if (Object.keys(errors).length > 0) {
         setFieldErrors(errors);
         return;
@@ -245,24 +247,51 @@ export function PoliticianTopBar({
             </p>
           </div>
 
-          {/* Mobile-only: info button (between names and suggest) */}
-          {introDismissed && !formActive && (
-            <button
-              type="button"
-              onClick={() => {
-                setIntroDismissed(false);
-                window.dispatchEvent(new Event("show-intro"));
-              }}
-              className="sm:hidden ml-auto cursor-pointer hover:opacity-50 transition-opacity rounded-full flex items-center justify-center"
-              style={{ width: 24, height: 24, backgroundColor: "rgba(255,255,255,0.5)" }}
-              aria-label="Vis information"
-            >
-              <FontAwesomeIcon
-                icon={faInfo}
-                style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }}
-              />
-            </button>
-          )}
+          {/* Mobile-only: info button + suggest/close button */}
+          <div className="sm:hidden ml-auto flex items-center gap-2 shrink-0">
+            {introDismissed && !formActive && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIntroDismissed(false);
+                  window.dispatchEvent(new Event("show-intro"));
+                }}
+                className="cursor-pointer hover:opacity-50 transition-opacity rounded-full flex items-center justify-center"
+                style={{ width: 24, height: 24, backgroundColor: "rgba(255,255,255,0.5)", marginRight: 10 }}
+                aria-label="Vis information"
+              >
+                <FontAwesomeIcon
+                  icon={faInfo}
+                  style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }}
+                />
+              </button>
+            )}
+            {/* Suggest button (comment-lines) / Close button (xmark) */}
+            {!success && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (formActive) {
+                    resetForm();
+                  } else {
+                    setFormActive(true);
+                  }
+                }}
+                className="cursor-pointer transition-opacity rounded-full flex items-center justify-center"
+                style={{
+                  width: 40,
+                  height: 40,
+                  backgroundColor: formActive ? "rgba(255,255,255,0.5)" : "#ffffff",
+                }}
+                aria-label={formActive ? "Luk" : "Foreslå et spørgsmål"}
+              >
+                <FontAwesomeIcon
+                  icon={formActive ? faXmark : faCommentLines}
+                  style={{ color: nameColor, fontSize: formActive ? 18 : 16 }}
+                />
+              </button>
+            )}
+          </div>
 
           {/* Desktop-only: expanded form input (replaces names on desktop) */}
           {formActive && (
@@ -362,34 +391,22 @@ export function PoliticianTopBar({
           )}
         </div>
 
-        {/* ── Mobile-only: second row (trigger button or active form) ── */}
-        <div className="px-[15px] pb-3 sm:hidden">
-          {formActive ? (
+        {/* ── Mobile-only: second row (form input when active, success message, or nothing) ── */}
+        {formActive && (
+          <div className="px-[15px] pb-3 sm:hidden">
             <div className="flex items-center gap-2">
-              <div className="relative flex-1 min-w-0">
-                <input
-                  ref={mobileInputRef}
-                  name="text"
-                  type="text"
-                  required
-                  maxLength={300}
-                  placeholder="Foreslå et spørgsmål..."
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  className="topbar-suggest-input w-full bg-white rounded-full px-5 pr-10 py-2 text-base focus:outline-none"
-                  style={{ color: nameColor, "--placeholder-color": nameColor } as React.CSSProperties}
-                />
-                {text.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => { setText(""); mobileInputRef.current?.focus(); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 cursor-pointer opacity-40 hover:opacity-70 transition-opacity"
-                    style={{ color: nameColor }}
-                  >
-                    <FontAwesomeIcon icon={faXmark} className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+              <input
+                ref={mobileInputRef}
+                name="text"
+                type="text"
+                required
+                maxLength={300}
+                placeholder="Foreslå et spørgsmål..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="topbar-suggest-input flex-1 min-w-0 bg-white rounded-full px-5 py-2 text-base focus:outline-none"
+                style={{ color: nameColor, "--placeholder-color": nameColor } as React.CSSProperties}
+              />
               {text.trim().length > 0 && (() => {
                 const isSend = hasSession || showIdentity;
                 const identityIncomplete = showIdentity && (!firstName.trim() || !email.trim());
@@ -408,7 +425,10 @@ export function PoliticianTopBar({
                 );
               })()}
             </div>
-          ) : success ? (
+          </div>
+        )}
+        {!formActive && success && (
+          <div className="px-[15px] pb-3 sm:hidden">
             <span
               className="block text-base px-5 py-2 rounded-full bg-white text-center"
               style={{ color: nameColor }}
@@ -417,44 +437,26 @@ export function PoliticianTopBar({
                 ? "Tak! Dit forslag er sendt"
                 : "Tjek din email for at bekræfte"}
             </span>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setFormActive(true)}
-              className="w-full bg-white text-base px-5 py-2 rounded-full cursor-pointer text-left"
-              style={{ color: nameColor }}
-            >
-              Foreslå et spørgsmål...
-            </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* ── Identity panel (slides down when not logged in) ── */}
         {formActive && showIdentity && !hasSession && (
-          <div className="px-[15px] pb-4">
-            <p className="text-base mb-3" style={{ color: nameColor }}>
+          <div className="px-[15px] pb-4 space-y-2">
+            <p className="text-base mb-1" style={{ color: nameColor }}>
               Vi skal lige vide lidt mere om dig <span style={{ opacity: 0.5 }}>— alder er valgfri</span>
             </p>
+            {/* Row 1: Fornavn + Alder */}
             <div className="flex items-center gap-2">
               <input
                 name="firstName"
                 type="text"
                 required
-                placeholder={fieldErrors.firstName ? (isNarrow ? "Fornavn" : "Fornavn skal udfyldes") : "Fornavn"}
+                placeholder={fieldErrors.firstName ? "Fornavn skal udfyldes" : "Fornavn"}
                 value={firstName}
                 onChange={(e) => { setFirstName(e.target.value); setFieldErrors((prev) => ({ ...prev, firstName: undefined })); }}
                 className="topbar-field bg-white rounded-full px-5 py-2 text-base text-gray-900 focus:outline-none min-w-0"
-                style={{ flex: "20", "--field-placeholder-color": fieldErrors.firstName ? "#FF4105" : "#9ca3af" } as React.CSSProperties}
-              />
-              <input
-                name="email"
-                type="email"
-                required
-                placeholder={fieldErrors.email ? (isNarrow ? "E-mail" : "E-mail skal udfyldes") : "E-mail"}
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setFieldErrors((prev) => ({ ...prev, email: undefined })); }}
-                className="topbar-field bg-white rounded-full px-5 py-2 text-base text-gray-900 focus:outline-none min-w-0"
-                style={{ flex: "65", "--field-placeholder-color": fieldErrors.email ? "#FF4105" : "#9ca3af" } as React.CSSProperties}
+                style={{ flex: "75", "--field-placeholder-color": fieldErrors.firstName ? "#FF4105" : "#9ca3af" } as React.CSSProperties}
               />
               <input
                 name="age"
@@ -463,10 +465,23 @@ export function PoliticianTopBar({
                 pattern="[0-9]*"
                 maxLength={3}
                 placeholder="Alder"
+                onKeyDown={(e) => { if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) e.preventDefault(); }}
+                onPaste={(e) => { const text = e.clipboardData.getData("text"); if (!/^\d+$/.test(text)) e.preventDefault(); }}
                 className="topbar-field bg-white rounded-full px-5 py-2 text-base text-gray-900 focus:outline-none min-w-0"
-                style={{ flex: "15" }}
+                style={{ flex: "25" }}
               />
             </div>
+            {/* Row 2: E-mail (full width) */}
+            <input
+              name="email"
+              type="email"
+              required
+              placeholder={fieldErrors.email ? "E-mail skal udfyldes" : "E-mail"}
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setFieldErrors((prev) => ({ ...prev, email: undefined, emailInvalid: undefined })); }}
+              className="topbar-field bg-white rounded-full px-5 py-2 text-base focus:outline-none w-full"
+              style={{ color: fieldErrors.emailInvalid ? "#FF4105" : "#111827", "--field-placeholder-color": fieldErrors.email ? "#FF4105" : "#9ca3af" } as React.CSSProperties}
+            />
           </div>
         )}
 

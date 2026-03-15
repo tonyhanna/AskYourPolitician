@@ -95,7 +95,7 @@ export function BannerHero({
             <div className="flex flex-col text-left">
               {heroLine1 && (
                 <span
-                  className="leading-tight text-[16px] sm:text-[30px]"
+                  className="leading-tight text-[18px] sm:text-[30px]"
                   style={{
                     fontFamily: "var(--font-figtree)",
                     fontWeight: 500,
@@ -107,7 +107,7 @@ export function BannerHero({
               )}
               {heroLine2 && (
                 <span
-                  className="leading-tight text-[16px] sm:text-[30px]"
+                  className="leading-tight text-[18px] sm:text-[30px]"
                   style={{
                     fontFamily: "var(--font-figtree)",
                     fontWeight: 500,
