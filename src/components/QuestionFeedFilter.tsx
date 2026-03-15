@@ -1337,24 +1337,24 @@ function PinnedQuestionCard({
           {/* Temporary version indicator — remove after mobile debugging */}
           <span style={{ position: "absolute", bottom: 4, right: 6, fontSize: 9, color: "rgba(255,255,255,0.5)", zIndex: 99, fontFamily: "monospace", pointerEvents: "none" }}>v8</span>
 
-          {/* Thumbnail visual */}
-          {thumbnailClipUrl ? (
+          {/* Static poster image — always visible behind the clip video so
+              there's no white flash while the video loads on first visit */}
+          {thumbnailPhotoUrl && (
+            <img
+              src={thumbnailPhotoUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          )}
+          {/* Clip video layered on top of the poster */}
+          {thumbnailClipUrl && (
             <video
               ref={clipRef}
               src={thumbnailClipUrl}
               muted
               playsInline
               preload="auto"
-              poster={thumbnailPhotoUrl || undefined}
-              className="w-full h-full object-cover"
-              style={{ borderRadius: 20 }}
-            />
-          ) : (
-            <img
-              src={thumbnailPhotoUrl!}
-              alt=""
-              className="w-full h-full object-cover"
-              style={{ borderRadius: 20 }}
+              className="absolute inset-0 w-full h-full object-cover"
             />
           )}
         </div>
@@ -1629,18 +1629,9 @@ function AnsweredQuestionCard({
       onMouseEnter={() => { if (hasPlayableMedia && !window.matchMedia("(pointer: coarse)").matches) setIsHovering(true); }}
       onMouseLeave={() => { if (!window.matchMedia("(pointer: coarse)").matches) setIsHovering(false); }}
     >
-      {/* Thumbnail clip/photo */}
-      {clipUrl ? (
-        <video
-          ref={clipRef}
-          src={clipUrl}
-          muted
-          playsInline
-          preload="auto"
-          poster={photoUrl || undefined}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-      ) : photoUrl ? (
+      {/* Static poster image — always visible behind the clip video so
+          there's no white flash while the video loads on first visit */}
+      {photoUrl ? (
         <img
           src={photoUrl}
           alt=""
@@ -1651,6 +1642,17 @@ function AnsweredQuestionCard({
         <div
           className="absolute inset-0"
           style={{ backgroundColor: partyColor || "#7E7D7A" }}
+        />
+      )}
+      {/* Clip video layered on top of the poster */}
+      {clipUrl && (
+        <video
+          ref={clipRef}
+          src={clipUrl}
+          muted
+          playsInline
+          preload="auto"
+          className="absolute inset-0 w-full h-full object-cover"
         />
       )}
 
