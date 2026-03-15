@@ -182,7 +182,7 @@ export default async function BorgerFeed({
       {/* Client-side fallback for SPA navigations */}
       {party?.color && <ThemeColorSetter color={party.color} />}
       {/* Top bar: sticky with solid party-color background */}
-      <div className="sticky top-0 z-50" style={{ backgroundColor: party?.color ?? undefined, willChange: "transform" }}>
+      <div className="sticky top-0 z-50" style={{ backgroundColor: party?.color ?? undefined, minHeight: 75 }}>
         <PoliticianTopBar
           politicianName={politician.name}
           partyName={politician.party}
@@ -211,7 +211,7 @@ export default async function BorgerFeed({
           politicianSlug={politicianSlug}
         />
       </div>
-      <main className="px-[15px] py-6 pb-0 bg-white min-h-screen">
+      <main className="px-[15px] py-6 pb-0 bg-white min-h-screen" style={{ boxShadow: '0 200px 0 0 #fff' }}>
       <QuestionFeedFilter
         questions={feedQuestions}
         allTags={[...allTagsSet]}
