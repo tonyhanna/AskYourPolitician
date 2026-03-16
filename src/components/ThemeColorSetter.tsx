@@ -3,11 +3,13 @@
 import { useEffect } from "react";
 
 /**
- * Sets party color on both <html> and <body> background for overscroll rubber-band.
- * html bg needed for Safari/Chrome desktop, body bg needed for Chrome iOS.
+ * Sets party color on <html> bg always (Safari/Chrome desktop rubber-band).
+ * Sets party color on <body> bg only when scrolled to top (Chrome iOS rubber-band).
+ * When scrolled away from top, body bg reverts to white to prevent green bleed
+ * at the bottom during overscroll bounce.
  *
- * The <meta name="theme-color"> for Safari/Chrome toolbar is rendered
- * server-side in page.tsx JSX (must be in initial HTML for Safari).
+ * The SSR style tag (page.tsx) sets both html+body green for initial paint.
+ * This component takes over after hydration, toggling body bg on scroll.
  */
 export function ThemeColorSetter({ color }: { color: string }) {
   useEffect(() => {
@@ -15,9 +17,19 @@ export function ThemeColorSetter({ color }: { color: string }) {
     const body = document.body;
     const prevHtml = html.style.backgroundColor;
     const prevBody = body.style.backgroundColor;
+
     html.style.backgroundColor = color;
-    body.style.backgroundColor = color;
+    // Set initial body bg based on current scroll position
+    body.style.backgroundColor = window.scrollY <= 0 ? color : "#ffffff";
+
+    const handleScroll = () => {
+      body.style.backgroundColor = window.scrollY <= 0 ? color : "#ffffff";
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
     return () => {
+      window.removeEventListener("scroll", handleScroll);
       html.style.backgroundColor = prevHtml;
       body.style.backgroundColor = prevBody;
     };

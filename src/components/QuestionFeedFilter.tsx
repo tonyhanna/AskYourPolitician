@@ -1296,7 +1296,7 @@ function PinnedQuestionCard({
               ref={fullVideoRef}
               src={question.answerUrl!}
               playsInline
-              preload="auto"
+              preload="none"
               onEnded={handleFullVideoEnded}
               onWaiting={handleWaiting}
               onPlaying={handlePlaying}
@@ -1353,7 +1353,7 @@ function PinnedQuestionCard({
               src={thumbnailClipUrl}
               muted
               playsInline
-              preload="auto"
+              preload="metadata"
               className="absolute inset-0 w-full h-full object-cover"
             />
           )}
@@ -1651,7 +1651,7 @@ function AnsweredQuestionCard({
           src={clipUrl}
           muted
           playsInline
-          preload="auto"
+          preload="metadata"
           className="absolute inset-0 w-full h-full object-cover"
         />
       )}
@@ -1704,7 +1704,7 @@ function AnsweredQuestionCard({
           ref={fullVideoRef}
           src={question.answerUrl!}
           playsInline
-          preload="auto"
+          preload="none"
           onEnded={handleEnded}
           onWaiting={() => { if (bufferingRef.current) bufferingRef.current.style.opacity = "1"; }}
           onPlaying={() => { if (bufferingRef.current) bufferingRef.current.style.opacity = "0"; }}
