@@ -177,27 +177,24 @@ export default async function BorgerFeed({
         <style
           precedence="theme"
           href={`theme-${partySlug}`}
-        >{`html,html body{background-color:${party.color}}`}</style>
+        >{`html{background-color:${party.color}}`}</style>
       )}
       {/* Client-side fallback for SPA navigations */}
       {party?.color && <ThemeColorSetter color={party.color} />}
-      {/* Top bar: sticky with solid party-color background */}
-      <div className="sticky top-0 z-50" style={{ backgroundColor: party?.color ?? undefined, minHeight: 75 }}>
-        <PoliticianTopBar
-          politicianName={politician.name}
-          partyName={politician.party}
-          profilePhotoUrl={politician.profilePhotoUrl}
-          partyLogoUrl={party?.logoUrl ?? null}
-          constituency={politician.constituency}
-          partyColor={party?.color ?? null}
-          partyColorDark={party?.colorDark ?? null}
-          partyColorLight={party?.colorLight ?? null}
-          politicianId={politician.id}
-          partySlug={partySlug}
-          politicianSlug={politicianSlug}
-          hasSession={!!citizen}
-        />
-      </div>
+      <PoliticianTopBar
+        politicianName={politician.name}
+        partyName={politician.party}
+        profilePhotoUrl={politician.profilePhotoUrl}
+        partyLogoUrl={party?.logoUrl ?? null}
+        constituency={politician.constituency}
+        partyColor={party?.color ?? null}
+        partyColorDark={party?.colorDark ?? null}
+        partyColorLight={party?.colorLight ?? null}
+        politicianId={politician.id}
+        partySlug={partySlug}
+        politicianSlug={politicianSlug}
+        hasSession={!!citizen}
+      />
       {/* Hero banner: scrolls normally, disappears behind sticky topbar */}
       <div className="relative z-40">
         <IntroSection
@@ -211,7 +208,7 @@ export default async function BorgerFeed({
           politicianSlug={politicianSlug}
         />
       </div>
-      <main className="px-[15px] py-6 pb-0 bg-white min-h-screen" style={{ boxShadow: '0 200px 0 0 #fff' }}>
+      <main className="px-[15px] py-6 pb-0 bg-white min-h-screen">
       <QuestionFeedFilter
         questions={feedQuestions}
         allTags={[...allTagsSet]}

@@ -175,7 +175,7 @@ export function PoliticianTopBar({
   return (
     <div
       ref={containerRef}
-      className="cursor-pointer"
+      className="sticky top-0 z-50 cursor-pointer"
       style={{ backgroundColor: bgColor, fontFamily: "var(--font-figtree)", fontWeight: 500 }}
       onClick={(e) => {
         const target = e.target as HTMLElement;
