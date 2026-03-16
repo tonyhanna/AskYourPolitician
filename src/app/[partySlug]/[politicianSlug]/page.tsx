@@ -202,7 +202,7 @@ export default async function BorgerFeed({
         dismissButtonColor={party?.colorDark ?? null}
         politicianSlug={politicianSlug}
       />
-      <main className="px-[15px] py-6 pb-0">
+      <main className="bg-white px-[15px] py-6 pb-0">
       <QuestionFeedFilter
         questions={feedQuestions}
         allTags={[...allTagsSet]}
