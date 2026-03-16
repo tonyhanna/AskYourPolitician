@@ -28,6 +28,25 @@ export default async function Dashboard() {
   const impersonatingId = await getImpersonatingPoliticianId();
   const politician = await getActivePolitician();
 
+  // Block access if no politician profile was pre-created by admin
+  if (!politician && !impersonatingId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="text-center max-w-md">
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Ingen adgang</h1>
+          <p className="text-gray-600 mb-6">
+            Din Google-konto er ikke tilknyttet en politikerprofil. Kontakt en administrator for at få adgang.
+          </p>
+          <form action={async () => { "use server"; await signOut({ redirectTo: "/politiker" }); }}>
+            <button type="submit" className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition cursor-pointer">
+              Log ud
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   // Fetch all parties for dropdown
   const allParties = await db
     .select({ id: parties.id, name: parties.name, color: parties.color, colorLight: parties.colorLight, colorDark: parties.colorDark })

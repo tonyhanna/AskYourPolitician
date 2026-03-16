@@ -159,6 +159,7 @@ function QuestionItem({
   const [clipGenerating, setClipGenerating] = useState(false);
   const [clipError, setClipError] = useState<string | null>(null);
   const [customPosterUrl, setCustomPosterUrl] = useState<string | null>(null);
+  const [showPosterUpload, setShowPosterUpload] = useState(false);
   const hasUpvotes = question.upvoteCount > 0;
 
   // Countdown timer for unanswered goal-reached questions
@@ -375,6 +376,7 @@ function QuestionItem({
       setPendingDuration(undefined);
       setPendingAspectRatio(undefined);
       setCustomPosterUrl(null);
+      setShowPosterUpload(false);
       setEditingAnswer(false);
       // Generate clip in background (non-blocking)
       generateClipInBackground(question.id, videoUrl);
@@ -558,6 +560,27 @@ function QuestionItem({
       {question.goalReached && (
         <div className="mt-2 mb-3">
           {question.answerUrl && !editingAnswer ? (
+            clipGenerating ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="space-y-3">
+                  {/* Step 1: Upload — always done at this point */}
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    <span className="text-sm text-green-800">Video uploadet</span>
+                  </div>
+                  {/* Step 2: Clip generation — in progress */}
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-amber-600 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                    <span className="text-sm text-amber-800 font-medium">Genererer forhåndsvisning...</span>
+                  </div>
+                  {/* Progress bar (indeterminate) */}
+                  <div className="w-full bg-amber-200 rounded-full h-2 overflow-hidden">
+                    <div className="bg-amber-500 h-2 rounded-full animate-pulse" style={{ width: "60%" }} />
+                  </div>
+                  <p className="text-xs text-amber-600">Luk ikke browseren — dette kan tage op til 2 minutter.</p>
+                </div>
+              </div>
+            ) : (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -577,9 +600,6 @@ function QuestionItem({
                       {question.answerUrl}
                     </a>
                   )}
-                  {clipGenerating && (
-                    <p className="text-xs text-amber-600 mt-1">Genererer forhåndsvisning...</p>
-                  )}
                   {clipError && (
                     <p className="text-xs text-red-500 mt-1">Forhåndsvisning fejlede: {clipError}</p>
                   )}
@@ -592,6 +612,7 @@ function QuestionItem({
                 </button>
               </div>
             </div>
+            )
           ) : (
             <div className={`${question.deadlineMissed ? "bg-red-50 border border-red-200" : "bg-amber-50 border border-amber-200"} rounded-lg p-3`}>
               <div className="flex items-center justify-between mb-2">
@@ -620,58 +641,73 @@ function QuestionItem({
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <p className="text-sm text-green-800 font-medium">Video klar til indsendelse</p>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">
-                      Der genereres automatisk et poster-billede fra din video. Du kan valgfrit uploade dit eget:
-                    </p>
-                    <label className="block w-full border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:border-gray-400 transition">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handlePhotoUpload(file, "poster");
-                        }}
-                        disabled={uploadingPhoto || submittingAnswer}
-                      />
-                      <span className="text-sm text-gray-600">
-                        Upload poster-billede (valgfrit, portrait-format)
-                      </span>
-                    </label>
-                    {uploadingPhoto && (
-                      <div className="mt-2">
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all"
-                            style={{ width: `${photoProgress}%` }}
-                          />
+                  {/* Collapsible poster upload */}
+                  {customPosterUrl ? (
+                    <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+                      <img src={customPosterUrl} alt="Poster preview" className="w-12 h-12 rounded-lg object-cover" />
+                      <span className="text-xs text-gray-600 flex-1">Eget poster-billede valgt</span>
+                      <button
+                        type="button"
+                        onClick={() => { setCustomPosterUrl(null); setShowPosterUpload(false); }}
+                        className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+                      >
+                        Fjern
+                      </button>
+                    </div>
+                  ) : showPosterUpload ? (
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-gray-500">Upload eget poster-billede (portrait-format)</p>
+                        <button type="button" onClick={() => setShowPosterUpload(false)} className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer">Luk</button>
+                      </div>
+                      <label className="block w-full border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:border-gray-400 transition">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handlePhotoUpload(file, "poster");
+                          }}
+                          disabled={uploadingPhoto || submittingAnswer}
+                        />
+                        <span className="text-sm text-gray-600">Vælg billede</span>
+                      </label>
+                      {uploadingPhoto && (
+                        <div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: `${photoProgress}%` }} />
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">Uploader poster... {Math.round(photoProgress)}%</p>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Uploader poster... {Math.round(photoProgress)}%
-                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowPosterUpload(true)}
+                      className="text-xs text-gray-500 hover:text-gray-700 underline cursor-pointer"
+                    >
+                      Tilføj eget poster-billede (valgfrit)
+                    </button>
+                  )}
+                  {submittingAnswer ? (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-amber-600 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                        <span className="text-sm text-amber-800 font-medium">Indsender svar...</span>
                       </div>
-                    )}
-                    {customPosterUrl && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <img src={customPosterUrl} alt="Poster preview" className="w-16 h-16 rounded-lg object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setCustomPosterUrl(null)}
-                          className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
-                        >
-                          Fjern poster
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={handleSubmitVideoAnswer}
-                    disabled={submittingAnswer || uploadingPhoto}
-                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer"
-                  >
-                    {submittingAnswer ? "Sender..." : customPosterUrl ? "Indsend video med poster" : "Indsend video"}
-                  </button>
+                      <p className="text-xs text-amber-600 mt-1">Luk ikke browseren.</p>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleSubmitVideoAnswer}
+                      disabled={uploadingPhoto}
+                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer"
+                    >
+                      {customPosterUrl ? "Indsend video med poster" : "Indsend video"}
+                    </button>
+                  )}
                 </div>
               ) : pendingAudioUrl ? (
                 <div className="space-y-3">

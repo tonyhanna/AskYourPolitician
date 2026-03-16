@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { users, politicians, questions, questionTags, upvotes, citizens, answerHistory, causes, questionSuggestions, parties } from "@/db/schema";
+import { users, accounts, sessions, politicians, questions, questionTags, upvotes, citizens, answerHistory, causes, questionSuggestions, parties } from "@/db/schema";
 import { sendAnswerNotificationEmail, sendSuggestionApprovedEmail, sendSuggestionRejectedEmail } from "@/lib/email";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { generateSlug } from "@/lib/utils";
@@ -120,37 +120,29 @@ export async function updateSettings(formData: FormData) {
       })
       .where(eq(politicians.id, politician.id));
 
-    // Sync email to auth user table so Google OAuth login keeps matching
-    await db
-      .update(users)
-      .set({ email })
-      .where(eq(users.id, politician.userId));
+    // If email changed: sync to auth user, remove old Google account link
+    // (so they must re-authenticate with the new Google account), and
+    // invalidate all sessions to force re-login.
+    if (email !== politician.email) {
+      await db
+        .update(users)
+        .set({ email })
+        .where(eq(users.id, politician.userId));
+      await db
+        .delete(accounts)
+        .where(eq(accounts.userId, politician.userId));
+      await db
+        .delete(sessions)
+        .where(eq(sessions.userId, politician.userId));
+    }
 
     // Clean up old blobs (fire-and-forget)
     if (oldBlobUrls.length > 0) {
       del(oldBlobUrls).catch(() => {});
     }
   } else {
-    await db.insert(politicians).values({
-      userId: session.user.id,
-      name,
-      slug,
-      party: partyRecord.name,
-      partySlug: partyRecord.slug,
-      partyId: partyRecord.id,
-      email,
-      constituency,
-      profilePhotoUrl,
-      bannerUrl,
-      ogImageUrl,
-      bannerBgColor,
-      heroLine1,
-      heroLine1Color,
-      heroLine2,
-      heroLine2Color,
-      chatbaseId,
-      defaultUpvoteGoal,
-    });
+    // Only admins can create politician profiles (via /admin)
+    throw new Error("Ingen politikerprofil fundet. Kontakt en administrator.");
   }
 
   revalidatePath("/politiker/dashboard");
