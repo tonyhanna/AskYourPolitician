@@ -61,6 +61,8 @@ export default async function AdminPage() {
       partyId: politicians.partyId,
       email: politicians.email,
       profilePhotoUrl: politicians.profilePhotoUrl,
+      slug: politicians.slug,
+      partySlug: politicians.partySlug,
     })
     .from(politicians)
     .orderBy(asc(politicians.party), asc(politicians.name));

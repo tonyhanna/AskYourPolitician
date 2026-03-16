@@ -11,6 +11,8 @@ type Politician = {
   partyId: string | null;
   email: string;
   profilePhotoUrl: string | null;
+  slug: string;
+  partySlug: string;
 };
 
 type PartyGroup = {
@@ -77,13 +79,22 @@ export function AdminPoliticianList({ groups }: { groups: PartyGroup[] }) {
                     <div className="text-sm text-gray-500">{p.email}</div>
                   </div>
                 </a>
-                <button
-                  onClick={() => handleImpersonate(p.id)}
-                  disabled={loading === p.id}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition cursor-pointer disabled:opacity-50"
-                >
-                  {loading === p.id ? "Skifter..." : "Tag rolle"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={`/${p.partySlug}/${p.slug}`}
+                    target="_blank"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition"
+                  >
+                    Borgerside
+                  </a>
+                  <button
+                    onClick={() => handleImpersonate(p.id)}
+                    disabled={loading === p.id}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition cursor-pointer disabled:opacity-50"
+                  >
+                    {loading === p.id ? "Skifter..." : "Tag rolle"}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

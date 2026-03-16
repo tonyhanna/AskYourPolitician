@@ -172,11 +172,12 @@ export default async function BorgerFeed({
     <>
       {/* SSR theme-color meta tag for Safari/Chrome mobile toolbar */}
       {party?.color && <meta name="theme-color" content={party.color} />}
-      {/* SSR style: paint html bg to party color so Safari/Chrome rubber-band shows green */}
+      {/* SSR style: paint body bg to party color for overscroll rubber-band.
+           Only body (not html) so canvas propagates from body and can be toggled via scroll. */}
       {party?.color && (
-        <style precedence="theme" href={`theme-${partySlug}`}>{`html,html body{background-color:${party.color}}`}</style>
+        <style precedence="theme" href={`theme-${partySlug}`}>{`html body{background-color:${party.color}}`}</style>
       )}
-      {/* Client-side: keep html bg in sync after hydration */}
+      {/* Client-side: toggle body bg based on scroll (green at top, white when scrolled) */}
       {party?.color && <ThemeColorSetter color={party.color} />}
       <PoliticianTopBar
         politicianName={politician.name}
@@ -202,7 +203,7 @@ export default async function BorgerFeed({
         dismissButtonColor={party?.colorDark ?? null}
         politicianSlug={politicianSlug}
       />
-      <main className="bg-white px-[15px] py-6 pb-0">
+      <main className="bg-white px-[15px] py-6 pb-1">
       <QuestionFeedFilter
         questions={feedQuestions}
         allTags={[...allTagsSet]}

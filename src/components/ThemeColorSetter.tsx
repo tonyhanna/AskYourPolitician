@@ -3,22 +3,23 @@
 import { useEffect } from "react";
 
 /**
- * Sets party color on <html> bg always (Safari/Chrome desktop rubber-band).
- * Sets party color on <body> bg only when scrolled to top (Chrome iOS rubber-band).
- * When scrolled away from top, body bg reverts to white to prevent green bleed
- * at the bottom during overscroll bounce.
+ * Toggles body background based on scroll position for overscroll rubber-band.
  *
- * The SSR style tag (page.tsx) sets both html+body green for initial paint.
- * This component takes over after hydration, toggling body bg on scroll.
+ * - scrollY ≤ 0  → body bg = party color → canvas (propagated from body) = green
+ * - scrollY > 0  → body bg = white       → canvas = white (no bottom bleed)
+ *
+ * html bg is intentionally NOT set so the CSS canvas propagates from body,
+ * allowing dynamic color changes via scroll.
+ *
+ * The SSR style tag (page.tsx) sets `html body { background-color: partyColor }`
+ * for initial paint (page always loads at scrollY=0).
+ * The <meta name="theme-color"> handles Safari/Chrome toolbar color.
  */
 export function ThemeColorSetter({ color }: { color: string }) {
   useEffect(() => {
-    const html = document.documentElement;
     const body = document.body;
-    const prevHtml = html.style.backgroundColor;
     const prevBody = body.style.backgroundColor;
 
-    html.style.backgroundColor = color;
     // Set initial body bg based on current scroll position
     body.style.backgroundColor = window.scrollY <= 0 ? color : "#ffffff";
 
@@ -30,7 +31,6 @@ export function ThemeColorSetter({ color }: { color: string }) {
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      html.style.backgroundColor = prevHtml;
       body.style.backgroundColor = prevBody;
     };
   }, [color]);
