@@ -172,15 +172,7 @@ export default async function BorgerFeed({
     <>
       {/* SSR theme-color meta tag for Safari/Chrome mobile toolbar */}
       {party?.color && <meta name="theme-color" content={party.color} />}
-      {/* SSR style for <html> background — must be in initial HTML for Safari toolbar */}
-      {party?.color && (
-        <style
-          precedence="theme"
-          href={`theme-${partySlug}`}
-        >{`html{background-color:${party.color}}`}</style>
-      )}
-      {/* Client-side fallback for SPA navigations */}
-      {party?.color && <ThemeColorSetter color={party.color} />}
+      {/* SSR style + ThemeColorSetter temporarily disabled to test Chrome 3px */}
       <PoliticianTopBar
         politicianName={politician.name}
         partyName={politician.party}
