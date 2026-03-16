@@ -192,19 +192,17 @@ export default async function BorgerFeed({
         politicianSlug={politicianSlug}
         hasSession={!!citizen}
       />
-      <div className="relative z-40">
-        <IntroSection
-          bannerUrl={politician.bannerUrl}
-          bannerBgColor={politician.bannerBgColor}
-          heroLine1={politician.heroLine1}
-          heroLine1Color={resolvedHeroLine1Color}
-          heroLine2={politician.heroLine2}
-          heroLine2Color={resolvedHeroLine2Color}
-          dismissButtonColor={party?.colorDark ?? null}
-          politicianSlug={politicianSlug}
-        />
-      </div>
-      <main className="bg-white min-h-screen px-[15px] py-6 pb-0">
+      <IntroSection
+        bannerUrl={politician.bannerUrl}
+        bannerBgColor={politician.bannerBgColor}
+        heroLine1={politician.heroLine1}
+        heroLine1Color={resolvedHeroLine1Color}
+        heroLine2={politician.heroLine2}
+        heroLine2Color={resolvedHeroLine2Color}
+        dismissButtonColor={party?.colorDark ?? null}
+        politicianSlug={politicianSlug}
+      />
+      <main className="px-[15px] py-6 pb-0">
       <QuestionFeedFilter
         questions={feedQuestions}
         allTags={[...allTagsSet]}
