@@ -157,6 +157,7 @@ function QuestionItem({
   const [compressProgress, setCompressProgress] = useState(0);
   const [clipGenerating, setClipGenerating] = useState(false);
   const [clipError, setClipError] = useState<string | null>(null);
+  const [customPosterUrl, setCustomPosterUrl] = useState<string | null>(null);
   const hasUpvotes = question.upvoteCount > 0;
 
   // Countdown timer for unanswered goal-reached questions
@@ -234,8 +235,9 @@ function QuestionItem({
         setPendingDuration(duration);
         setPendingAspectRatio(aspectRatio);
       } else {
-        await submitAnswerUrl(question.id, blob.url, undefined, duration, aspectRatio);
+        await submitAnswerUrl(question.id, blob.url, customPosterUrl ?? undefined, duration, aspectRatio);
         setEditingAnswer(false);
+        setCustomPosterUrl(null);
         // Generate clip in background (non-blocking)
         generateClipInBackground(question.id, blob.url);
       }
@@ -247,7 +249,7 @@ function QuestionItem({
     }
   }
 
-  async function handlePhotoUpload(file: File) {
+  async function handlePhotoUpload(file: File, target: "audio" | "poster" = "audio") {
     if (file.size > 10 * 1024 * 1024) {
       setUploadError("Billedet er for stort (maks 10 MB)");
       return;
@@ -272,7 +274,7 @@ function QuestionItem({
           setUploadingPhoto(false);
           return;
         }
-        setPendingAspectRatio(ar);
+        if (target === "audio") setPendingAspectRatio(ar);
       }
       URL.revokeObjectURL(img.src);
 
@@ -281,7 +283,11 @@ function QuestionItem({
         handleUploadUrl: "/api/upload",
         onUploadProgress: ({ percentage }) => setPhotoProgress(percentage),
       });
-      setPhotoUrl(blob.url);
+      if (target === "poster") {
+        setCustomPosterUrl(blob.url);
+      } else {
+        setPhotoUrl(blob.url);
+      }
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "Upload fejlede");
     } finally {
@@ -299,18 +305,28 @@ function QuestionItem({
         setClipGenerating(false);
         return; // Browser doesn't support MediaRecorder — skip silently
       }
-      // Upload clip and poster in parallel
-      const [clipBlob, posterBlob] = await Promise.all([
-        upload(`answers/clips/${result.clip.name}`, result.clip, {
-          access: "public",
-          handleUploadUrl: "/api/upload",
-        }),
-        upload(`answers/posters/${result.poster.name}`, result.poster, {
-          access: "public",
-          handleUploadUrl: "/api/upload",
-        }),
-      ]);
-      await submitAnswerClipUrl(questionId, clipBlob.url, posterBlob.url);
+      // Upload clip (always) and auto-poster (only if no custom poster was uploaded)
+      const hasCustomPoster = !!customPosterUrl;
+      const clipBlobPromise = upload(`answers/clips/${result.clip.name}`, result.clip, {
+        access: "public",
+        handleUploadUrl: "/api/upload",
+      });
+
+      if (hasCustomPoster) {
+        // Custom poster already saved — only upload clip, don't overwrite poster
+        const clipBlob = await clipBlobPromise;
+        await submitAnswerClipUrl(questionId, clipBlob.url);
+      } else {
+        // No custom poster — upload auto-generated poster alongside clip
+        const [clipBlob, posterBlob] = await Promise.all([
+          clipBlobPromise,
+          upload(`answers/posters/${result.poster.name}`, result.poster, {
+            access: "public",
+            handleUploadUrl: "/api/upload",
+          }),
+        ]);
+        await submitAnswerClipUrl(questionId, clipBlob.url, posterBlob.url);
+      }
     } catch (e) {
       console.error("Clip generation failed:", e);
       setClipError(e instanceof Error ? e.message : "Klip-generering fejlede");
@@ -670,6 +686,52 @@ function QuestionItem({
                       </p>
                     </div>
                   )}
+                  {/* Optional custom poster upload for video answers */}
+                  <div className="mt-3">
+                    <p className="text-xs text-gray-500 mb-1">
+                      Der genereres automatisk et poster-billede fra din video. Du kan valgfrit uploade dit eget:
+                    </p>
+                    <label className="block w-full border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:border-gray-400 transition">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handlePhotoUpload(file, "poster");
+                        }}
+                        disabled={uploadingPhoto || uploading}
+                      />
+                      <span className="text-sm text-gray-600">
+                        Upload poster-billede (valgfrit, portrait-format)
+                      </span>
+                    </label>
+                    {uploadingPhoto && !pendingAudioUrl && (
+                      <div className="mt-2">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all"
+                            style={{ width: `${photoProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Uploader poster... {Math.round(photoProgress)}%
+                        </p>
+                      </div>
+                    )}
+                    {customPosterUrl && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <img src={customPosterUrl} alt="Poster preview" className="w-16 h-16 rounded-lg object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setCustomPosterUrl(null)}
+                          className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+                        >
+                          Fjern poster
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
               {uploadError && (
