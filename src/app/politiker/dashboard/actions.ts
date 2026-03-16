@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { politicians, questions, questionTags, upvotes, citizens, answerHistory, causes, questionSuggestions, parties } from "@/db/schema";
+import { users, politicians, questions, questionTags, upvotes, citizens, answerHistory, causes, questionSuggestions, parties } from "@/db/schema";
 import { sendAnswerNotificationEmail, sendSuggestionApprovedEmail, sendSuggestionRejectedEmail } from "@/lib/email";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { generateSlug } from "@/lib/utils";
@@ -119,6 +119,12 @@ export async function updateSettings(formData: FormData) {
         updatedAt: new Date(),
       })
       .where(eq(politicians.id, politician.id));
+
+    // Sync email to auth user table so Google OAuth login keeps matching
+    await db
+      .update(users)
+      .set({ email })
+      .where(eq(users.id, politician.userId));
 
     // Clean up old blobs (fire-and-forget)
     if (oldBlobUrls.length > 0) {
@@ -324,6 +330,7 @@ export async function submitAnswerUrl(questionId: string, answerUrl: string, pho
   );
 
   revalidatePath("/politiker/dashboard");
+  revalidatePath(`/${politician.partySlug}/${politician.slug}`);
 }
 
 export async function submitAnswerClipUrl(questionId: string, clipUrl: string, posterUrl?: string) {
