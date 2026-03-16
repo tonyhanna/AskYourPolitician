@@ -147,6 +147,7 @@ function QuestionItem({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [pendingAudioUrl, setPendingAudioUrl] = useState<string | null>(null);
+  const [pendingVideoUrl, setPendingVideoUrl] = useState<string | null>(null);
   const [pendingDuration, setPendingDuration] = useState<number | undefined>(undefined);
   const [pendingAspectRatio, setPendingAspectRatio] = useState<number | undefined>(undefined);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -232,15 +233,11 @@ function QuestionItem({
       });
       if (file.type.startsWith("audio/")) {
         setPendingAudioUrl(blob.url);
-        setPendingDuration(duration);
-        setPendingAspectRatio(aspectRatio);
       } else {
-        await submitAnswerUrl(question.id, blob.url, customPosterUrl ?? undefined, duration, aspectRatio);
-        setEditingAnswer(false);
-        setCustomPosterUrl(null);
-        // Generate clip in background (non-blocking)
-        generateClipInBackground(question.id, blob.url);
+        setPendingVideoUrl(blob.url);
       }
+      setPendingDuration(duration);
+      setPendingAspectRatio(aspectRatio);
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "Upload fejlede");
     } finally {
@@ -300,7 +297,11 @@ function QuestionItem({
     setClipGenerating(true);
     setClipError(null);
     try {
-      const result = await generateVideoClip(videoUrl);
+      // Timeout after 2 minutes to prevent hanging if video can't be loaded (e.g. Blob bandwidth exceeded)
+      const result = await Promise.race([
+        generateVideoClip(videoUrl),
+        new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Timeout: klip-generering tog for lang tid")), 120_000)),
+      ]);
       if (!result) {
         setClipGenerating(false);
         return; // Browser doesn't support MediaRecorder — skip silently
@@ -351,6 +352,32 @@ function QuestionItem({
       setPendingAspectRatio(undefined);
       setPhotoUrl(null);
       setEditingAnswer(false);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Der opstod en fejl");
+    } finally {
+      setSubmittingAnswer(false);
+    }
+  }
+
+  async function handleSubmitVideoAnswer() {
+    if (!pendingVideoUrl) return;
+    if (editingAnswer) {
+      const confirmed = confirm(
+        `Er du sikker på at du vil sende dette opdateret svar ud til ${question.upvoteCount} ${question.upvoteCount === 1 ? "borger" : "borgere"}?`
+      );
+      if (!confirmed) return;
+    }
+    setSubmittingAnswer(true);
+    try {
+      await submitAnswerUrl(question.id, pendingVideoUrl, customPosterUrl ?? undefined, pendingDuration, pendingAspectRatio);
+      const videoUrl = pendingVideoUrl;
+      setPendingVideoUrl(null);
+      setPendingDuration(undefined);
+      setPendingAspectRatio(undefined);
+      setCustomPosterUrl(null);
+      setEditingAnswer(false);
+      // Generate clip in background (non-blocking)
+      generateClipInBackground(question.id, videoUrl);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Der opstod en fejl");
     } finally {
@@ -588,7 +615,65 @@ function QuestionItem({
                   </button>
                 )}
               </div>
-              {pendingAudioUrl ? (
+              {pendingVideoUrl ? (
+                <div className="space-y-3">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-sm text-green-800 font-medium">Video klar til indsendelse</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">
+                      Der genereres automatisk et poster-billede fra din video. Du kan valgfrit uploade dit eget:
+                    </p>
+                    <label className="block w-full border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:border-gray-400 transition">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handlePhotoUpload(file, "poster");
+                        }}
+                        disabled={uploadingPhoto || submittingAnswer}
+                      />
+                      <span className="text-sm text-gray-600">
+                        Upload poster-billede (valgfrit, portrait-format)
+                      </span>
+                    </label>
+                    {uploadingPhoto && (
+                      <div className="mt-2">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all"
+                            style={{ width: `${photoProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Uploader poster... {Math.round(photoProgress)}%
+                        </p>
+                      </div>
+                    )}
+                    {customPosterUrl && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <img src={customPosterUrl} alt="Poster preview" className="w-16 h-16 rounded-lg object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setCustomPosterUrl(null)}
+                          className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+                        >
+                          Fjern poster
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleSubmitVideoAnswer}
+                    disabled={submittingAnswer || uploadingPhoto}
+                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer"
+                  >
+                    {submittingAnswer ? "Sender..." : customPosterUrl ? "Indsend video med poster" : "Indsend video"}
+                  </button>
+                </div>
+              ) : pendingAudioUrl ? (
                 <div className="space-y-3">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <p className="text-sm text-green-800 font-medium">Lydfil klar til indsendelse</p>
@@ -686,52 +771,6 @@ function QuestionItem({
                       </p>
                     </div>
                   )}
-                  {/* Optional custom poster upload for video answers */}
-                  <div className="mt-3">
-                    <p className="text-xs text-gray-500 mb-1">
-                      Der genereres automatisk et poster-billede fra din video. Du kan valgfrit uploade dit eget:
-                    </p>
-                    <label className="block w-full border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:border-gray-400 transition">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handlePhotoUpload(file, "poster");
-                        }}
-                        disabled={uploadingPhoto || uploading}
-                      />
-                      <span className="text-sm text-gray-600">
-                        Upload poster-billede (valgfrit, portrait-format)
-                      </span>
-                    </label>
-                    {uploadingPhoto && !pendingAudioUrl && (
-                      <div className="mt-2">
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all"
-                            style={{ width: `${photoProgress}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Uploader poster... {Math.round(photoProgress)}%
-                        </p>
-                      </div>
-                    )}
-                    {customPosterUrl && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <img src={customPosterUrl} alt="Poster preview" className="w-16 h-16 rounded-lg object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setCustomPosterUrl(null)}
-                          className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
-                        >
-                          Fjern poster
-                        </button>
-                      </div>
-                    )}
-                  </div>
                 </>
               )}
               {uploadError && (
