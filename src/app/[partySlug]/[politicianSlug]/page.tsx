@@ -174,7 +174,7 @@ export default async function BorgerFeed({
       {party?.color && <meta name="theme-color" content={party.color} />}
       {/* SSR style: paint html bg to party color so Safari/Chrome rubber-band shows green */}
       {party?.color && (
-        <style precedence="theme" href={`theme-${partySlug}`}>{`html{background-color:${party.color}}`}</style>
+        <style precedence="theme" href={`theme-${partySlug}`}>{`html,html body{background-color:${party.color}}`}</style>
       )}
       {/* Client-side: keep html bg in sync after hydration */}
       {party?.color && <ThemeColorSetter color={party.color} />}
