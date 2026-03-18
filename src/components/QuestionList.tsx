@@ -158,6 +158,7 @@ function QuestionItem({
   const [compressProgress, setCompressProgress] = useState(0);
   const [clipGenerating, setClipGenerating] = useState(false);
   const [clipError, setClipError] = useState<string | null>(null);
+  const [submitStep, setSubmitStep] = useState<"idle" | "submitting" | "generating" | "done">("idle");
   const [customPosterUrl, setCustomPosterUrl] = useState<string | null>(null);
   const [showPosterUpload, setShowPosterUpload] = useState(false);
   const hasUpvotes = question.upvoteCount > 0;
@@ -368,20 +369,25 @@ function QuestionItem({
       );
       if (!confirmed) return;
     }
+    setSubmitStep("submitting");
     setSubmittingAnswer(true);
     try {
       await submitAnswerUrl(question.id, pendingVideoUrl, customPosterUrl ?? undefined, pendingDuration, pendingAspectRatio);
       const videoUrl = pendingVideoUrl;
+      const questionId = question.id;
       setPendingVideoUrl(null);
       setPendingDuration(undefined);
       setPendingAspectRatio(undefined);
       setCustomPosterUrl(null);
       setShowPosterUpload(false);
       setEditingAnswer(false);
-      // Generate clip in background (non-blocking)
-      generateClipInBackground(question.id, videoUrl);
+      // Generate clip — blocking so the UI shows progress until done
+      setSubmitStep("generating");
+      await generateClipInBackground(questionId, videoUrl);
+      setSubmitStep("done");
     } catch (e) {
       alert(e instanceof Error ? e.message : "Der opstod en fejl");
+      setSubmitStep("idle");
     } finally {
       setSubmittingAnswer(false);
     }
@@ -560,22 +566,30 @@ function QuestionItem({
       {question.goalReached && (
         <div className="mt-2 mb-3">
           {question.answerUrl && !editingAnswer ? (
-            clipGenerating ? (
+            submitStep === "submitting" || submitStep === "generating" ? (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                 <div className="space-y-3">
-                  {/* Step 1: Upload — always done at this point */}
+                  {/* Step 1: Upload */}
                   <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    <span className="text-sm text-green-800">Video uploadet</span>
+                    {submitStep === "submitting" ? (
+                      <svg className="w-4 h-4 text-amber-600 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                    ) : (
+                      <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    )}
+                    <span className={`text-sm ${submitStep === "submitting" ? "text-amber-800 font-medium" : "text-green-800"}`}>
+                      {submitStep === "submitting" ? "Indsender svar..." : "Video uploadet"}
+                    </span>
                   </div>
-                  {/* Step 2: Clip generation — in progress */}
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-amber-600 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
-                    <span className="text-sm text-amber-800 font-medium">Genererer forhåndsvisning...</span>
-                  </div>
+                  {/* Step 2: Clip generation */}
+                  {submitStep === "generating" && (
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-amber-600 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                      <span className="text-sm text-amber-800 font-medium">Genererer forhåndsvisning...</span>
+                    </div>
+                  )}
                   {/* Progress bar (indeterminate) */}
                   <div className="w-full bg-amber-200 rounded-full h-2 overflow-hidden">
-                    <div className="bg-amber-500 h-2 rounded-full animate-pulse" style={{ width: "60%" }} />
+                    <div className="bg-amber-500 h-2 rounded-full animate-pulse" style={{ width: submitStep === "submitting" ? "30%" : "60%" }} />
                   </div>
                   <p className="text-xs text-amber-600">Luk ikke browseren — dette kan tage op til 2 minutter.</p>
                 </div>
