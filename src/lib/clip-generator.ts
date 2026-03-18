@@ -51,6 +51,7 @@ export async function generateVideoClip(
 
   // Pick a supported MIME type
   const mimeType = getSupportedMimeType();
+  console.log("[clip-generator] start, mimeType:", mimeType);
   if (!mimeType) return null;
 
   const video = document.createElement("video");
@@ -62,19 +63,26 @@ export async function generateVideoClip(
 
   // Wait for metadata so we know the duration + dimensions
   await new Promise<void>((resolve, reject) => {
-    video.onloadedmetadata = () => resolve();
-    video.onerror = () => reject(new Error("Failed to load video metadata"));
+    const timeout = setTimeout(() => reject(new Error("Timeout waiting for video metadata")), 30_000);
+    video.onloadedmetadata = () => { clearTimeout(timeout); resolve(); };
+    video.onerror = () => { clearTimeout(timeout); reject(new Error("Failed to load video metadata")); };
   });
+
+  // Helper: seek and wait for onseeked with timeout (some browsers never fire
+  // onseeked if seeking to the current position or to an out-of-range value).
+  const seekTo = (time: number, timeoutMs = 10_000) =>
+    new Promise<void>((resolve) => {
+      const timeout = setTimeout(() => { console.warn("clip-generator: onseeked timeout, continuing"); resolve(); }, timeoutMs);
+      video.onseeked = () => { clearTimeout(timeout); resolve(); };
+      video.currentTime = time;
+    });
 
   // Webm files from MediaRecorder often lack duration metadata (Infinity/NaN).
   // Workaround: seek to a huge value — the browser clamps to the real end,
   // giving us the actual duration.
   let videoDuration = video.duration;
   if (!isFinite(videoDuration) || videoDuration <= 0) {
-    video.currentTime = 1e10; // seek to "end"
-    await new Promise<void>((resolve) => {
-      video.onseeked = () => resolve();
-    });
+    await seekTo(1e10);
     videoDuration = video.currentTime; // browser clamped to real duration
     if (videoDuration <= 0) return null;
   }
@@ -86,10 +94,7 @@ export async function generateVideoClip(
   if (actualDuration <= 0) return null;
 
   // Seek to startTime
-  video.currentTime = startTime;
-  await new Promise<void>((resolve) => {
-    video.onseeked = () => resolve();
-  });
+  await seekTo(startTime);
 
   // Calculate scaled dimensions (maintain aspect ratio)
   let w = video.videoWidth;
@@ -123,12 +128,19 @@ export async function generateVideoClip(
     ? new File([posterBlob], "poster.jpg", { type: "image/jpeg" })
     : null;
 
-  await video.play();
+  try {
+    await video.play();
+  } catch (e) {
+    console.warn("clip-generator: video.play() failed, continuing with poster only:", e);
+    return posterFile ? { clip: posterFile, poster: posterFile } : null;
+  }
 
   // Wait until the video has rendered at least one frame (canplay +
   // one rAF to ensure the canvas draw loop will have real data).
   await new Promise<void>((resolve) => {
+    const timeout = setTimeout(resolve, 2000);
     requestAnimationFrame(() => {
+      clearTimeout(timeout);
       ctx.drawImage(video, 0, 0, w, h);
       resolve();
     });
@@ -168,9 +180,10 @@ export async function generateVideoClip(
     }, actualDuration * 1000);
   });
 
-  // Wait for the recorder to flush
+  // Wait for the recorder to flush (with timeout)
   await new Promise<void>((resolve) => {
-    recorder.onstop = () => resolve();
+    const timeout = setTimeout(() => { console.warn("clip-generator: recorder.onstop timeout"); resolve(); }, 5000);
+    recorder.onstop = () => { clearTimeout(timeout); resolve(); };
   });
 
   let blob = new Blob(chunks, { type: mimeType });

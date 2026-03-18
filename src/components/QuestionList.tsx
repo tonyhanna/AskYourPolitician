@@ -588,7 +588,7 @@ function QuestionItem({
                   {isBlobUrl(question.answerUrl!) ? (
                     <p className="text-sm text-green-700">
                       {getBlobMediaType(question.answerUrl!) === "audio" ? "Lydfil" : "Video"} uploadet
-                      {question.answerPhotoUrl && " (med billede)"}
+                      {getBlobMediaType(question.answerUrl!) === "audio" && question.answerPhotoUrl && " (med billede)"}
                     </p>
                   ) : (
                     <a
