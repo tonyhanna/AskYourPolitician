@@ -3,11 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { faEnvelopeCircleCheck } from "@fortawesome/pro-duotone-svg-icons";
+import { faArrowUp as faArrowUpDuotone, faEnvelopeCircleCheck } from "@fortawesome/pro-duotone-svg-icons";
 import { submitUpvote } from "@/app/[partySlug]/[politicianSlug]/actions";
+import { useSystemColors } from "./SystemColorProvider";
 
 type UpvoteModalProps = {
   questionId: string;
+  questionText: string;
   partySlug: string;
   politicianSlug: string;
   partyColor?: string | null;
@@ -21,6 +23,7 @@ type ModalPhase = "form" | "pending" | "emailSent" | "error";
 
 export function UpvoteModal({
   questionId,
+  questionText,
   partySlug,
   politicianSlug,
   partyColor,
@@ -29,35 +32,33 @@ export function UpvoteModal({
   redirectPath,
   onClose,
 }: UpvoteModalProps) {
-  const dark = partyColorDark || "#1E3A5F";
-  const light = partyColorLight || "#DBEAFE";
-  const primary = partyColor || "#3B82F6";
+  const systemColors = useSystemColors();
+  const colorError = systemColors.error;
+  const bgColor = partyColor || "#3B82F6";
+  const nameColor = partyColorDark || systemColors.text0;
+  const lightColor = partyColorLight || "#93C5FD";
 
   const [phase, setPhase] = useState<ModalPhase>("form");
   const [error, setError] = useState<string | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ firstName?: boolean; email?: boolean; emailInvalid?: boolean }>({});
+  const [firstName, setFirstName] = useState("");
+  const [email, setEmail] = useState("");
   const firstInputRef = useRef<HTMLInputElement>(null);
 
   // Body scroll lock
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    return () => { document.body.style.overflow = prev; };
   }, []);
 
   // Auto-focus first input
-  useEffect(() => {
-    firstInputRef.current?.focus();
-  }, []);
+  useEffect(() => { firstInputRef.current?.focus(); }, []);
 
   // Escape key closes (unless pending)
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && phase !== "pending") {
-        onClose();
-      }
+      if (e.key === "Escape" && phase !== "pending") onClose();
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -65,6 +66,17 @@ export function UpvoteModal({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    // Validate
+    const errors: { firstName?: boolean; email?: boolean; emailInvalid?: boolean } = {};
+    if (!firstName.trim()) errors.firstName = true;
+    if (!email.trim()) errors.email = true;
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.emailInvalid = true;
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
     setPhase("pending");
     setError(null);
 
@@ -81,7 +93,6 @@ export function UpvoteModal({
         setPhase("error");
       } else {
         setPhase("emailSent");
-        // Notify CircularUpvoteButton to switch to "submitted" state
         window.dispatchEvent(new CustomEvent("upvote-submitted", { detail: { questionId } }));
       }
     } catch (err) {
@@ -93,15 +104,15 @@ export function UpvoteModal({
   const canClose = phase !== "pending";
 
   const inputStyle: React.CSSProperties = {
-    width: "100%",
+    color: nameColor,
     backgroundColor: "#ffffff",
-    border: `1.5px solid ${dark}40`,
-    borderRadius: 10,
-    padding: "10px 14px",
-    fontSize: 16, // Must be >= 16px to prevent iOS Safari auto-zoom on focus
-    color: dark,
-    fontFamily: "var(--font-figtree)",
+    borderRadius: 9999,
+    padding: "8px 20px",
+    fontSize: "16px",
     outline: "none",
+    width: "100%",
+    fontFamily: "var(--font-figtree)",
+    fontWeight: 500,
   };
 
   return (
@@ -109,144 +120,133 @@ export function UpvoteModal({
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-[60]"
-        style={{ backgroundColor: `${dark}B3` }}
+        style={{ backgroundColor: "#000000", opacity: 0.7 }}
         onClick={canClose ? onClose : undefined}
       />
 
-      {/* Centered container */}
-      <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none px-4">
-        {/* Modal panel */}
+      {/* Modal */}
+      <div className="fixed inset-0 z-[61] flex items-start justify-center px-4 py-8 overflow-y-auto">
         <div
-          className="pointer-events-auto w-full max-w-sm rounded-2xl p-6 relative"
-          style={{
-            backgroundColor: light,
-            color: dark,
-            fontFamily: "var(--font-figtree)",
-          }}
+          className="relative w-full max-w-md p-6 space-y-3 my-auto"
+          style={{ backgroundColor: bgColor, fontFamily: "var(--font-figtree)", fontWeight: 500, borderRadius: 10 }}
+          onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
         >
-          {/* Close button */}
-          {canClose && (
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 cursor-pointer hover:opacity-60 transition"
-              aria-label="Luk"
-              style={{ color: dark }}
-            >
-              <FontAwesomeIcon icon={faXmark} className="text-lg" />
-            </button>
-          )}
+          <style>{`
+            .upvote-modal-field::placeholder { color: var(--field-placeholder-color, ${nameColor}); opacity: var(--field-placeholder-opacity, 0.75); }
+            .upvote-modal-age::-webkit-inner-spin-button,
+            .upvote-modal-age::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+            .upvote-modal-age { -moz-appearance: textfield; }
+          `}</style>
+
+          {/* Title + close button row */}
+          <div className="relative" style={{ marginBottom: 25 }}>
+            <p className={`text-lg flex items-center gap-2 ${phase === "emailSent" ? "justify-center" : ""}`} style={{ color: nameColor, fontWeight: 600 }}>
+              {phase !== "emailSent" && <FontAwesomeIcon icon={faArrowUpDuotone} style={{ color: nameColor }} />}
+              {phase === "emailSent" ? "Tjek din e-mail" : "Upvote spørgsmål"}
+            </p>
+            {canClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="absolute top-1/2 right-0 -translate-y-1/2 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                style={{ width: 24, height: 24, backgroundColor: `${nameColor}80` }}
+                aria-label="Luk"
+              >
+                <FontAwesomeIcon icon={faXmark} style={{ color: lightColor, fontSize: "13.5px" }} />
+              </button>
+            )}
+          </div>
 
           {phase === "emailSent" ? (
-            /* ── Success state ── */
-            <div className="text-center space-y-4">
-              <FontAwesomeIcon icon={faEnvelopeCircleCheck} className="text-4xl" style={{ color: dark }} />
-              <h2
-                className="text-xl"
-                style={{ fontWeight: 700, color: dark }}
-              >
-                Tjek din email
-              </h2>
-              <p className="text-sm" style={{ color: dark, opacity: 0.8 }}>
-                Vi har sendt dig en bekræftelses-email. Klik på linket i emailen
-                for at registrere din upvote.
+            <div className="text-center space-y-4 py-4">
+              <FontAwesomeIcon icon={faEnvelopeCircleCheck} style={{ color: nameColor, fontSize: 48 }} />
+              <p className="text-base" style={{ color: nameColor }}>
+                Vi har sendt dig en bekræftelses-email. Klik på linket i emailen for at registrere din upvote.
               </p>
             </div>
           ) : (
-            /* ── Form state ── */
-            <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-              <h2
-                className="text-lg pr-6"
-                style={{ fontWeight: 700, color: dark }}
-              >
-                Upvote spørgsmål
-              </h2>
+            <form onSubmit={handleSubmit} className="space-y-3" noValidate>
+              {/* Question text */}
+              <p style={{ color: nameColor, fontSize: "32px", lineHeight: 1.2, fontWeight: 500 }}>
+                {questionText}
+              </p>
 
-              <div>
-                <label
-                  htmlFor="modal-firstName"
-                  className="block text-sm mb-1"
-                  style={{ fontWeight: 500, color: dark }}
-                >
-                  Fornavn
-                </label>
+              <p className="text-base" style={{ color: nameColor, opacity: 0.5 }}>
+                Alder er valgfri
+              </p>
+
+              {/* Fornavn + Alder row */}
+              <div className="flex items-center gap-2">
                 <input
                   ref={firstInputRef}
-                  id="modal-firstName"
                   name="firstName"
                   type="text"
                   required
-                  style={inputStyle}
-                  onFocus={(e) =>
-                    (e.currentTarget.style.boxShadow = `0 0 0 2px ${primary}`)
-                  }
-                  onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
+                  placeholder={fieldErrors.firstName ? "Fornavn skal udfyldes" : "Fornavn *"}
+                  value={firstName}
+                  onChange={(e) => { setFirstName(e.target.value); setFieldErrors((prev) => ({ ...prev, firstName: undefined })); }}
+                  className="upvote-modal-field min-w-0"
+                  style={{
+                    ...inputStyle,
+                    flex: "75",
+                    "--field-placeholder-color": fieldErrors.firstName ? colorError : nameColor,
+                    "--field-placeholder-opacity": fieldErrors.firstName ? "1" : "0.75",
+                  } as React.CSSProperties}
+                />
+                <input
+                  name="age"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={3}
+                  placeholder="Alder"
+                  onKeyDown={(e) => { if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) e.preventDefault(); }}
+                  onPaste={(e) => { const t = e.clipboardData.getData("text"); if (!/^\d+$/.test(t)) e.preventDefault(); }}
+                  className="upvote-modal-field upvote-modal-age min-w-0"
+                  style={{ ...inputStyle, flex: "25" }}
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="modal-email"
-                  className="block text-sm mb-1"
-                  style={{ fontWeight: 500, color: dark }}
-                >
-                  E-mail
-                </label>
+              {/* Email */}
+              <div className="relative">
                 <input
-                  id="modal-email"
                   name="email"
                   type="email"
                   required
-                  style={inputStyle}
-                  onFocus={(e) =>
-                    (e.currentTarget.style.boxShadow = `0 0 0 2px ${primary}`)
-                  }
-                  onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
+                  placeholder={fieldErrors.email ? "E-mail skal udfyldes" : "E-mail *"}
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setFieldErrors((prev) => ({ ...prev, email: undefined, emailInvalid: undefined })); }}
+                  className="upvote-modal-field"
+                  style={{
+                    ...inputStyle,
+                    color: fieldErrors.emailInvalid ? colorError : nameColor,
+                    "--field-placeholder-color": fieldErrors.email ? colorError : nameColor,
+                    "--field-placeholder-opacity": fieldErrors.email ? "1" : "0.75",
+                  } as React.CSSProperties}
                 />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="modal-age"
-                  className="block text-sm mb-1"
-                  style={{ fontWeight: 500, color: dark }}
-                >
-                  Alder{" "}
-                  <span style={{ fontWeight: 400, opacity: 0.6 }}>
-                    (valgfrit)
+                {fieldErrors.emailInvalid && (
+                  <span
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
+                    style={{ color: colorError, fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+                  >
+                    Ukorrekt format
                   </span>
-                </label>
-                <input
-                  id="modal-age"
-                  name="age"
-                  type="number"
-                  min={1}
-                  max={150}
-                  style={inputStyle}
-                  onFocus={(e) =>
-                    (e.currentTarget.style.boxShadow = `0 0 0 2px ${primary}`)
-                  }
-                  onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-                />
+                )}
               </div>
 
+              {/* Error message */}
               {(phase === "error" || error) && (
-                <p className="text-sm" style={{ color: "#DC2626" }}>
-                  {error}
-                </p>
+                <p className="text-sm" style={{ color: "#fee2e2" }}>{error}</p>
               )}
 
+              {/* Submit button */}
               <button
                 type="submit"
                 disabled={phase === "pending"}
-                className="w-full py-3 rounded-xl cursor-pointer hover:opacity-80 transition disabled:opacity-50"
-                style={{
-                  backgroundColor: dark,
-                  color: "#ffffff",
-                  fontWeight: 600,
-                  fontSize: 14,
-                }}
+                className="w-full text-base px-5 py-2.5 rounded-full cursor-pointer disabled:opacity-50 transition-opacity"
+                style={{ backgroundColor: nameColor, color: "#ffffff", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
               >
                 {phase === "pending" ? "Sender..." : "Upvote"}
               </button>

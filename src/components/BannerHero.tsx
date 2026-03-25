@@ -117,7 +117,7 @@ export function BannerHero({
         {hasHeroText && (
           <div
             ref={containerRef}
-            className="absolute top-0 bottom-0 right-0 w-[60%] flex items-center justify-end pr-[36px] sm:pr-6 pointer-events-none"
+            className="absolute top-0 bottom-0 right-0 w-[60%] flex items-center justify-end pr-[48px] sm:pr-6 pointer-events-none"
           >
             <div
               ref={textRef}

@@ -377,6 +377,7 @@ export function QuestionFeedFilter({
       {upvoteModalQuestionId && (
         <UpvoteModal
           questionId={upvoteModalQuestionId}
+          questionText={questions.find(q => q.id === upvoteModalQuestionId)?.text || ""}
           partySlug={partySlug}
           politicianSlug={politicianSlug}
           partyColor={partyColor}
@@ -463,6 +464,26 @@ function PinnedQuestionCard({
           </span>
         </a>
 
+        {question.suggestedBy && (
+          <div style={{ marginTop: 4 }}>
+            <span
+              style={{
+                fontSize: 12,
+                lineHeight: 1.3,
+                color: "var(--system-text0)",
+                backgroundColor: "var(--system-bg1)",
+                boxDecorationBreak: "clone",
+                WebkitBoxDecorationBreak: "clone",
+                padding: "2px 8px",
+                fontFamily: "var(--font-figtree)",
+                fontWeight: 400,
+              }}
+            >
+              {question.suggestedBy}
+            </span>
+          </div>
+        )}
+
         {/* Bottom row: share + tags */}
         <div className="flex items-center gap-2 py-[20px]">
           <button
@@ -503,7 +524,7 @@ function PinnedQuestionCard({
           bufferingColor={partyColorLight}
           playingId={playingId}
           setPlayingId={setPlayingId}
-          className="w-[90vw] self-center lg:self-auto lg:w-[337px]"
+          className="w-[90vw] self-center lg:self-auto lg:w-[337px] lg:mr-[9px]"
         />
       )}
     </div>
@@ -901,8 +922,8 @@ function AnsweredQuestionCard({
               style={{
                 fontSize: "12px",
                 lineHeight: 1.3,
-                color: "#000000",
-                backgroundColor: "#FFFFFF",
+                color: "var(--system-text0)",
+                backgroundColor: "var(--system-bg1)",
                 boxDecorationBreak: "clone",
                 WebkitBoxDecorationBreak: "clone",
                 padding: "2px 8px",
@@ -1431,21 +1452,26 @@ function UnansweredQuestionCard({
         </a>
 
         {question.suggestedBy && (
-          <div
-            style={{
-              fontSize: 14,
-              color: "#7E7D7A",
-              fontFamily: "var(--font-figtree)",
-              fontWeight: 400,
-              marginTop: 4,
-            }}
-          >
-            {question.suggestedBy}
+          <div style={{ marginTop: 4 }}>
+            <span
+              style={{
+                display: "inline-block",
+                fontSize: 12,
+                lineHeight: 1.3,
+                color: "var(--system-text0)",
+                backgroundColor: "var(--system-bg1)",
+                padding: "2px 4px",
+                borderRadius: 3,
+                fontFamily: "var(--font-figtree)",
+                fontWeight: 400,
+              }}
+            >
+              {question.suggestedBy}
+            </span>
           </div>
         )}
-
         {/* Share + tags row — pushed to bottom */}
-        <div className="flex items-center gap-2 mt-auto pt-2">
+        <div className="flex items-center gap-2 mt-auto" style={{ paddingTop: 20 }}>
           <button
             onClick={handleShare}
             className="hover:opacity-70 cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative"

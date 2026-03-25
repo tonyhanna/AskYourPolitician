@@ -2,14 +2,14 @@
 
 import { Suspense } from "react";
 import { useEffect, useState, useRef } from "react";
-import { flushSync } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
-import { faCommentLines } from "@fortawesome/pro-solid-svg-icons";
+import { faCommentPlus } from "@fortawesome/pro-solid-svg-icons";
 import { faInfo } from "@fortawesome/pro-duotone-svg-icons";
-import { submitSuggestion, directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
+import { directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { useSystemColors } from "./SystemColorProvider";
 import { SuccessBanner } from "./SuccessBanner";
+import { SuggestionModal } from "./SuggestionModal";
 
 type PoliticianTopBarProps = {
   politicianName: string;
@@ -53,11 +53,10 @@ export function PoliticianTopBar({
   // Form interaction state
   const [formActive, setFormActive] = useState(false);
   const [text, setText] = useState("");
-  const [showIdentity, setShowIdentity] = useState(false);
   const [pending, setPending] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{ firstName?: boolean; email?: boolean; emailInvalid?: boolean }>({});
+  const [modalOpen, setModalOpen] = useState(false);
   const introStorageKey = `intro-dismissed:${politicianSlug}`;
   const [introDismissed, setIntroDismissed] = useState(false);
   useEffect(() => {
@@ -75,10 +74,7 @@ export function PoliticianTopBar({
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
-  const [firstName, setFirstName] = useState("");
-  const [email, setEmail] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const mobileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Focus desktop input when form activates (mobile focus is handled
@@ -115,35 +111,21 @@ export function PoliticianTopBar({
   function resetForm() {
     setFormActive(false);
     setText("");
-    setShowIdentity(false);
     setError(null);
-    setFieldErrors({});
-    setFirstName("");
-    setEmail("");
+    setModalOpen(false);
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!text.trim()) return;
 
-    // If not logged in and identity panel not open yet, open it
-    if (!hasSession && !showIdentity) {
-      setShowIdentity(true);
+    // Logged-out users: open modal instead of submitting directly
+    if (!hasSession) {
+      setModalOpen(true);
       return;
     }
 
-    // Validate identity fields when panel is open
-    if (!hasSession && showIdentity) {
-      const errors: { firstName?: boolean; email?: boolean; emailInvalid?: boolean } = {};
-      if (!firstName.trim()) errors.firstName = true;
-      if (!email.trim()) errors.email = true;
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.emailInvalid = true;
-      if (Object.keys(errors).length > 0) {
-        setFieldErrors(errors);
-        return;
-      }
-    }
-
+    // Logged-in users: submit directly from topbar
     setPending(true);
     setError(null);
 
@@ -155,15 +137,10 @@ export function PoliticianTopBar({
     if (redirectPath) formData.set("redirectPath", redirectPath);
 
     try {
-      if (hasSession) {
-        await directSuggestion(formData);
-      } else {
-        await submitSuggestion(formData);
-      }
+      await directSuggestion(formData);
       setSuccess(true);
       setText("");
       setFormActive(false);
-      setShowIdentity(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Der opstod en fejl");
     } finally {
@@ -256,7 +233,7 @@ export function PoliticianTopBar({
           </div>
 
           {/* Mobile-only: info button + suggest/close button */}
-          <div className="sm:hidden ml-auto flex items-center gap-2 shrink-0">
+          <div className="sm:hidden ml-auto flex items-center gap-3 shrink-0">
             {!backHref && introDismissed && !formActive && (
               <button
                 type="button"
@@ -265,7 +242,7 @@ export function PoliticianTopBar({
                   window.dispatchEvent(new Event("show-intro"));
                 }}
                 className="cursor-pointer hover:opacity-50 transition-opacity rounded-full flex items-center justify-center"
-                style={{ width: 24, height: 24, backgroundColor: "rgba(255,255,255,0.5)", marginRight: 10 }}
+                style={{ width: 24, height: 24, backgroundColor: "rgba(255,255,255,0.5)" }}
                 aria-label="Vis information"
               >
                 <FontAwesomeIcon
@@ -278,27 +255,18 @@ export function PoliticianTopBar({
             {!success && (
               <button
                 type="button"
-                onClick={() => {
-                  if (formActive) {
-                    resetForm();
-                  } else {
-                    // flushSync forces synchronous render so the input is in the DOM
-                    // before we focus it — required for iOS to open the keyboard
-                    flushSync(() => setFormActive(true));
-                    mobileInputRef.current?.focus();
-                  }
-                }}
+                onClick={() => setModalOpen(true)}
                 className="cursor-pointer transition-opacity rounded-full flex items-center justify-center"
                 style={{
                   width: 40,
                   height: 40,
-                  backgroundColor: formActive ? "rgba(255,255,255,0.5)" : "#ffffff",
+                  backgroundColor: "#ffffff",
                 }}
-                aria-label={formActive ? "Luk" : "Foreslå et spørgsmål"}
+                aria-label="Foreslå et spørgsmål"
               >
                 <FontAwesomeIcon
-                  icon={formActive ? faXmark : faCommentLines}
-                  style={{ color: nameColor, fontSize: formActive ? 18 : 16 }}
+                  icon={faCommentPlus}
+                  style={{ color: nameColor, fontSize: 20 }}
                 />
               </button>
             )}
@@ -331,23 +299,19 @@ export function PoliticianTopBar({
                   </button>
                 )}
               </div>
-              {text.trim().length > 0 && (() => {
-                const isSend = hasSession || showIdentity;
-                const identityIncomplete = showIdentity && (!firstName.trim() || !email.trim());
-                return (
-                  <button
-                    type="submit"
-                    disabled={pending}
-                    className={`topbar-btn text-base px-5 py-2 rounded-full whitespace-nowrap cursor-pointer disabled:opacity-50 shrink-0 transition-opacity ${identityIncomplete ? "opacity-50" : ""}`}
-                    style={isSend
-                      ? { backgroundColor: nameColor, color: "#ffffff" }
-                      : { backgroundColor: partyTextColor, color: nameColor }
-                    }
-                  >
-                    {pending ? "Sender..." : isSend ? "Send forslag" : "Næste"}
-                  </button>
-                );
-              })()}
+              {text.trim().length > 0 && (
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="topbar-btn text-base px-5 py-2 rounded-full whitespace-nowrap cursor-pointer disabled:opacity-50 shrink-0 transition-opacity"
+                  style={hasSession
+                    ? { backgroundColor: nameColor, color: "#ffffff" }
+                    : { backgroundColor: partyTextColor, color: nameColor }
+                  }
+                >
+                  {pending ? "Sender..." : hasSession ? "Send forslag" : "Næste"}
+                </button>
+              )}
             </div>
           )}
 
@@ -379,14 +343,12 @@ export function PoliticianTopBar({
                   />
                 </button>
               )}
-              {success ? (
+              {success && hasSession ? (
                 <span
-                  className="text-base px-5 py-2 rounded-full bg-white whitespace-nowrap"
-                  style={{ color: nameColor }}
+                  className="text-base px-5 py-2 rounded-full whitespace-nowrap"
+                  style={{ backgroundColor: nameColor, color: "var(--system-text0-contrast)" }}
                 >
-                  {hasSession
-                    ? "Tak! Dit forslag er sendt"
-                    : "Tjek din email for at bekræfte"}
+                  Tak! Dit forslag er sendt
                 </span>
               ) : (
                 <button
@@ -402,107 +364,46 @@ export function PoliticianTopBar({
           )}
         </div>
 
-        {/* ── Mobile-only: second row (form input when active, success message, or nothing) ── */}
-        {formActive && (
-          <div className="px-[15px] pb-3 sm:hidden">
-            <div className="flex items-center gap-2">
-              <input
-                ref={mobileInputRef}
-                name="text"
-                type="text"
-                required
-                maxLength={300}
-                placeholder="Foreslå et spørgsmål..."
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                className="topbar-suggest-input flex-1 min-w-0 bg-white rounded-full px-5 py-2 text-base focus:outline-none"
-                style={{ color: nameColor, "--placeholder-color": nameColor } as React.CSSProperties}
-              />
-              {text.trim().length > 0 && (() => {
-                const isSend = hasSession || showIdentity;
-                const identityIncomplete = showIdentity && (!firstName.trim() || !email.trim());
-                return (
-                  <button
-                    type="submit"
-                    disabled={pending}
-                    className={`topbar-btn text-base px-5 py-2 rounded-full whitespace-nowrap cursor-pointer disabled:opacity-50 shrink-0 transition-opacity ${identityIncomplete ? "opacity-50" : ""}`}
-                    style={isSend
-                      ? { backgroundColor: nameColor, color: "#ffffff" }
-                      : { backgroundColor: partyTextColor, color: nameColor }
-                    }
-                  >
-                    {pending ? "Sender..." : isSend ? "Send forslag" : "Næste"}
-                  </button>
-                );
-              })()}
-            </div>
-          </div>
-        )}
-        {!formActive && success && (
+        {/* ── Mobile-only: success message (logged-in only, logged-out uses modal) ── */}
+        {!formActive && success && hasSession && (
           <div className="px-[15px] pb-3 sm:hidden">
             <span
-              className="block text-base px-5 py-2 rounded-full bg-white text-center"
-              style={{ color: nameColor }}
+              className="block text-base px-5 py-2 rounded-full text-center"
+              style={{ backgroundColor: nameColor, color: "var(--system-text0-contrast)" }}
             >
-              {hasSession
-                ? "Tak! Dit forslag er sendt"
-                : "Tjek din email for at bekræfte"}
+              Tak! Dit forslag er sendt
             </span>
           </div>
         )}
 
-        {/* ── Identity panel (slides down when not logged in) ── */}
-        {formActive && showIdentity && !hasSession && (
-          <div className="px-[15px] pb-4 space-y-2">
-            <p className="text-base mb-1" style={{ color: nameColor }}>
-              Vi skal lige vide lidt mere om dig <span style={{ opacity: 0.5 }}>— alder er valgfri</span>
-            </p>
-            {/* Row 1: Fornavn + Alder */}
-            <div className="flex items-center gap-2">
-              <input
-                name="firstName"
-                type="text"
-                required
-                placeholder={fieldErrors.firstName ? "Fornavn skal udfyldes" : "Fornavn"}
-                value={firstName}
-                onChange={(e) => { setFirstName(e.target.value); setFieldErrors((prev) => ({ ...prev, firstName: undefined })); }}
-                className="topbar-field bg-white rounded-full px-5 py-2 text-base text-gray-900 focus:outline-none min-w-0"
-                style={{ flex: "75", "--field-placeholder-color": fieldErrors.firstName ? colorError : "#9ca3af" } as React.CSSProperties}
-              />
-              <input
-                name="age"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={3}
-                placeholder="Alder"
-                onKeyDown={(e) => { if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) e.preventDefault(); }}
-                onPaste={(e) => { const text = e.clipboardData.getData("text"); if (!/^\d+$/.test(text)) e.preventDefault(); }}
-                className="topbar-field bg-white rounded-full px-5 py-2 text-base text-gray-900 focus:outline-none min-w-0"
-                style={{ flex: "25" }}
-              />
-            </div>
-            {/* Row 2: E-mail (full width) */}
-            <input
-              name="email"
-              type="email"
-              required
-              placeholder={fieldErrors.email ? "E-mail skal udfyldes" : "E-mail"}
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setFieldErrors((prev) => ({ ...prev, email: undefined, emailInvalid: undefined })); }}
-              className="topbar-field bg-white rounded-full px-5 py-2 text-base focus:outline-none w-full"
-              style={{ color: fieldErrors.emailInvalid ? colorError : "#111827", "--field-placeholder-color": fieldErrors.email ? colorError : "#9ca3af" } as React.CSSProperties}
-            />
-          </div>
-        )}
-
-        {/* Error when logged in (no identity panel) */}
-        {formActive && error && (hasSession || !showIdentity) && (
+        {/* Error when logged in (desktop topbar submit) */}
+        {formActive && error && hasSession && (
           <div className="px-[15px] pb-2">
             <p className="text-sm text-red-200">{error}</p>
           </div>
         )}
       </form>
+
+      {/* Suggestion modal (mobile: all users, desktop: logged-out only) */}
+      <SuggestionModal
+        isOpen={modalOpen}
+        onClose={() => { setModalOpen(false); }}
+        initialText={text}
+        politicianId={politicianId}
+        politicianSlug={politicianSlug}
+        partySlug={partySlug}
+        partyColor={partyColor}
+        partyColorDark={partyColorDark}
+        partyColorLight={partyColorLight}
+        hasSession={hasSession}
+        redirectPath={redirectPath}
+        onSuccess={() => {
+          setSuccess(true);
+          setText("");
+          setFormActive(false);
+          setModalOpen(false);
+        }}
+      />
     </div>
   );
 }

@@ -97,20 +97,32 @@ export function QuestionDetailCard({
                     style={{
                       fontSize: "40px",
                       lineHeight: 1.3,
-                      color: "#0E412E",
+                      color: "var(--system-text0)",
                       fontFamily: "var(--font-figtree)",
                       fontWeight: 400,
-                      backgroundColor: "#ECF5DC",
-                      boxDecorationBreak: "clone",
-                      WebkitBoxDecorationBreak: "clone",
-                      padding: "2px 8px",
                     }}
                   >
                     {question.text}
                   </span>
                 </div>
                 {question.suggestedByName && (
-                  <p className="text-xs text-gray-400 mt-2 ml-2">{question.suggestedByName}</p>
+                  <div className="mt-2">
+                    <span
+                      style={{
+                        display: "inline-block",
+                        fontSize: 12,
+                        lineHeight: 1.3,
+                        color: "var(--system-text0)",
+                        backgroundColor: "var(--system-bg1)",
+                        padding: "2px 4px",
+                        borderRadius: 3,
+                        fontFamily: "var(--font-figtree)",
+                        fontWeight: 400,
+                      }}
+                    >
+                      {question.suggestedByName}
+                    </span>
+                  </div>
                 )}
               </div>
               <div className="shrink-0 pt-[8px]">
@@ -153,7 +165,23 @@ export function QuestionDetailCard({
                 </span>
               </div>
               {question.suggestedByName && (
-                <p className="text-xs text-gray-400 mt-2 ml-2">{question.suggestedByName}</p>
+                <div className="mt-2">
+                    <span
+                      style={{
+                        fontSize: 12,
+                        lineHeight: 1.3,
+                        color: "var(--system-text0)",
+                        backgroundColor: "var(--system-bg1)",
+                        boxDecorationBreak: "clone",
+                        WebkitBoxDecorationBreak: "clone" as const,
+                        padding: "2px 8px",
+                        fontFamily: "var(--font-figtree)",
+                        fontWeight: 400,
+                      }}
+                    >
+                      {question.suggestedByName}
+                    </span>
+                  </div>
               )}
             </>
           )}
@@ -196,7 +224,7 @@ export function QuestionDetailCard({
             partyColor={partyColor}
             partyColorDark={partyColorDark}
             bufferingColor={partyColorLight}
-            className="w-[90vw] self-center lg:self-auto lg:w-[337px]"
+            className="w-[90vw] self-center lg:self-auto lg:w-[337px] lg:mr-[9px]"
           />
         )}
       </div>
@@ -205,6 +233,7 @@ export function QuestionDetailCard({
     {showUpvoteModal && (
       <UpvoteModal
         questionId={question.id}
+        questionText={question.text}
         partySlug={partySlug}
         politicianSlug={politicianSlug}
         partyColor={partyColor}
