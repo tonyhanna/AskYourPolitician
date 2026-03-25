@@ -17,23 +17,28 @@ import { useEffect } from "react";
  */
 export function ThemeColorSetter({ color }: { color: string }) {
   useEffect(() => {
+    const html = document.documentElement;
     const body = document.body;
     const prevBody = body.style.backgroundColor;
+    const prevHtml = html.style.backgroundColor;
 
-    const getBg = () => getComputedStyle(document.documentElement).getPropertyValue("--system-bg0").trim() || "#ffffff";
+    const getBg = () => getComputedStyle(html).getPropertyValue("--system-bg0").trim() || "#ffffff";
 
-    // Set initial body bg based on current scroll position
-    body.style.backgroundColor = window.scrollY <= 0 ? color : getBg();
-
-    const handleScroll = () => {
-      body.style.backgroundColor = window.scrollY <= 0 ? color : getBg();
+    const apply = () => {
+      const atTop = window.scrollY <= 0;
+      body.style.backgroundColor = atTop ? color : getBg();
+      // Chrome desktop overscroll reveals html bg, so set it too
+      html.style.backgroundColor = atTop ? color : getBg();
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    apply();
+
+    window.addEventListener("scroll", apply, { passive: true });
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", apply);
       body.style.backgroundColor = prevBody;
+      html.style.backgroundColor = prevHtml;
     };
   }, [color]);
 
