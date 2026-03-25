@@ -7,6 +7,7 @@ import { PoliticianTopBar } from "@/components/PoliticianTopBar";
 import { QuestionDetailCard } from "@/components/QuestionDetailCard";
 import { QuestionDetailEllipsis } from "@/components/QuestionDetailEllipsis";
 import { ChatbaseWidget } from "@/components/ChatbaseWidget";
+import { ThemeColorSetter } from "@/components/ThemeColorSetter";
 import type { Metadata } from "next";
 import { getAppSettings } from "@/lib/settings";
 
@@ -141,6 +142,9 @@ export default async function QuestionLandingPage({ params }: Props) {
         <meta name="theme-color" content={partyColor} />
       )}
       <style>{`:root { --party-color: ${partyColor || "#3B82F6"}; }`}</style>
+      <style precedence="theme" href={`theme-detail-${partySlug}`}>{`html body{background-color:${partyColor}}`}</style>
+
+      {partyColor && <ThemeColorSetter color={partyColor} />}
 
       <div className="min-h-dvh flex flex-col" style={{ backgroundColor: "var(--system-bg0, #ffffff)" }}>
       {/* PoliticianTopBar */}
