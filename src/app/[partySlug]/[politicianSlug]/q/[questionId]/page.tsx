@@ -142,7 +142,7 @@ export default async function QuestionLandingPage({ params }: Props) {
       )}
       <style>{`:root { --party-color: ${partyColor || "#3B82F6"}; }`}</style>
 
-      <div className="min-h-dvh flex flex-col">
+      <div className="min-h-dvh flex flex-col" style={{ backgroundColor: "var(--system-bg0, #ffffff)" }}>
       {/* PoliticianTopBar */}
       <PoliticianTopBar
         politicianName={politician.name}
