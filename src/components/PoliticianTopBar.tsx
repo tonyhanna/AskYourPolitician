@@ -4,10 +4,11 @@ import { Suspense } from "react";
 import { useEffect, useState, useRef } from "react";
 import { flushSync } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { faCommentLines } from "@fortawesome/pro-solid-svg-icons";
 import { faInfo } from "@fortawesome/pro-duotone-svg-icons";
 import { submitSuggestion, directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
+import { useSystemColors } from "./SystemColorProvider";
 import { SuccessBanner } from "./SuccessBanner";
 
 type PoliticianTopBarProps = {
@@ -23,6 +24,8 @@ type PoliticianTopBarProps = {
   partySlug: string;
   politicianSlug: string;
   hasSession: boolean;
+  backHref?: string | null;
+  redirectPath?: string | null;
 };
 
 export function PoliticianTopBar({
@@ -38,7 +41,10 @@ export function PoliticianTopBar({
   partySlug,
   politicianSlug,
   hasSession,
+  backHref,
+  redirectPath,
 }: PoliticianTopBarProps) {
+  const { error: colorError } = useSystemColors();
   const bgColor = partyColor ?? "#3B82F6";
   const nameColor = partyColorDark ?? "#1E3A5F";
   const partyTextColor = partyColorLight ?? "#93C5FD";
@@ -146,6 +152,7 @@ export function PoliticianTopBar({
     formData.set("politicianId", politicianId);
     formData.set("politicianSlug", politicianSlug);
     formData.set("partySlug", partySlug);
+    if (redirectPath) formData.set("redirectPath", redirectPath);
 
     try {
       if (hasSession) {
@@ -197,8 +204,25 @@ export function PoliticianTopBar({
       <form onSubmit={handleSubmit} noValidate>
         {/* ── Top row: logos + names + desktop form/button ── */}
         <div className="px-[15px] h-[75px] flex items-center gap-3">
-          {/* Left: party logo + profile photo (always visible) */}
+          {/* Left: back button (optional) + party logo + profile photo (always visible) */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {backHref && (
+              <a
+                href={backHref}
+                className="group w-12 h-12 rounded-full flex items-center justify-center shrink-0 relative"
+                aria-label="Tilbage"
+              >
+                <span
+                  className="absolute inset-0 rounded-full transition-opacity group-hover:opacity-50"
+                  style={{ backgroundColor: "rgba(255,255,255,0.25)" }}
+                />
+                <FontAwesomeIcon
+                  icon={faArrowLeft}
+                  className="relative"
+                  style={{ color: partyColorDark || "#1E3A5F", fontSize: 18 }}
+                />
+              </a>
+            )}
             {partyLogoUrl && (
               <img
                 src={partyLogoUrl}
@@ -233,7 +257,7 @@ export function PoliticianTopBar({
 
           {/* Mobile-only: info button + suggest/close button */}
           <div className="sm:hidden ml-auto flex items-center gap-2 shrink-0">
-            {introDismissed && !formActive && (
+            {!backHref && introDismissed && !formActive && (
               <button
                 type="button"
                 onClick={() => {
@@ -338,7 +362,7 @@ export function PoliticianTopBar({
                   {constituency}
                 </span>
               )}
-              {introDismissed && (
+              {!backHref && introDismissed && (
                 <button
                   type="button"
                   onClick={() => {
@@ -443,7 +467,7 @@ export function PoliticianTopBar({
                 value={firstName}
                 onChange={(e) => { setFirstName(e.target.value); setFieldErrors((prev) => ({ ...prev, firstName: undefined })); }}
                 className="topbar-field bg-white rounded-full px-5 py-2 text-base text-gray-900 focus:outline-none min-w-0"
-                style={{ flex: "75", "--field-placeholder-color": fieldErrors.firstName ? "#FF4105" : "#9ca3af" } as React.CSSProperties}
+                style={{ flex: "75", "--field-placeholder-color": fieldErrors.firstName ? colorError : "#9ca3af" } as React.CSSProperties}
               />
               <input
                 name="age"
@@ -467,7 +491,7 @@ export function PoliticianTopBar({
               value={email}
               onChange={(e) => { setEmail(e.target.value); setFieldErrors((prev) => ({ ...prev, email: undefined, emailInvalid: undefined })); }}
               className="topbar-field bg-white rounded-full px-5 py-2 text-base focus:outline-none w-full"
-              style={{ color: fieldErrors.emailInvalid ? "#FF4105" : "#111827", "--field-placeholder-color": fieldErrors.email ? "#FF4105" : "#9ca3af" } as React.CSSProperties}
+              style={{ color: fieldErrors.emailInvalid ? colorError : "#111827", "--field-placeholder-color": fieldErrors.email ? colorError : "#9ca3af" } as React.CSSProperties}
             />
           </div>
         )}

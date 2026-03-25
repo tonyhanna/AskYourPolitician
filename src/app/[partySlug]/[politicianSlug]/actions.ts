@@ -30,6 +30,7 @@ export async function submitUpvote(formData: FormData): Promise<{ error?: string
   const partySlug = formData.get("partySlug") as string;
   const ageStr = formData.get("age") as string | null;
   const age = ageStr ? parseInt(ageStr, 10) : null;
+  const redirectPath = formData.get("redirectPath") as string | null;
 
   if (!firstName || !email || !questionId || !politicianSlug || !partySlug) {
     return { error: "Alle felter er påkrævet" };
@@ -82,7 +83,10 @@ export async function submitUpvote(formData: FormData): Promise<{ error?: string
   });
 
   // Send verification email
-  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/verify/${token}`;
+  const baseVerifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/verify/${token}`;
+  const verificationUrl = redirectPath
+    ? `${baseVerifyUrl}?redirect=${encodeURIComponent(redirectPath)}`
+    : baseVerifyUrl;
   await sendVerificationEmail({
     to: email.toLowerCase(),
     firstName,
@@ -184,6 +188,7 @@ export async function submitSuggestion(formData: FormData) {
   const partySlug = formData.get("partySlug") as string;
   const ageStr = formData.get("age") as string | null;
   const age = ageStr ? parseInt(ageStr, 10) : null;
+  const redirectPath = formData.get("redirectPath") as string | null;
 
   if (!firstName || !email || !text || !politicianId || !politicianSlug || !partySlug) {
     throw new Error("Alle felter er påkrævet");
@@ -240,7 +245,10 @@ export async function submitSuggestion(formData: FormData) {
   });
 
   // Send verification email
-  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/verify-suggestion/${token}`;
+  const baseVerifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/verify-suggestion/${token}`;
+  const verificationUrl = redirectPath
+    ? `${baseVerifyUrl}?redirect=${encodeURIComponent(redirectPath)}`
+    : baseVerifyUrl;
   await sendSuggestionVerificationEmail({
     to: email.toLowerCase(),
     firstName,
@@ -299,5 +307,5 @@ export async function directSuggestion(formData: FormData) {
 
 export async function citizenLogout(partySlug: string, politicianSlug: string) {
   await clearCitizenSession();
-  revalidatePath(`/${partySlug}/${politicianSlug}`);
+  revalidatePath(`/${partySlug}/${politicianSlug}`, "layout");
 }

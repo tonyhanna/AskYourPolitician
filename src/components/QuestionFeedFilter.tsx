@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faVideo, faMicrophone, faEllipsis, faXmark, faCirclePlay, faChevronLeft, faChevronRight, faChevronDown, faArrowUp, faCheck, faArrowRightFromBracket } from "@fortawesome/free-solid-svg-icons";
-import { faShare, faArrowUp as faArrowUpDuotone, faHourglass, faFilter } from "@fortawesome/pro-duotone-svg-icons";
-import { UpvoteButton } from "./UpvoteButton";
-import { CancelUpvoteButton } from "./CancelUpvoteButton";
-import { CopyLinkButton } from "./CopyLinkButton";
+import { faVideo, faMicrophone, faXmark, faChevronLeft, faChevronRight, faChevronDown, faPlay, faCopy } from "@fortawesome/free-solid-svg-icons";
+import { faShare, faFilter, faUpRightAndDownLeftFromCenter } from "@fortawesome/pro-duotone-svg-icons";
+import { PlayableMediaCard } from "./PlayableMediaCard";
 import { isBlobUrl, getBlobMediaType } from "@/lib/answer-utils";
-import { citizenLogout, directUpvote, cancelUpvote } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { UpvoteModal } from "./UpvoteModal";
+import { CircularUpvoteButton } from "./CircularUpvoteButton";
+import { QuestionDetailEllipsis } from "./QuestionDetailEllipsis";
+import { useSystemColors } from "./SystemColorProvider";
 
 type FeedQuestion = {
   id: string;
@@ -63,9 +63,10 @@ export function QuestionFeedFilter({
   partyColorLight?: string | null;
   citizenEmail?: string | null;
 }) {
+  const systemColors = useSystemColors();
+  const { pending: colorPending, error: colorError } = systemColors;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [upvoteModalQuestionId, setUpvoteModalQuestionId] = useState<string | null>(null);
   const [sort, setSort] = useState<SortOption>("newest");
@@ -134,20 +135,20 @@ export function QuestionFeedFilter({
   }, [questions, group, selectedTags, sort]);
 
   return (
-    <div>
+    <div className="flex flex-col flex-1">
       {/* Filtre — toggle button or expanded filters */}
       {!filtersOpen ? (
         <div className="mb-[25px]">
           <button
             onClick={() => setFiltersOpen(true)}
-            className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
+            className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-colors duration-150"
             style={{
               fontFamily: "var(--font-figtree)", fontWeight: 500,
-              backgroundColor: partyColorLight || "#DBEAFE",
-              color: partyColorDark || "#1E3A5F",
+              backgroundColor: "var(--system-bg1)",
+              color: "var(--system-icon1)",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = partyColorDark || "#1E3A5F"; e.currentTarget.style.color = "#ffffff"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = partyColorLight || "#DBEAFE"; e.currentTarget.style.color = partyColorDark || "#1E3A5F"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-icon0)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-icon1)"; }}
           >
             <FontAwesomeIcon icon={faFilter} className="text-xs" />
             Filtre
@@ -158,11 +159,26 @@ export function QuestionFeedFilter({
           {/* Vis */}
           <div>
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setFiltersOpen(false)}
+                className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
+                style={{
+                  width: 34,
+                  height: 34,
+                  backgroundColor: "var(--system-bg1)",
+                  color: "var(--system-icon1)",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-icon0)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-icon1)"; }}
+                aria-label="Luk filtre"
+              >
+                <FontAwesomeIcon icon={faXmark} style={{ fontSize: 14 }} />
+              </button>
               {([
                 ["all", "Alle"],
                 ["own", "Politiker"],
                 ["citizen", "Borgere"],
-                ...(hasSession && questions.some((q) => q.isUpvoted) ? [["upvoted", "Mine upvotede"] as [GroupOption, string]] : []),
+                ...(hasSession && questions.some((q) => q.isUpvoted) ? [["upvoted", "Upvotede"] as [GroupOption, string]] : []),
               ] as [GroupOption, string][]).map(([value, label]) => (
                 <button
                   key={value}
@@ -170,12 +186,11 @@ export function QuestionFeedFilter({
                   className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
                   style={{
                     fontFamily: "var(--font-figtree)", fontWeight: 500,
-                    ...(group === value
-                      ? { backgroundColor: partyColor || "#3B82F6", color: "#ffffff" }
-                      : { backgroundColor: partyColorLight || "#DBEAFE", color: partyColorDark || "#1E3A5F" }),
+                    backgroundColor: group === value ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                    color: group === value ? "var(--system-text0-contrast)" : "var(--system-text0)",
                   }}
-                  onMouseEnter={(e) => { if (group !== value) { e.currentTarget.style.backgroundColor = partyColorDark || "#1E3A5F"; e.currentTarget.style.color = "#ffffff"; } }}
-                  onMouseLeave={(e) => { if (group !== value) { e.currentTarget.style.backgroundColor = partyColorLight || "#DBEAFE"; e.currentTarget.style.color = partyColorDark || "#1E3A5F"; } }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = group === value ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
                 >
                   {label}
                 </button>
@@ -183,9 +198,9 @@ export function QuestionFeedFilter({
               <button
                 onClick={() => setMoreOpen((v) => !v)}
                 className="inline-flex items-center gap-1 text-sm cursor-pointer"
-                style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: partyColorDark || "#1E3A5F", opacity: 0.6 }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.6"; }}
+                style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text1)" }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text0)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-text1)"; }}
               >
                 Flere filtre
                 <FontAwesomeIcon
@@ -198,7 +213,7 @@ export function QuestionFeedFilter({
                 <button
                   onClick={reset}
                   className="text-sm cursor-pointer"
-                  style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "#FF4105" }}
+                  style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: colorError }}
                 >
                   Nulstil
                 </button>
@@ -210,7 +225,7 @@ export function QuestionFeedFilter({
             <>
               {/* Sortering */}
               <div>
-                <p className="text-sm mb-2" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: partyColorDark || "#1E3A5F" }}>Sortering</p>
+                <p className="text-sm mb-2" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text1)" }}>Sortering</p>
                 <div className="flex flex-wrap gap-2">
                   {([
                     ["newest", "Nyeste først"],
@@ -224,12 +239,11 @@ export function QuestionFeedFilter({
                       className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
                       style={{
                         fontFamily: "var(--font-figtree)", fontWeight: 500,
-                        ...(sort === value
-                          ? { backgroundColor: partyColor || "#3B82F6", color: "#ffffff" }
-                          : { backgroundColor: partyColorLight || "#DBEAFE", color: partyColorDark || "#1E3A5F" }),
+                        backgroundColor: sort === value ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                        color: sort === value ? "var(--system-text0-contrast)" : "var(--system-text0)",
                       }}
-                      onMouseEnter={(e) => { if (sort !== value) { e.currentTarget.style.backgroundColor = partyColorDark || "#1E3A5F"; e.currentTarget.style.color = "#ffffff"; } }}
-                      onMouseLeave={(e) => { if (sort !== value) { e.currentTarget.style.backgroundColor = partyColorLight || "#DBEAFE"; e.currentTarget.style.color = partyColorDark || "#1E3A5F"; } }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = sort === value ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
                     >
                       {label}
                     </button>
@@ -240,7 +254,7 @@ export function QuestionFeedFilter({
               {/* Mærkesager */}
               {allTags.length > 0 && (
                 <div>
-                  <p className="text-sm mb-2" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: partyColorDark || "#1E3A5F" }}>Mærkesager</p>
+                  <p className="text-sm mb-2" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text1)" }}>Mærkesager</p>
                   <div className="flex flex-wrap gap-2">
                     {allTags.map((tag) => (
                       <button
@@ -249,12 +263,11 @@ export function QuestionFeedFilter({
                         className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
                         style={{
                           fontFamily: "var(--font-figtree)", fontWeight: 500,
-                          ...(selectedTags.has(tag)
-                            ? { backgroundColor: partyColor || "#3B82F6", color: "#ffffff" }
-                            : { backgroundColor: partyColorLight || "#DBEAFE", color: partyColorDark || "#1E3A5F" }),
+                          backgroundColor: selectedTags.has(tag) ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                          color: selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)",
                         }}
-                        onMouseEnter={(e) => { if (!selectedTags.has(tag)) { e.currentTarget.style.backgroundColor = partyColorDark || "#1E3A5F"; e.currentTarget.style.color = "#ffffff"; } }}
-                        onMouseLeave={(e) => { if (!selectedTags.has(tag)) { e.currentTarget.style.backgroundColor = partyColorLight || "#DBEAFE"; e.currentTarget.style.color = partyColorDark || "#1E3A5F"; } }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
                       >
                         {tag}
                       </button>
@@ -264,6 +277,7 @@ export function QuestionFeedFilter({
               )}
             </>
           )}
+          {moreOpen && <hr className="border-0 mt-2" style={{ borderTop: "1px solid var(--system-bg2)" }} />}
         </div>
       )}
 
@@ -290,6 +304,7 @@ export function QuestionFeedFilter({
                 appUrl={appUrl}
                 partyColor={partyColor}
                 partyColorDark={partyColorDark}
+                partyColorLight={partyColorLight}
                 playingId={playingId}
                 setPlayingId={setPlayingId}
               />
@@ -302,7 +317,7 @@ export function QuestionFeedFilter({
       {pinnedQuestions.length > 0 && answeredQuestions.length > 0 && (
         <div
           className="my-6"
-          style={{ height: 1, backgroundColor: `${partyColor || "#00D564"}40` }}
+          style={{ height: 1, backgroundColor: "var(--system-bg2)" }}
         />
       )}
 
@@ -314,6 +329,7 @@ export function QuestionFeedFilter({
           appUrl={appUrl}
           partyColor={partyColor}
           partyColorDark={partyColorDark}
+          partyColorLight={partyColorLight}
           playingId={playingId}
           setPlayingId={setPlayingId}
         />
@@ -323,7 +339,7 @@ export function QuestionFeedFilter({
       {answeredQuestions.length > 0 && (
         <div
           className="my-6"
-          style={{ height: 1, backgroundColor: `${partyColor || "#00D564"}40` }}
+          style={{ height: 1, backgroundColor: "var(--system-bg2)" }}
         />
       )}
 
@@ -341,73 +357,21 @@ export function QuestionFeedFilter({
           partyColorDark={partyColorDark}
           onLoginUpvote={(qId) => setUpvoteModalQuestionId(qId)}
         />
-      ) : pinnedQuestions.length === 0 && questions.length > 0 ? (
+      ) : isFiltered && questions.length > 0 ? (
         <p className="max-w-2xl mx-auto text-gray-500 text-center py-8">
           Ingen spørgsmål matcher dine filtre.
         </p>
       ) : null}
 
       {/* Ellipsis menu — below question list, centered */}
-      {!hasSession && <div style={{ height: 104 }} />}
-      {hasSession && (
-        <div className="relative flex justify-center" style={{ marginTop: 50, marginBottom: 30 }}>
-          {/* Invisible backdrop to dismiss menu on outside click */}
-          {menuOpen && (
-            <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-          )}
-          {/* Menu popover — opens upward */}
-          {menuOpen && citizenEmail && (
-            <div
-              className="absolute bottom-full mb-2 flex flex-col items-center gap-2 rounded-xl px-4 py-3 z-20"
-              style={{
-                backgroundColor: partyColor || "#7E7D7A",
-                fontFamily: "var(--font-figtree)",
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-              }}
-            >
-              <span className="text-sm" style={{ color: "#ffffff" }}>{citizenEmail}</span>
-              <button
-                onClick={async () => {
-                  const scrollY = window.scrollY;
-                  await citizenLogout(partySlug, politicianSlug);
-                  requestAnimationFrame(() => window.scrollTo(0, scrollY));
-                }}
-                className="cursor-pointer transition hover:opacity-50 flex items-center gap-2 text-sm"
-                style={{ color: "#ffffff" }}
-              >
-                <FontAwesomeIcon icon={faArrowRightFromBracket} />
-                Log ud
-              </button>
-            </div>
-          )}
-          {/* Ellipsis / close button */}
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="cursor-pointer hover:opacity-50 transition-opacity rounded-full flex items-center justify-center z-20"
-            style={{
-              width: 24,
-              height: 24,
-              backgroundColor: menuOpen
-                ? (partyColor || "#7E7D7A")
-                : `${partyColor || "#7E7D7A"}80`,
-            }}
-            aria-label="Menu"
-          >
-            {menuOpen ? (
-              <FontAwesomeIcon
-                icon={faXmark}
-                style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }}
-              />
-            ) : (
-              <FontAwesomeIcon
-                icon={faEllipsis}
-                style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }}
-              />
-            )}
-          </button>
-        </div>
-      )}
+      <QuestionDetailEllipsis
+        hasSession={hasSession}
+        citizenEmail={citizenEmail ?? null}
+        partySlug={partySlug}
+        politicianSlug={politicianSlug}
+        partyColor={partyColor}
+        partyColorDark={partyColorDark}
+      />
 
       {/* Upvote login modal */}
       {upvoteModalQuestionId && (
@@ -433,468 +397,13 @@ function formatDuration(seconds: number | null): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-function QuestionCard({
-  question,
-  basePath,
-  appUrl,
-  hasSession,
-  partySlug,
-  politicianSlug,
-  politicianName,
-  partyColor,
-  partyColorDark,
-  isPinned,
-}: {
-  question: FeedQuestion;
-  basePath: string;
-  appUrl: string;
-  hasSession: boolean;
-  partySlug: string;
-  politicianSlug: string;
-  politicianName: string;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
-  isPinned?: boolean;
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const fullVideoRef = useRef<HTMLVideoElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const progressBarRef = useRef<HTMLDivElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isWatching, setIsWatching] = useState(false);
-  const [isBuffering, setIsBuffering] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
-  const [isHourglassHovering, setIsHourglassHovering] = useState(false);
-  const answerAspectRatio = question.answerAspectRatio;
-
-  // Determine card variant
-  const mediaType = question.answerUrl && isBlobUrl(question.answerUrl)
-    ? getBlobMediaType(question.answerUrl)
-    : null;
-  const hasClip = !!question.answerClipUrl;
-  const hasAudioPhoto = mediaType === "audio" && !!question.answerPhotoUrl;
-  const hasBackground = hasClip || hasAudioPhoto;
-  const hasVideoAnswer = mediaType === "video" && !!question.answerUrl;
-  const hasAudioAnswer = hasAudioPhoto; // audio + photo = clickable card
-
-  // Click card to play full video or audio answer
-  const handleCardClick = useCallback((e: React.MouseEvent) => {
-    if (!hasVideoAnswer && !hasAudioAnswer) return;
-    // Don't trigger when clicking interactive elements
-    const target = e.target as HTMLElement;
-    if (target.closest("a, button")) return;
-
-    if (isWatching) {
-      // Stop watching
-      fullVideoRef.current?.pause();
-      audioRef.current?.pause();
-      setIsWatching(false);
-      setIsBuffering(false);
-    } else if (hasVideoAnswer) {
-      // Start watching video — pause clip, play full video directly in click handler
-      // (must not use setTimeout — browser requires user gesture for unmuted play)
-      videoRef.current?.pause();
-      setIsBuffering(true); // Show spinner immediately while video loads
-      if (fullVideoRef.current) {
-        fullVideoRef.current.currentTime = 0;
-        fullVideoRef.current.play().catch(() => {});
-      }
-      setIsWatching(true);
-    } else if (hasAudioAnswer) {
-      // Start listening — play audio, show photo at natural size
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(() => {});
-      }
-      setIsWatching(true);
-    }
-  }, [hasVideoAnswer, hasAudioAnswer, isWatching]);
-
-  // Full video ended
-  const handleFullVideoEnded = useCallback(() => {
-    setIsWatching(false);
-    setIsBuffering(false);
-  }, []);
-
-  // Buffering: video stalled waiting for data
-  const handleWaiting = useCallback(() => {
-    setIsBuffering(true);
-  }, []);
-
-  // Buffering resolved: playback resumed
-  const handlePlaying = useCallback(() => {
-    setIsBuffering(false);
-  }, []);
-
-  // Audio ended
-  const handleAudioEnded = useCallback(() => {
-    setIsWatching(false);
-  }, []);
-
-  // Clip ended — just stop playing, stay on last frame (hover remains)
-  const handleClipEnded = useCallback(() => {
-    setIsPlaying(false);
-  }, []);
-
-  // Desktop: hover to reveal background + play clip (only when not watching full video)
-  const handleMouseEnter = useCallback(() => {
-    if (isWatching) return;
-    if (hasBackground) setIsHovering(true);
-    if (hasClip && videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-    }
-  }, [hasClip, hasBackground, isWatching]);
-
-  const handleMouseLeave = useCallback(() => {
-    if (isWatching) return;
-    setIsHovering(false);
-    if (hasClip && videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-      setIsPlaying(false);
-    }
-  }, [hasClip, isWatching]);
-
-  // Mobile: IntersectionObserver for scroll-based clip play
-  useEffect(() => {
-    if (!hasClip || !cardRef.current || !videoRef.current) return;
-
-    // Only use IntersectionObserver on touch devices
-    const isTouch = window.matchMedia("(pointer: coarse)").matches;
-    if (!isTouch) return;
-
-    const video = videoRef.current;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        // Don't interfere with full video playback
-        if (isWatching) return;
-        if (entry.isIntersecting) {
-          video.play().then(() => setIsPlaying(true)).catch(() => {});
-        } else {
-          video.pause();
-          video.currentTime = 0;
-          setIsPlaying(false);
-        }
-      },
-      { threshold: 0.6 }
-    );
-
-    observer.observe(cardRef.current);
-    return () => observer.disconnect();
-  }, [hasClip, isWatching]);
-
-  // Progress bar — smooth rAF loop while watching
-  useEffect(() => {
-    if (!isWatching) {
-      // Reset bar when not watching
-      if (progressBarRef.current) progressBarRef.current.style.width = "0%";
-      return;
-    }
-
-    let rafId: number;
-    const tick = () => {
-      const el = hasVideoAnswer ? fullVideoRef.current : audioRef.current;
-      if (el && progressBarRef.current) {
-        const total = question.answerDuration ?? el.duration;
-        if (total && isFinite(total) && total > 0) {
-          const pct = Math.min((el.currentTime / total) * 100, 100);
-          progressBarRef.current.style.width = `${pct}%`;
-        }
-      }
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, [isWatching, hasVideoAnswer, question.answerDuration]);
-
-  // Text and overlay colors based on background — always white when background exists
-  const textColor = hasBackground ? "#ffffff" : "#2E2E2E";
-  const subtextColor = hasBackground ? "rgba(255,255,255,0.7)" : "#7E7D7A";
-  const tagBg = hasBackground ? "rgba(255,255,255,0.2)" : "#E8E7E5";
-  const tagColor = hasBackground ? "#ffffff" : (partyColorDark || "#1E3A5F");
-  const answerBtnBg = hasBackground ? "rgba(255,255,255,0.2)" : "#E8E7E5";
-  const answerBtnColor = hasBackground ? "#ffffff" : "#7E7D7A";
-
-  return (
-    <div
-      ref={cardRef}
-      className="p-4 break-inside-avoid group/card relative overflow-hidden"
-      style={{
-        backgroundColor: isWatching && hasVideoAnswer ? "#000000" : "#F6F6F5",
-        fontFamily: "var(--font-figtree)",
-        fontWeight: 500,
-        cursor: hasVideoAnswer || hasAudioAnswer ? "pointer" : undefined,
-        aspectRatio: isWatching && answerAspectRatio
-          ? `${answerAspectRatio}`
-          : undefined,
-        transition: "background-color 300ms, aspect-ratio 300ms",
-      }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onClick={handleCardClick}
-    >
-      {/* Story-style progress bar */}
-      {isWatching && (
-        <div
-          className="absolute"
-          style={{ zIndex: 5, top: 5, left: 5, right: 5, height: 4, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 9999 }}
-        >
-          <div
-            ref={progressBarRef}
-            style={{
-              height: "100%",
-              width: "0%",
-              backgroundColor: "#ffffff",
-              borderRadius: 9999,
-            }}
-          />
-        </div>
-      )}
-
-      {/* Background: video clip */}
-      {hasClip && (
-        <>
-          <video
-            ref={videoRef}
-            src={question.answerClipUrl!}
-            muted
-            playsInline
-            preload="metadata"
-            poster={question.answerPhotoUrl || undefined}
-            onEnded={handleClipEnded}
-            className="absolute inset-0 w-full h-full object-cover transition-all duration-300"
-            style={{ zIndex: 0, filter: isHovering || isWatching ? "none" : "blur(8px)", transform: isHovering || isWatching ? "none" : "scale(1.1)" }}
-          />
-          <div
-            className="absolute inset-0 transition-opacity duration-300"
-            style={{ backgroundColor: "rgba(0,0,0,0.55)", zIndex: 1, opacity: isWatching ? 0 : 1 }}
-          />
-        </>
-      )}
-
-      {/* Full video for on-card playback */}
-      {hasVideoAnswer && (
-        <video
-          ref={fullVideoRef}
-          src={question.answerUrl!}
-          playsInline
-          preload="none"
-          onEnded={handleFullVideoEnded}
-          onWaiting={handleWaiting}
-          onPlaying={handlePlaying}
-          className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300"
-          style={{ zIndex: isWatching ? 3 : 0, opacity: isWatching ? 1 : 0 }}
-        />
-      )}
-
-      {/* Buffering spinner */}
-      {isWatching && isBuffering && (
-        <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ zIndex: 4 }}
-        >
-          <svg
-            className="animate-spin h-10 w-10 text-white"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-        </div>
-      )}
-
-      {/* Background: audio answer photo */}
-      {hasAudioPhoto && !hasClip && (
-        <>
-          <img
-            src={question.answerPhotoUrl!}
-            alt=""
-            className={`absolute inset-0 w-full h-full transition-all duration-300 ${isWatching ? "object-contain" : "object-cover"}`}
-            style={{ zIndex: 0, filter: isHovering || isWatching ? "none" : "blur(8px)", transform: isHovering || isWatching ? "none" : "scale(1.1)" }}
-          />
-          <div
-            className="absolute inset-0 transition-opacity duration-300"
-            style={{ backgroundColor: "rgba(0,0,0,0.55)", zIndex: 1, opacity: isWatching ? 0 : 1 }}
-          />
-        </>
-      )}
-
-      {/* Hidden audio element for on-card playback */}
-      {hasAudioAnswer && (
-        <audio
-          ref={audioRef}
-          src={question.answerUrl!}
-          preload="none"
-          onEnded={handleAudioEnded}
-        />
-      )}
-
-      {/* Content (above background) — fades out when watching full video */}
-      <div
-        className="relative transition-opacity duration-300"
-        style={{ zIndex: isWatching ? 1 : 2, opacity: isWatching ? 0 : 1 }}
-      >
-        {/* Question text */}
-        <div>
-          <a
-            href={`${basePath}/q/${question.id}`}
-            className="transition hover:opacity-70"
-            style={{
-              fontSize: "30px",
-              lineHeight: 1.15,
-              color: textColor,
-              fontFamily: "var(--font-figtree)",
-              transition: "color 300ms",
-            }}
-          >
-            {question.text}
-          </a>
-        </div>
-        <span
-          className="text-xs mt-1 block transition-colors duration-300"
-          style={{ color: subtextColor }}
-        >
-          — {question.suggestedBy ? question.suggestedBy : politicianName}
-        </span>
-        <div className="flex items-center gap-2" style={{ marginTop: question.answerUrl ? 50 : 12 }}>
-          <CopyLinkButton
-            url={`${appUrl}${basePath}/q/${question.id}`}
-            title={question.text}
-            compact
-            partyColor={partyColor}
-          />
-          {(hasVideoAnswer || hasAudioAnswer) && (
-            <span
-              className="inline-flex items-center gap-1 text-xs transition-colors duration-300"
-              style={{ color: subtextColor, fontVariantNumeric: "tabular-nums", marginLeft: -10 }}
-            >
-              <FontAwesomeIcon
-                icon={hasVideoAnswer ? faVideo : faMicrophone}
-                className="text-[11px]"
-              />
-              {formatDuration(question.answerDuration)}
-            </span>
-          )}
-          {question.tags.length > 0 && (
-            question.tags.map((tag) => (
-              <span
-                key={tag}
-                className="text-xs px-2 py-0.5 rounded-full transition-colors duration-300 inline-flex items-center gap-1"
-                style={{ backgroundColor: tagBg, color: tagColor }}
-              >
-                {tag}
-              </span>
-            ))
-          )}
-          {question.answerUrl ? (
-            <>
-              <span
-                className="text-xs ml-auto transition-opacity duration-200 md:opacity-0 md:group-hover/card:opacity-100"
-                style={{ color: hasBackground ? "rgba(255,255,255,0.7)" : (partyColor || "#3B82F6") }}
-              >
-                {question.upvoteCount} / {question.upvoteGoal}
-              </span>
-              <a
-                href={`${basePath}/q/${question.id}`}
-                className="text-xs px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-300"
-                style={{ backgroundColor: answerBtnBg, color: answerBtnColor }}
-              >
-                {isBlobUrl(question.answerUrl) && getBlobMediaType(question.answerUrl) === "audio" ? "Lyt til svar" : "Se svar"}
-              </a>
-              {question.isUpvoted && (
-                <CancelUpvoteButton
-                  questionId={question.id}
-                  partySlug={partySlug}
-                  politicianSlug={politicianSlug}
-                />
-              )}
-            </>
-          ) : (
-            <>
-              {question.goalReachedEmailSent ? (
-                <div
-                  className="ml-auto flex items-center"
-                  onMouseEnter={() => setIsHourglassHovering(true)}
-                  onMouseLeave={() => setIsHourglassHovering(false)}
-                >
-                  {isHourglassHovering ? (
-                    question.isUpvoted ? (
-                      <CancelUpvoteButton
-                        questionId={question.id}
-                        partySlug={partySlug}
-                        politicianSlug={politicianSlug}
-                      />
-                    ) : (
-                      <UpvoteButton
-                        questionId={question.id}
-                        basePath={basePath}
-                        isUpvoted={false}
-                        hasSession={hasSession}
-                        partySlug={partySlug}
-                        politicianSlug={politicianSlug}
-                        partyColor={partyColor}
-                        partyColorDark={partyColorDark}
-                      />
-                    )
-                  ) : (
-                    <span
-                      className="flex items-center justify-center rounded-full"
-                      style={{
-                        width: 28,
-                        height: 28,
-                        backgroundColor: `${partyColor || "#00D564"}40`,
-                      }}
-                    >
-                      <FontAwesomeIcon
-                        icon={faHourglass}
-                        style={{ color: partyColorDark || "#0E412E", fontSize: 14 }}
-                      />
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <span className="text-xs ml-auto transition-opacity duration-200 md:opacity-0 md:group-hover/card:opacity-100" style={{ color: partyColor || "#3B82F6" }}>
-                    {question.upvoteCount} / {question.upvoteGoal}
-                  </span>
-                  {question.isUpvoted ? (
-                    <CancelUpvoteButton
-                      questionId={question.id}
-                      partySlug={partySlug}
-                      politicianSlug={politicianSlug}
-                    />
-                  ) : (
-                    <UpvoteButton
-                      questionId={question.id}
-                      basePath={basePath}
-                      isUpvoted={false}
-                      hasSession={hasSession}
-                      partySlug={partySlug}
-                      politicianSlug={politicianSlug}
-                      partyColor={partyColor}
-                      partyColorDark={partyColorDark}
-                    />
-                  )}
-                </>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function PinnedQuestionCard({
   question,
   basePath,
   appUrl,
   partyColor,
   partyColorDark,
+  partyColorLight,
   playingId,
   setPlayingId,
 }: {
@@ -903,23 +412,16 @@ function PinnedQuestionCard({
   appUrl: string;
   partyColor?: string | null;
   partyColorDark?: string | null;
+  partyColorLight?: string | null;
   playingId: string | null;
   setPlayingId: (id: string | null) => void;
 }) {
-  const mediaType = question.answerUrl && isBlobUrl(question.answerUrl)
-    ? getBlobMediaType(question.answerUrl)
-    : null;
-  const hasVideoAnswer = mediaType === "video";
-  const hasAudioAnswer = mediaType === "audio";
-  const hasPlayableMedia = hasVideoAnswer || hasAudioAnswer;
-
-  // Thumbnail: clip video for video answers, photo for audio answers
   const thumbnailClipUrl = question.answerClipUrl;
   const thumbnailPhotoUrl = question.answerPhotoUrl;
 
-  // Share/copy state
+  // Share/copy state — blink copy icon then return to share
   const [copied, setCopied] = useState(false);
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyAnimRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const handleShare = useCallback(() => {
     const url = `${appUrl}${basePath}/q/${question.id}`;
@@ -929,234 +431,12 @@ function PinnedQuestionCard({
       navigator.share({ url, title: question.text }).catch(() => {});
     } else {
       navigator.clipboard.writeText(url).catch(() => {});
+      copyAnimRef.current.forEach(t => clearTimeout(t));
+      copyAnimRef.current = [];
       setCopied(true);
-      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
-      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
+      copyAnimRef.current.push(setTimeout(() => setCopied(false), 600));
     }
   }, [appUrl, basePath, question.id, question.text]);
-
-  // Playback state
-  const thumbnailWrapRef = useRef<HTMLDivElement>(null);
-  const fullVideoRef = useRef<HTMLVideoElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const progressBarRef = useRef<HTMLDivElement>(null);
-  const clipRef = useRef<HTMLVideoElement>(null);
-  const [isWatching, setIsWatching] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
-  const isWatchingRef = useRef(false);
-  const bufferingRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { isWatchingRef.current = isWatching; }, [isWatching]);
-
-  // Hover clip: play forward on hover, reset to start on leave (desktop only)
-  useEffect(() => {
-    const clip = clipRef.current;
-    if (!clip || !thumbnailClipUrl) return;
-    // On touch devices, IntersectionObserver handles clip playback — skip hover logic entirely
-    if (window.matchMedia("(pointer: coarse)").matches) return;
-
-    if (isHovering && !isWatching) {
-      clip.currentTime = 0;
-      clip.play().catch(() => {});
-    } else {
-      clip.pause();
-      clip.currentTime = 0;
-    }
-  }, [isHovering, isWatching, thumbnailClipUrl]);
-
-  // Mobile: autoplay clip when visible, pause/resume everything on scroll
-  useEffect(() => {
-    const wrap = thumbnailWrapRef.current;
-    if (!wrap) return;
-    const isTouch = window.matchMedia("(pointer: coarse)").matches;
-    if (!isTouch) return;
-
-    let inViewport = false;
-    let checkTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const doReload = (clip: HTMLVideoElement) => {
-      // Fallback: reload video and wait for enough data to play
-      clip.oncanplay = () => {
-        clip.oncanplay = null;
-        if (inViewport && !isWatchingRef.current) {
-          clip.currentTime = 0;
-          clip.play().catch(() => {});
-        }
-      };
-      clip.load();
-    };
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        inViewport = entry.isIntersecting;
-        const clip = clipRef.current;
-        if (checkTimer) { clearTimeout(checkTimer); checkTimer = null; }
-
-        if (entry.isIntersecting) {
-          if (isWatchingRef.current) {
-            // Resume full video/audio that was paused by scroll-away
-            fullVideoRef.current?.play().catch(() => {});
-            audioRef.current?.play().catch(() => {});
-          } else if (clip && thumbnailClipUrl) {
-            // Try direct play first (fast, no flash, uses preloaded data).
-            // Hover effect is disabled on mobile so nothing interferes.
-            clip.currentTime = 0;
-            const p = clip.play();
-            if (p) {
-              p.catch(() => doReload(clip));
-            }
-            // Safety: if play() resolved but video isn't advancing (iOS
-            // decoder released), fall back to reload after 400ms.
-            checkTimer = setTimeout(() => {
-              if (clip.currentTime < 0.05 && !clip.paused && !clip.ended && inViewport && !isWatchingRef.current) {
-                doReload(clip);
-              }
-            }, 400);
-          }
-        } else {
-          if (clip && thumbnailClipUrl && !isWatchingRef.current) {
-            clip.oncanplay = null;
-            clip.pause();
-          }
-          if (isWatchingRef.current) {
-            fullVideoRef.current?.pause();
-            audioRef.current?.pause();
-          }
-        }
-      },
-      { threshold: 0.3 }
-    );
-    observer.observe(wrap);
-    return () => { observer.disconnect(); if (checkTimer) clearTimeout(checkTimer); };
-  }, [thumbnailClipUrl]);
-
-  // Stop if another card started playing
-  useEffect(() => {
-    if (playingId && playingId !== question.id && isWatching) {
-      fullVideoRef.current?.pause();
-      audioRef.current?.pause();
-      setIsWatching(false);
-      if (bufferingRef.current) bufferingRef.current.style.opacity = "0";
-    }
-  }, [playingId, question.id, isWatching]);
-
-  // Click thumbnail to play/pause
-  const handleThumbnailClick = useCallback((e: React.MouseEvent) => {
-    if (!hasPlayableMedia) return;
-    e.preventDefault();
-
-    if (isWatching) {
-      // Check if video/audio was paused (e.g. by scroll-away) → resume instead of stopping
-      const vid = fullVideoRef.current;
-      const aud = audioRef.current;
-      if ((vid && vid.paused && vid.currentTime > 0) || (aud && aud.paused && aud.currentTime > 0)) {
-        vid?.play().catch(() => {});
-        aud?.play().catch(() => {});
-        return;
-      }
-      vid?.pause();
-      aud?.pause();
-      setIsWatching(false);
-      setPlayingId(null);
-    } else if (hasVideoAnswer) {
-      // Stop clip to free mobile video decoder before starting full video
-      if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
-      // Let onWaiting/onPlaying handle spinner — don't force-show it
-      if (fullVideoRef.current) {
-        fullVideoRef.current.currentTime = 0;
-        fullVideoRef.current.play().catch(() => {});
-      }
-      setIsWatching(true);
-      setPlayingId(question.id);
-      requestAnimationFrame(() => {
-        if (!thumbnailWrapRef.current) return;
-        const rect = thumbnailWrapRef.current.getBoundingClientRect();
-        const headerH = 170;
-        const cardH = rect.bottom - rect.top;
-        const availableH = window.innerHeight - headerH;
-        if (cardH > availableH) {
-          const d = rect.bottom - window.innerHeight;
-          if (Math.abs(d) > 1) window.scrollBy({ top: d, behavior: "smooth" });
-        } else {
-          if (rect.top < headerH) {
-            window.scrollBy({ top: rect.top - headerH, behavior: "smooth" });
-          } else if (rect.bottom > window.innerHeight) {
-            window.scrollBy({ top: rect.bottom - window.innerHeight, behavior: "smooth" });
-          }
-        }
-      });
-    } else if (hasAudioAnswer) {
-      // Stop clip to free mobile video decoder before starting audio playback
-      if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(() => {});
-      }
-      setIsWatching(true);
-      setPlayingId(question.id);
-      requestAnimationFrame(() => {
-        if (!thumbnailWrapRef.current) return;
-        const rect = thumbnailWrapRef.current.getBoundingClientRect();
-        const headerH = 170;
-        const cardH = rect.bottom - rect.top;
-        const availableH = window.innerHeight - headerH;
-        if (cardH > availableH) {
-          const d = rect.bottom - window.innerHeight;
-          if (Math.abs(d) > 1) window.scrollBy({ top: d, behavior: "smooth" });
-        } else {
-          if (rect.top < headerH) {
-            window.scrollBy({ top: rect.top - headerH, behavior: "smooth" });
-          } else if (rect.bottom > window.innerHeight) {
-            window.scrollBy({ top: rect.bottom - window.innerHeight, behavior: "smooth" });
-          }
-        }
-      });
-    }
-  }, [hasPlayableMedia, hasVideoAnswer, hasAudioAnswer, isWatching, question.id, setPlayingId]);
-
-  const handleFullVideoEnded = useCallback(() => {
-    setIsWatching(false);
-    setPlayingId(null);
-  }, [setPlayingId]);
-
-  const handleWaiting = useCallback(() => {
-    if (bufferingRef.current) bufferingRef.current.style.opacity = "1";
-  }, []);
-
-  const handlePlaying = useCallback(() => {
-    if (bufferingRef.current) bufferingRef.current.style.opacity = "0";
-  }, []);
-
-  const handleAudioEnded = useCallback(() => {
-    setIsWatching(false);
-    setPlayingId(null);
-  }, [setPlayingId]);
-
-  // Progress bar — timeupdate events (~4/sec) + CSS transition for smooth visual
-  // Zero JS between events = no main-thread blocking = no audio stutter
-  useEffect(() => {
-    if (!isWatching) {
-      if (progressBarRef.current) {
-        progressBarRef.current.style.transition = "none";
-        progressBarRef.current.style.transform = "scaleX(0)";
-      }
-      return;
-    }
-
-    const el = hasVideoAnswer ? fullVideoRef.current : audioRef.current;
-    const bar = progressBarRef.current;
-    if (!el || !bar) return;
-
-    bar.style.transition = "transform 300ms linear";
-    const onTimeUpdate = () => {
-      const total = question.answerDuration ?? el.duration;
-      if (total && isFinite(total) && total > 0) {
-        const fraction = Math.min(el.currentTime / total, 1);
-        bar.style.transform = `scaleX(${fraction})`;
-      }
-    };
-    el.addEventListener("timeupdate", onTimeUpdate);
-    return () => el.removeEventListener("timeupdate", onTimeUpdate);
-  }, [isWatching, hasVideoAnswer, question.answerDuration]);
 
   return (
     <div className="flex flex-col lg:flex-row lg:items-start">
@@ -1187,36 +467,19 @@ function PinnedQuestionCard({
         <div className="flex items-center gap-2 py-[20px]">
           <button
             onClick={handleShare}
-            className={`${copied ? "" : "hover:opacity-70"} cursor-pointer rounded-full flex items-center gap-1 overflow-hidden`}
+            className="hover:opacity-70 cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative"
             style={{
               height: 24,
-              width: copied ? 85 : 24,
+              width: 24,
               backgroundColor: partyColor || "#3B82F6",
-              transition: "width 300ms ease",
             }}
             aria-label="Del"
           >
-            <span
-              className="flex items-center justify-center flex-shrink-0"
-              style={{ width: 24, height: 24 }}
-            >
-              <FontAwesomeIcon
-                icon={faShare}
-                style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }}
-              />
+            <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 0 : 1, transition: "opacity 300ms ease" }}>
+              <FontAwesomeIcon icon={faShare} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
             </span>
-            <span
-              style={{
-                color: partyColorDark || "#1E3A5F",
-                fontSize: "11px",
-                fontFamily: "var(--font-figtree)",
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-                opacity: copied ? 1 : 0,
-                transition: "opacity 200ms ease",
-              }}
-            >
-              Kopieret
+            <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 1 : 0, transition: "opacity 300ms ease" }}>
+              <FontAwesomeIcon icon={faCopy} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
             </span>
           </button>
           {question.tags.map((tag) => (
@@ -1233,131 +496,15 @@ function PinnedQuestionCard({
 
       {/* Right: video/photo thumbnail with playback */}
       {(thumbnailClipUrl || thumbnailPhotoUrl) && (
-        <div
-          ref={thumbnailWrapRef}
-          className={`flex-shrink-0 relative w-[90vw] self-center lg:self-auto lg:w-[337px] ${hasPlayableMedia ? "cursor-pointer" : ""}`}
-          style={{ borderRadius: 20, overflow: "hidden", aspectRatio: "3/4", scrollMarginTop: 170 }}
-          onClick={hasPlayableMedia ? handleThumbnailClick : undefined}
-          onMouseEnter={() => { if (hasPlayableMedia && !window.matchMedia("(pointer: coarse)").matches) setIsHovering(true); }}
-          onMouseLeave={() => { if (!window.matchMedia("(pointer: coarse)").matches) setIsHovering(false); }}
-        >
-          {/* Dark overlay + play icon on hover */}
-          {hasPlayableMedia && !isWatching && (
-            <>
-              <div
-                className="absolute inset-0 transition-opacity duration-200"
-                style={{
-                  zIndex: 1,
-                  opacity: isHovering ? 0.2 : 0,
-                  backgroundColor: partyColorDark || "#1E3A5F",
-                  pointerEvents: "none",
-                  borderRadius: 20,
-                }}
-              />
-              <div
-                className="absolute inset-0 flex items-center justify-center transition-opacity duration-200"
-                style={{
-                  zIndex: 2,
-                  opacity: isHovering ? 1 : 0,
-                  pointerEvents: "none",
-                }}
-              >
-                <FontAwesomeIcon
-                  icon={faCirclePlay}
-                  style={{ color: "#ffffff", fontSize: 48 }}
-                />
-              </div>
-            </>
-          )}
-
-          {/* Progress bar */}
-          {isWatching && (
-            <div
-              className="absolute"
-              style={{ zIndex: 5, bottom: 35, left: 30, right: 30, height: 4, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 9999, mixBlendMode: "difference", overflow: "hidden" }}
-            >
-              <div
-                ref={progressBarRef}
-                style={{
-                  height: "100%",
-                  width: "100%",
-                  backgroundColor: "#ffffff",
-                  transformOrigin: "left",
-                  transform: "scaleX(0)",
-                  willChange: "transform",
-                }}
-              />
-            </div>
-          )}
-
-          {/* Full video for on-thumbnail playback */}
-          {hasVideoAnswer && (
-            <video
-              ref={fullVideoRef}
-              src={question.answerUrl!}
-              playsInline
-              preload="none"
-              onEnded={handleFullVideoEnded}
-              onWaiting={handleWaiting}
-              onPlaying={handlePlaying}
-              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
-              style={{ zIndex: isWatching ? 3 : 0, opacity: isWatching ? 1 : 0 }}
-            />
-          )}
-
-          {/* Buffering spinner — ref-controlled to avoid re-renders during playback */}
-          {isWatching && (
-            <div
-              ref={bufferingRef}
-              className="absolute inset-0 flex items-center justify-center"
-              style={{ zIndex: 4, opacity: 0, pointerEvents: "none", transition: "opacity 150ms" }}
-            >
-              <svg
-                className="animate-spin h-10 w-10 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            </div>
-          )}
-
-          {/* Hidden audio element */}
-          {hasAudioAnswer && (
-            <audio
-              ref={audioRef}
-              src={question.answerUrl!}
-              preload="none"
-              onEnded={handleAudioEnded}
-            />
-          )}
-
-          {/* Temporary version indicator — remove after mobile debugging */}
-          <span style={{ position: "absolute", bottom: 4, right: 6, fontSize: 9, color: "rgba(255,255,255,0.5)", zIndex: 99, fontFamily: "monospace", pointerEvents: "none" }}>v8</span>
-
-          {/* Static poster image — always visible behind the clip video so
-              there's no white flash while the video loads on first visit */}
-          {thumbnailPhotoUrl && (
-            <img
-              src={thumbnailPhotoUrl}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          )}
-          {/* Clip video layered on top of the poster */}
-          {thumbnailClipUrl && (
-            <video
-              ref={clipRef}
-              src={thumbnailClipUrl}
-              muted
-              playsInline
-              preload="metadata"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          )}
-        </div>
+        <PlayableMediaCard
+          question={question}
+          partyColor={partyColor}
+          partyColorDark={partyColorDark}
+          bufferingColor={partyColorLight}
+          playingId={playingId}
+          setPlayingId={setPlayingId}
+          className="w-[90vw] self-center lg:self-auto lg:w-[337px]"
+        />
       )}
     </div>
   );
@@ -1370,6 +517,7 @@ function AnsweredQuestionCard({
   appUrl,
   partyColor,
   partyColorDark,
+  partyColorLight,
   playingId,
   setPlayingId,
   isVisible = true,
@@ -1379,6 +527,7 @@ function AnsweredQuestionCard({
   appUrl: string;
   partyColor?: string | null;
   partyColorDark?: string | null;
+  partyColorLight?: string | null;
   playingId: string | null;
   setPlayingId: (id: string | null) => void;
   isVisible?: boolean;
@@ -1392,6 +541,7 @@ function AnsweredQuestionCard({
 
   const clipUrl = question.answerClipUrl;
   const photoUrl = question.answerPhotoUrl;
+  const hasCustomPoster = hasVideoAnswer && !clipUrl && !!photoUrl;
   const cardRef = useRef<HTMLDivElement>(null);
   const clipRef = useRef<HTMLVideoElement>(null);
   const fullVideoRef = useRef<HTMLVideoElement>(null);
@@ -1400,13 +550,15 @@ function AnsweredQuestionCard({
 
   const [isHovering, setIsHovering] = useState(false);
   const [isWatching, setIsWatching] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
   const isWatchingRef = useRef(false);
   const bufferingRef = useRef<HTMLDivElement>(null);
   useEffect(() => { isWatchingRef.current = isWatching; }, [isWatching]);
+  useEffect(() => { setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches); }, []);
 
-  // Share/copy state
+  // Share/copy state — blink copy icon twice then return to share
   const [copied, setCopied] = useState(false);
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyAnimRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const handleShare = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1416,9 +568,10 @@ function AnsweredQuestionCard({
       navigator.share({ url, title: question.text }).catch(() => {});
     } else {
       navigator.clipboard.writeText(url).catch(() => {});
+      copyAnimRef.current.forEach(t => clearTimeout(t));
+      copyAnimRef.current = [];
       setCopied(true);
-      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
-      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
+      copyAnimRef.current.push(setTimeout(() => setCopied(false), 600));
     }
   }, [appUrl, basePath, question.id, question.text]);
 
@@ -1656,40 +809,26 @@ function AnsweredQuestionCard({
         />
       )}
 
-      {/* Dark hover overlay + play icon (only when not watching) */}
+      {/* Dark hover overlay */}
       {hasPlayableMedia && !isWatching && (
-        <>
-          <div
-            className="absolute inset-0 transition-opacity duration-200"
-            style={{
-              zIndex: 1,
-              opacity: isHovering ? 0.2 : 0,
-              backgroundColor: partyColorDark || "#1E3A5F",
-              pointerEvents: "none",
-              borderRadius: 20,
-            }}
-          />
-          <div
-            className="absolute inset-0 flex items-center justify-center transition-opacity duration-200"
-            style={{
-              zIndex: 2,
-              opacity: isHovering ? 1 : 0,
-              pointerEvents: "none",
-            }}
-          >
-            <FontAwesomeIcon
-              icon={faCirclePlay}
-              style={{ color: "#ffffff", fontSize: 48 }}
-            />
-          </div>
-        </>
+        <div
+          className="absolute inset-0 transition-opacity duration-200"
+          style={{
+            zIndex: 1,
+            opacity: isHovering ? 0.2 : 0,
+            backgroundColor: partyColorDark || "#1E3A5F",
+            pointerEvents: "none",
+            borderRadius: 20,
+          }}
+        />
       )}
 
-      {/* Progress bar */}
+      {/* Progress bar — delayed fade-in to wait for bottom overlay to fade out */}
       {isWatching && (
         <div
+          ref={(el) => { if (el) setTimeout(() => { el.style.opacity = "1"; }, 300); }}
           className="absolute"
-          style={{ zIndex: 5, bottom: 25, left: 20, right: 20, height: 4, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 9999, mixBlendMode: "difference", overflow: "hidden" }}
+          style={{ zIndex: 5, bottom: 25, left: 20, right: 20, height: 4, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 9999, mixBlendMode: "difference", overflow: "hidden", opacity: 0, transition: "opacity 150ms ease" }}
         >
           <div
             ref={progressBarRef}
@@ -1715,11 +854,17 @@ function AnsweredQuestionCard({
 
       {/* Buffering spinner — ref-controlled to avoid re-renders during playback */}
       {isWatching && (
-        <div ref={bufferingRef} className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 4, opacity: 0, pointerEvents: "none", transition: "opacity 150ms" }}>
-          <svg className="animate-spin h-10 w-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
+        <div ref={bufferingRef} className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 4, opacity: 0, pointerEvents: "none", transition: "opacity 150ms", mixBlendMode: "difference" }}>
+          <div
+            className="animate-spin"
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              border: "4px solid rgba(255,255,255,0.25)",
+              borderTopColor: "#ffffff",
+            }}
+          />
         </div>
       )}
 
@@ -1730,8 +875,8 @@ function AnsweredQuestionCard({
 
       {/* Bottom: highlighted text + share + tags */}
       <div
-        className="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-20 transition-opacity duration-300"
-        style={{ zIndex: 3, pointerEvents: "none", opacity: isWatching ? 0 : 1 }}
+        className="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-20"
+        style={{ zIndex: 3, pointerEvents: "none", opacity: isWatching ? 0 : 1, transform: isWatching ? "translateY(-20px)" : "translateY(0)", transition: "opacity 300ms ease, transform 300ms ease" }}
       >
         <span
           style={{
@@ -1740,7 +885,7 @@ function AnsweredQuestionCard({
             color: partyColorDark || "#0E412E",
             fontFamily: "var(--font-figtree)",
             fontWeight: 400,
-            backgroundColor: partyColor || "#00D564",
+            backgroundColor: partyColorLight || "#DBEAFE",
             boxDecorationBreak: "clone",
             WebkitBoxDecorationBreak: "clone",
             padding: "2px 8px",
@@ -1770,42 +915,26 @@ function AnsweredQuestionCard({
           </div>
         )}
 
-        {/* Share + tags row */}
+        {/* Play + tags + share + detail link row */}
         <div className="flex items-center gap-2 mt-3" style={{ pointerEvents: "auto" }}>
-          <button
-            onClick={handleShare}
-            className={`${copied ? "" : "hover:opacity-70"} cursor-pointer rounded-full flex items-center gap-1 overflow-hidden`}
-            style={{
-              height: 24,
-              width: copied ? 85 : 24,
-              backgroundColor: partyColor || "#3B82F6",
-              transition: "width 300ms ease",
-            }}
-            aria-label="Del"
-          >
-            <span
-              className="flex items-center justify-center flex-shrink-0"
-              style={{ width: 24, height: 24 }}
-            >
-              <FontAwesomeIcon
-                icon={faShare}
-                style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }}
-              />
-            </span>
-            <span
+          {hasPlayableMedia && (
+            <div
+              className="flex items-center justify-center rounded-full flex-shrink-0 relative transition-opacity duration-300"
               style={{
-                color: partyColorDark || "#1E3A5F",
-                fontSize: "11px",
-                fontFamily: "var(--font-figtree)",
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-                opacity: copied ? 1 : 0,
-                transition: "opacity 200ms ease",
+                width: 48,
+                height: 48,
+                opacity: isWatching ? 0 : 1,
               }}
             >
-              Kopieret
-            </span>
-          </button>
+              <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ backgroundColor: partyColor || "#00D564", opacity: isHovering ? 1 : 0.75 }} />
+              <FontAwesomeIcon
+                icon={faPlay}
+                className="relative"
+                style={{ color: partyColorDark || "#0E412E", fontSize: 20, marginLeft: 2 }}
+              />
+            </div>
+          )}
+          <div className="ml-auto flex items-center gap-2">
           {question.tags.map((tag) => (
             <span
               key={tag}
@@ -1815,6 +944,40 @@ function AnsweredQuestionCard({
               {tag}
             </span>
           ))}
+          <button
+            onClick={handleShare}
+            className="hover:opacity-70 cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative"
+            style={{
+              height: 24,
+              width: 24,
+              backgroundColor: partyColor || "#3B82F6",
+            }}
+            aria-label="Del"
+          >
+            <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 0 : 1, transition: "opacity 300ms ease" }}>
+              <FontAwesomeIcon icon={faShare} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
+            </span>
+            <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 1 : 0, transition: "opacity 300ms ease" }}>
+              <FontAwesomeIcon icon={faCopy} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
+            </span>
+          </button>
+          <a
+            href={`${basePath}/q/${question.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="hover:opacity-70 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{
+              width: 24,
+              height: 24,
+              backgroundColor: partyColor || "#3B82F6",
+            }}
+            aria-label="Se detaljer"
+          >
+            <FontAwesomeIcon
+              icon={faUpRightAndDownLeftFromCenter}
+              style={{ color: partyColorDark || "#1E3A5F", fontSize: "11px" }}
+            />
+          </a>
+          </div>
         </div>
       </div>
     </div>
@@ -1828,6 +991,7 @@ function MobileCarousel({
   appUrl,
   partyColor,
   partyColorDark,
+  partyColorLight,
   playingId,
   setPlayingId,
   currentIndex,
@@ -1838,6 +1002,7 @@ function MobileCarousel({
   appUrl: string;
   partyColor?: string | null;
   partyColorDark?: string | null;
+  partyColorLight?: string | null;
   playingId: string | null;
   setPlayingId: (id: string | null) => void;
   currentIndex: number;
@@ -1895,6 +1060,7 @@ function MobileCarousel({
                 appUrl={appUrl}
                 partyColor={partyColor}
                 partyColorDark={partyColorDark}
+                partyColorLight={partyColorLight}
                 playingId={playingId}
                 setPlayingId={setPlayingId}
                 isVisible={i === currentIndex}
@@ -1950,6 +1116,7 @@ function AnsweredQuestionsCarousel({
   appUrl,
   partyColor,
   partyColorDark,
+  partyColorLight,
   playingId,
   setPlayingId,
 }: {
@@ -1958,6 +1125,7 @@ function AnsweredQuestionsCarousel({
   appUrl: string;
   partyColor?: string | null;
   partyColorDark?: string | null;
+  partyColorLight?: string | null;
   playingId: string | null;
   setPlayingId: (id: string | null) => void;
 }) {
@@ -2011,6 +1179,7 @@ function AnsweredQuestionsCarousel({
                   appUrl={appUrl}
                   partyColor={partyColor}
                   partyColorDark={partyColorDark}
+                  partyColorLight={partyColorLight}
                   playingId={playingId}
                   setPlayingId={setPlayingId}
                   isVisible={i >= desktopIndex && i < desktopIndex + visibleCount}
@@ -2074,6 +1243,7 @@ function AnsweredQuestionsCarousel({
         appUrl={appUrl}
         partyColor={partyColor}
         partyColorDark={partyColorDark}
+        partyColorLight={partyColorLight}
         playingId={playingId}
         setPlayingId={setPlayingId}
         currentIndex={currentIndex}
@@ -2107,6 +1277,7 @@ function UnansweredQuestionsGrid({
   partyColorDark?: string | null;
   onLoginUpvote?: (questionId: string) => void;
 }) {
+  const systemColors = useSystemColors();
   const gridRef = useRef<HTMLDivElement>(null);
   const [availableWidth, setAvailableWidth] = useState(0);
 
@@ -2158,11 +1329,11 @@ function UnansweredQuestionsGrid({
                     style={{
                       gridColumn: "1 / -1",
                       height: 1,
-                      backgroundColor: `${partyColor || "#00D564"}40`,
+                      backgroundColor: "var(--system-bg2)",
                     }}
                   />
                 )}
-                <div className="relative">
+                <div className="relative h-full">
                   {/* Vertical separator line centered in the gap */}
                   {colIndex > 0 && (
                     <div
@@ -2170,7 +1341,7 @@ function UnansweredQuestionsGrid({
                       style={{
                         left: -(gapW / 2) - 0.5,
                         width: 1,
-                        backgroundColor: `${partyColor || "#00D564"}40`,
+                        backgroundColor: "var(--system-bg2)",
                       }}
                     />
                   )}
@@ -2219,9 +1390,9 @@ function UnansweredQuestionCard({
   partyColorDark?: string | null;
   onLoginUpvote?: (questionId: string) => void;
 }) {
-  // Share/copy state
+  // Share/copy state — blink copy icon then return to share
   const [copied, setCopied] = useState(false);
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyAnimRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const handleShare = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -2231,308 +1402,26 @@ function UnansweredQuestionCard({
       navigator.share({ url, title: question.text }).catch(() => {});
     } else {
       navigator.clipboard.writeText(url).catch(() => {});
+      copyAnimRef.current.forEach(t => clearTimeout(t));
+      copyAnimRef.current = [];
       setCopied(true);
-      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
-      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
+      copyAnimRef.current.push(setTimeout(() => setCopied(false), 600));
     }
   }, [appUrl, basePath, question.id, question.text]);
 
-  // Upvote state: "idle" | "pending" | "upvoted" | "waiting" | "cancel-ready" | "cancelling"
-  const [upvoteState, setUpvoteState] = useState<"idle" | "pending" | "upvoted" | "waiting" | "cancel-ready" | "cancelling">(
-    question.goalReachedEmailSent && question.isUpvoted ? "waiting"
-      : question.isUpvoted ? "cancel-ready"
-      : "idle"
-  );
-  const [isHovering, setIsHovering] = useState(false);
-  const [showUpvoteHint, setShowUpvoteHint] = useState(false);
-  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Sync upvoteState when server props change (e.g. after logout revalidation)
-  useEffect(() => {
-    setUpvoteState(
-      question.goalReachedEmailSent && question.isUpvoted ? "waiting"
-        : question.isUpvoted ? "cancel-ready"
-        : "idle"
-    );
-  }, [question.isUpvoted, question.goalReachedEmailSent]);
-
-  // Looping animation: alternate between hourglass and upvote hint every 3s
-  // Pauses on hover; resets to hourglass (false) on mouse leave
-  useEffect(() => {
-    if (!question.goalReachedEmailSent || question.isUpvoted || isHovering) {
-      setShowUpvoteHint(false);
-      return;
-    }
-    const interval = setInterval(() => {
-      setShowUpvoteHint((prev) => !prev);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [question.goalReachedEmailSent, question.isUpvoted, isHovering]);
-
-  // Compute deadline hours remaining for tooltip
-  const deadlineHoursLeft = useMemo(() => {
-    if (!question.goalReachedAt) return null;
-    const deadline = new Date(question.goalReachedAt).getTime() + 24 * 60 * 60 * 1000;
-    return Math.max(0, Math.ceil((deadline - Date.now()) / (1000 * 60 * 60)));
-  }, [question.goalReachedAt]);
-
-  const handleUpvote = useCallback(async () => {
-    if (upvoteState !== "idle") return;
-    if (!hasSession) {
-      onLoginUpvote?.(question.id);
-      return;
-    }
-    setUpvoteState("pending");
-    try {
-      await directUpvote(question.id, partySlug, politicianSlug);
-      setUpvoteState("upvoted");
-      window.dispatchEvent(new CustomEvent("upvote-banner", { detail: { message: "Din upvote er registreret" } }));
-      const reachedGoal = question.upvoteCount + 1 >= question.upvoteGoal;
-      transitionTimerRef.current = setTimeout(() => {
-        setIsHovering(false);
-        setUpvoteState(reachedGoal ? "waiting" : "cancel-ready");
-      }, 2000);
-    } catch {
-      setUpvoteState("idle");
-    }
-  }, [upvoteState, hasSession, basePath, question.id, partySlug, politicianSlug]);
-
-  const handleCancelUpvote = useCallback(async () => {
-    if (upvoteState !== "cancel-ready" && upvoteState !== "waiting") return;
-    const prevState = upvoteState;
-    setUpvoteState("cancelling");
-    try {
-      await cancelUpvote(question.id, partySlug, politicianSlug);
-      setUpvoteState("idle");
-      window.dispatchEvent(new CustomEvent("upvote-banner", { detail: { message: "Din upvote er fjernet" } }));
-    } catch {
-      setUpvoteState(prevState);
-    }
-  }, [upvoteState, question.id, partySlug, politicianSlug]);
-
-  useEffect(() => {
-    return () => {
-      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
-    };
-  }, []);
-
-  // Upvote button rendering
-  const renderUpvoteButton = () => {
-    if (upvoteState === "cancel-ready" || upvoteState === "cancelling") {
-      return (
-        <button
-          onClick={handleCancelUpvote}
-          disabled={upvoteState === "cancelling"}
-          onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
-          className="cursor-pointer rounded-full flex items-center justify-center disabled:opacity-50"
-          style={{
-            width: 40,
-            height: 40,
-            backgroundColor: isHovering ? "#000000" : "#FF410580",
-          }}
-          aria-label="Fjern upvote"
-        >
-          <FontAwesomeIcon
-            icon={faXmark}
-            style={{ color: isHovering ? "#FF4105" : "#000000", fontSize: 21 }}
-          />
-        </button>
-      );
-    }
-
-    if (upvoteState === "waiting") {
-      return (
-        <div className="relative">
-          {isHovering && (
-            <div
-              className="absolute bottom-full mb-2 rounded-xl px-4 py-3 uq-tooltip"
-              style={{
-                backgroundColor: partyColor || "#7E7D7A",
-                fontFamily: "var(--font-figtree)",
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-              }}
-            >
-              <span className="text-sm" style={{ color: "#ffffff" }}>
-                {deadlineHoursLeft !== null && deadlineHoursLeft > 0
-                  ? `${politicianFirstName} svarer inden for ${deadlineHoursLeft} timer`
-                  : deadlineHoursLeft === 0
-                  ? "Fristen er udløbet"
-                  : `Afventer svar fra ${politicianFirstName}`}
-              </span>
-            </div>
-          )}
-          <button
-            onClick={handleCancelUpvote}
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
-            className="cursor-pointer rounded-full flex items-center justify-center"
-            style={{
-              width: 40,
-              height: 40,
-              backgroundColor: isHovering ? "#FF410580" : `${partyColor || "#00D564"}40`,
-            }}
-            aria-label="Afventer svar"
-          >
-            <FontAwesomeIcon
-              icon={isHovering ? faXmark : faHourglass}
-              style={{ color: isHovering ? "#000000" : (partyColorDark || "#0E412E"), fontSize: 21 }}
-            />
-          </button>
-        </div>
-      );
-    }
-
-    // Goal reached but user hasn't upvoted — show hourglass with tooltip + upvote on hover
-    if (question.goalReachedEmailSent && (upvoteState === "idle" || upvoteState === "pending")) {
-      return (
-        <div className="relative">
-          {isHovering && (
-            <div
-              className="absolute bottom-full mb-2 rounded-xl px-4 py-3 uq-tooltip"
-              style={{
-                backgroundColor: partyColor || "#7E7D7A",
-                fontFamily: "var(--font-figtree)",
-                fontWeight: 500,
-                width: 260,
-                whiteSpace: "normal",
-              }}
-            >
-              <span className="text-sm block" style={{ color: "#ffffff" }}>
-                {deadlineHoursLeft !== null && deadlineHoursLeft > 0
-                  ? `${politicianFirstName} svarer inden for ${deadlineHoursLeft} timer`
-                  : deadlineHoursLeft === 0
-                  ? "Fristen er udløbet"
-                  : `Afventer svar fra ${politicianFirstName}`}
-              </span>
-              <span className="text-xs block mt-1" style={{ color: partyColorDark || "#0E412E" }}>
-                Dette spørgsmål har nået sit upvote-mål. Sæt din egen upvote for at blive notificeret, når {politicianFirstName} svarer.
-              </span>
-            </div>
-          )}
-          <button
-            onClick={handleUpvote}
-            disabled={upvoteState === "pending"}
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
-            className="cursor-pointer rounded-full flex items-center justify-center disabled:opacity-50"
-            style={{
-              width: 40,
-              height: 40,
-              backgroundColor: isHovering
-                ? (partyColor || "#00D564")
-                : showUpvoteHint
-                  ? (partyColor || "#00D564")
-                  : `${partyColor || "#00D564"}40`,
-              transition: isHovering ? "none" : "background-color 150ms ease",
-            }}
-            aria-label="Upvote"
-          >
-            <span className="relative" style={{ width: 21, height: 21 }}>
-              <span
-                className="absolute inset-0 flex items-center justify-center"
-                style={{
-                  opacity: (isHovering || showUpvoteHint) ? 1 : 0,
-                  transition: isHovering ? "none" : "opacity 150ms ease",
-                }}
-              >
-                <FontAwesomeIcon
-                  icon={faArrowUpDuotone}
-                  style={{ color: partyColorDark || "#0E412E", fontSize: 21 }}
-                />
-              </span>
-              <span
-                className="absolute inset-0 flex items-center justify-center"
-                style={{
-                  opacity: (isHovering || showUpvoteHint) ? 0 : 1,
-                  transition: isHovering ? "none" : "opacity 150ms ease",
-                }}
-              >
-                <FontAwesomeIcon
-                  icon={faHourglass}
-                  style={{ color: partyColorDark || "#0E412E", fontSize: 21 }}
-                />
-              </span>
-            </span>
-          </button>
-        </div>
-      );
-    }
-
-    if (upvoteState === "upvoted") {
-      return (
-        <div
-          className="rounded-full flex items-center justify-center"
-          style={{
-            width: 40,
-            height: 40,
-            backgroundColor: partyColor || "#00D564",
-          }}
-        >
-          <FontAwesomeIcon
-            icon={faCheck}
-            style={{ color: partyColorDark || "#0E412E", fontSize: 21 }}
-          />
-        </div>
-      );
-    }
-
-    // idle or pending
-    return (
-      <button
-        onClick={handleUpvote}
-        disabled={upvoteState === "pending"}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
-        className="cursor-pointer rounded-full flex items-center justify-center disabled:opacity-50"
-        style={{
-          width: 40,
-          height: 40,
-          backgroundColor: isHovering && upvoteState === "idle"
-            ? (partyColorDark || "#0E412E")
-            : (partyColor || "#00D564"),
-        }}
-        aria-label="Upvote"
-      >
-        {isHovering && upvoteState === "idle" ? (
-          <span
-            style={{
-              color: "#FFFFFF",
-              fontSize: 17.5,
-              fontFamily: "var(--font-figtree)",
-              fontWeight: 700,
-            }}
-          >
-            +1
-          </span>
-        ) : (
-          <FontAwesomeIcon
-            icon={faArrowUpDuotone}
-            style={{ color: partyColorDark || "#0E412E", fontSize: 21 }}
-          />
-        )}
-      </button>
-    );
-  };
-
   return (
     <div
-      className="flex items-start"
+      className="flex items-stretch h-full"
       style={{ padding: "16px 20px", gap: 20 }}
     >
-      <style>{`
-        .uq-tooltip { right: 0; }
-        @media (min-width: 640px) { .uq-tooltip { right: auto; left: 50%; transform: translateX(-50%); } }
-      `}</style>
       {/* Text + suggestedBy + share + tags */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 flex flex-col">
         <a
           href={`${basePath}/q/${question.id}`}
           style={{
             fontSize: 22,
             lineHeight: 1.3,
-            color: partyColorDark || "#0E412E",
+            color: "var(--system-text0, #000000)",
             fontFamily: "var(--font-figtree)",
             fontWeight: 500,
             textDecoration: "none",
@@ -2555,40 +1444,23 @@ function UnansweredQuestionCard({
           </div>
         )}
 
-        {/* Share + tags row */}
-        <div className="flex items-center gap-2 mt-2">
+        {/* Share + tags row — pushed to bottom */}
+        <div className="flex items-center gap-2 mt-auto pt-2">
           <button
             onClick={handleShare}
-            className={`${copied ? "" : "hover:opacity-70"} cursor-pointer rounded-full flex items-center gap-1 overflow-hidden`}
+            className="hover:opacity-70 cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative"
             style={{
               height: 24,
-              width: copied ? 85 : 24,
+              width: 24,
               backgroundColor: partyColor || "#3B82F6",
-              transition: "width 300ms ease",
             }}
             aria-label="Del"
           >
-            <span
-              className="flex items-center justify-center flex-shrink-0"
-              style={{ width: 24, height: 24 }}
-            >
-              <FontAwesomeIcon
-                icon={faShare}
-                style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }}
-              />
+            <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 0 : 1, transition: "opacity 300ms ease" }}>
+              <FontAwesomeIcon icon={faShare} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
             </span>
-            <span
-              style={{
-                color: partyColorDark || "#1E3A5F",
-                fontSize: "11px",
-                fontFamily: "var(--font-figtree)",
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-                opacity: copied ? 1 : 0,
-                transition: "opacity 200ms ease",
-              }}
-            >
-              Kopieret
+            <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 1 : 0, transition: "opacity 300ms ease" }}>
+              <FontAwesomeIcon icon={faCopy} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
             </span>
           </button>
           {question.tags.map((tag) => (
@@ -2604,8 +1476,24 @@ function UnansweredQuestionCard({
       </div>
 
       {/* Upvote button */}
-      <div className="flex-shrink-0 mt-1">
-        {renderUpvoteButton()}
+      <div className="flex-shrink-0 pt-1">
+        <CircularUpvoteButton
+          questionId={question.id}
+          isUpvoted={question.isUpvoted}
+          goalReached={question.goalReachedEmailSent}
+          goalReachedAt={question.goalReachedAt}
+          hasSession={hasSession}
+          partySlug={partySlug}
+          politicianSlug={politicianSlug}
+          partyColor={partyColor}
+          partyColorDark={partyColorDark}
+          size={40}
+          tooltipPosition="top"
+          onLoginUpvote={() => onLoginUpvote?.(question.id)}
+          politicianFirstName={politicianFirstName}
+          upvoteCount={question.upvoteCount}
+          upvoteGoal={question.upvoteGoal}
+        />
       </div>
     </div>
   );

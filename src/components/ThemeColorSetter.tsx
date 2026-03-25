@@ -20,11 +20,13 @@ export function ThemeColorSetter({ color }: { color: string }) {
     const body = document.body;
     const prevBody = body.style.backgroundColor;
 
+    const getBg = () => getComputedStyle(document.documentElement).getPropertyValue("--system-bg0").trim() || "#ffffff";
+
     // Set initial body bg based on current scroll position
-    body.style.backgroundColor = window.scrollY <= 0 ? color : "#ffffff";
+    body.style.backgroundColor = window.scrollY <= 0 ? color : getBg();
 
     const handleScroll = () => {
-      body.style.backgroundColor = window.scrollY <= 0 ? color : "#ffffff";
+      body.style.backgroundColor = window.scrollY <= 0 ? color : getBg();
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });

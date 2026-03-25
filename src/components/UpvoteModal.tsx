@@ -13,6 +13,7 @@ type UpvoteModalProps = {
   partyColor?: string | null;
   partyColorDark?: string | null;
   partyColorLight?: string | null;
+  redirectPath?: string | null;
   onClose: () => void;
 };
 
@@ -25,6 +26,7 @@ export function UpvoteModal({
   partyColor,
   partyColorDark,
   partyColorLight,
+  redirectPath,
   onClose,
 }: UpvoteModalProps) {
   const dark = partyColorDark || "#1E3A5F";
@@ -70,6 +72,7 @@ export function UpvoteModal({
     formData.set("questionId", questionId);
     formData.set("politicianSlug", politicianSlug);
     formData.set("partySlug", partySlug);
+    if (redirectPath) formData.set("redirectPath", redirectPath);
 
     try {
       const result = await submitUpvote(formData);
@@ -78,6 +81,8 @@ export function UpvoteModal({
         setPhase("error");
       } else {
         setPhase("emailSent");
+        // Notify CircularUpvoteButton to switch to "submitted" state
+        window.dispatchEvent(new CustomEvent("upvote-submitted", { detail: { questionId } }));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Der opstod en fejl");

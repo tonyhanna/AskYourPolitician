@@ -317,6 +317,8 @@ export async function sendSuggestionApprovedEmail({
   partyName,
   questionText,
   questionUrl,
+  originalText,
+  editReason,
 }: {
   to: string;
   firstName: string;
@@ -324,7 +326,20 @@ export async function sendSuggestionApprovedEmail({
   partyName: string;
   questionText: string;
   questionUrl: string;
+  originalText?: string;
+  editReason?: string;
 }) {
+  const wasEdited = originalText && editReason;
+
+  const editSection = wasEdited
+    ? `
+      <p style="color:#6b7280;font-size:14px;margin-top:16px;">Dit oprindelige forslag var:</p>
+      <blockquote style="border-left:4px solid #d1d5db;padding-left:16px;color:#9ca3af;font-style:italic;">"${originalText}"</blockquote>
+      <p style="color:#6b7280;font-size:14px;">${politicianName} har tilpasset spørgsmålet med følgende begrundelse:</p>
+      <p style="color:#374151;font-size:14px;font-style:italic;">"${editReason}"</p>
+    `
+    : "";
+
   const { error } = await resend.emails.send({
     from: `${politicianName} fra ${partyName} <${FROM_EMAIL}>`,
     replyTo: REPLY_TO,
@@ -334,6 +349,7 @@ export async function sendSuggestionApprovedEmail({
       <h2>Hej ${firstName},</h2>
       <p>${politicianName} har godkendt dit forslag til et spørgsmål:</p>
       <blockquote style="border-left:4px solid #2563eb;padding-left:16px;color:#374151;">"${questionText}"</blockquote>
+      ${editSection}
       <p>Dit spørgsmål er nu live! Del det med dine venner for at samle upvotes:</p>
       <a href="${questionUrl}"
          style="background:#2563eb;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;">

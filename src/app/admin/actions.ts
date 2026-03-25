@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { getAdmin, IMPERSONATE_COOKIE } from "@/lib/admin";
 import { cookies } from "next/headers";
 import { db } from "@/db";
-import { parties, politicians, users } from "@/db/schema";
+import { parties, politicians, users, appSettings, admins } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { generateSlug } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
@@ -285,6 +285,99 @@ export async function deletePolitician(politicianId: string) {
   // Cascade deletes handle: questions, questionTags, upvotes,
   // verificationTokens, answerHistory, causes, questionSuggestions, suggestionTokens
   await db.delete(politicians).where(eq(politicians.id, politicianId));
+
+  revalidatePath("/admin");
+}
+
+// --- App Settings ---
+
+export async function updateAppSettings(formData: FormData) {
+  await requireAdmin();
+
+  const keys = [
+    "colorBg0", "colorBg0Dark", "colorBg0Contrast", "colorBg0ContrastDark",
+    "colorBg1", "colorBg1Dark",
+    "colorBg2", "colorBg2Dark",
+    "colorText0", "colorText0Dark", "colorText0Contrast", "colorText0ContrastDark",
+    "colorText1", "colorText1Dark",
+    "colorText2", "colorText2Dark",
+    "colorText3", "colorText3Dark",
+    "colorIcon0", "colorIcon0Dark", "colorIcon0Contrast", "colorIcon0ContrastDark",
+    "colorIcon1", "colorIcon1Dark",
+    "colorIcon2", "colorIcon2Dark",
+    "colorIcon3", "colorIcon3Dark",
+    "colorAccent0", "colorAccent0Dark", "colorAccent0Contrast", "colorAccent0ContrastDark",
+    "colorAccent1", "colorAccent1Dark", "colorAccent1Contrast", "colorAccent1ContrastDark",
+    "colorSuccess", "colorSuccessDark", "colorSuccessContrast", "colorSuccessContrastDark",
+    "colorPending", "colorPendingDark", "colorPendingContrast", "colorPendingContrastDark",
+    "colorError", "colorErrorDark", "colorErrorContrast", "colorErrorContrastDark",
+  ];
+
+  const entries = keys
+    .map((key) => ({ key, value: formData.get(key) as string }))
+    .filter((e) => e.value);
+
+  for (const entry of entries) {
+    await db
+      .insert(appSettings)
+      .values({ key: entry.key, value: entry.value, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: appSettings.key,
+        set: { value: entry.value, updatedAt: new Date() },
+      });
+  }
+
+  revalidatePath("/admin");
+}
+
+// --- Admin Users ---
+
+export async function createAdmin(email: string, name: string | null) {
+  await requireAdmin();
+
+  if (!email) throw new Error("E-mail mangler");
+
+  const [existing] = await db.select().from(admins).where(eq(admins.email, email)).limit(1);
+  if (existing) throw new Error("Denne e-mail er allerede admin");
+
+  const [created] = await db
+    .insert(admins)
+    .values({ email, name, permissions: '["all"]' })
+    .returning();
+
+  revalidatePath("/admin");
+  return created;
+}
+
+export async function updateAdmin(adminId: string, email: string, name: string | null) {
+  await requireAdmin();
+
+  if (!adminId || !email) throw new Error("Admin-ID og e-mail mangler");
+
+  await db
+    .update(admins)
+    .set({ email, name })
+    .where(eq(admins.id, adminId));
+
+  revalidatePath("/admin");
+}
+
+export async function deleteAdmin(adminId: string) {
+  const currentAdmin = await requireAdmin();
+
+  if (!adminId) throw new Error("Admin-ID mangler");
+
+  // Prevent self-deletion
+  if (currentAdmin.id === adminId) throw new Error("Du kan ikke slette dig selv");
+
+  // Get admin email before deleting, so we can clean up the Auth.js user row
+  const [admin] = await db.select().from(admins).where(eq(admins.id, adminId)).limit(1);
+  if (!admin) throw new Error("Admin ikke fundet");
+
+  await db.delete(admins).where(eq(admins.id, adminId));
+
+  // Also remove from Auth.js user table
+  await db.delete(users).where(eq(users.email, admin.email));
 
   revalidatePath("/admin");
 }

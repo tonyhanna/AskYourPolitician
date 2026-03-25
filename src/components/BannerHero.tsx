@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 /**
  * Full-width banner that extends edge-to-edge.
@@ -78,6 +78,30 @@ export function BannerHero({
   }, [bannerUrl, bannerBgColor]);
 
   const hasHeroText = heroLine1 || heroLine2;
+  const textRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [textScale, setTextScale] = useState(1);
+
+  const computeScale = useCallback(() => {
+    const text = textRef.current;
+    const container = containerRef.current;
+    if (!text || !container) return;
+    // Temporarily reset scale to measure natural width (no visual flash — happens before paint)
+    text.style.transform = "scale(1)";
+    const naturalWidth = text.scrollWidth;
+    const cs = getComputedStyle(container);
+    const availableWidth = container.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const newScale = naturalWidth > availableWidth ? availableWidth / naturalWidth : 1;
+    text.style.transform = `scale(${newScale})`;
+    setTextScale(newScale);
+  }, []);
+
+  useEffect(() => {
+    if (!hasHeroText) return;
+    computeScale();
+    window.addEventListener("resize", computeScale);
+    return () => window.removeEventListener("resize", computeScale);
+  }, [hasHeroText, heroLine1, heroLine2, computeScale]);
 
   return (
     <div
@@ -91,8 +115,15 @@ export function BannerHero({
           className="w-full block"
         />
         {hasHeroText && (
-          <div className="absolute inset-0 flex justify-end items-center pr-[36px] sm:pr-6 pointer-events-none">
-            <div className="flex flex-col text-left">
+          <div
+            ref={containerRef}
+            className="absolute top-0 bottom-0 right-0 w-[60%] flex items-center justify-end pr-[36px] sm:pr-6 pointer-events-none"
+          >
+            <div
+              ref={textRef}
+              className="flex flex-col items-end whitespace-nowrap"
+              style={{ transform: `scale(${textScale})`, transformOrigin: "right center" }}
+            >
               {heroLine1 && (
                 <span
                   className="leading-tight text-[18px] sm:text-[30px]"

@@ -315,8 +315,7 @@ export function SettingsForm({
           <img
             src={ogImageUrl}
             alt="OpenGraph billede"
-            className="w-full max-w-md rounded-lg border border-gray-200 mb-2"
-            style={{ aspectRatio: "1200/630" }}
+            className="max-w-md rounded-lg border border-gray-200 mb-2"
           />
         ) : (
           <div className="w-full max-w-md rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs mb-2" style={{ aspectRatio: "1200/630" }}>

@@ -9,6 +9,7 @@ import { ChatbaseWidget } from "@/components/ChatbaseWidget";
 import { IntroSection } from "@/components/IntroSection";
 import { PoliticianTopBar } from "@/components/PoliticianTopBar";
 import { ThemeColorSetter } from "@/components/ThemeColorSetter";
+import { getAppSettings } from "@/lib/settings";
 
 export async function generateMetadata({
   params,
@@ -150,7 +151,9 @@ export default async function BorgerFeed({
       pinned: q.pinned,
     }));
 
-  // Fetch party data (needed for top bar colors + hero color resolution)
+  // Fetch app settings + party data
+  const appSettings = await getAppSettings();
+
   const [party] = politician.partyId
     ? await db.select().from(parties).where(eq(parties.id, politician.partyId)).limit(1)
     : [undefined];
@@ -179,6 +182,7 @@ export default async function BorgerFeed({
       )}
       {/* Client-side: toggle body bg based on scroll (green at top, white when scrolled) */}
       {party?.color && <ThemeColorSetter color={party.color} />}
+      <div className="min-h-dvh flex flex-col">
       <PoliticianTopBar
         politicianName={politician.name}
         partyName={politician.party}
@@ -203,7 +207,7 @@ export default async function BorgerFeed({
         dismissButtonColor={party?.colorDark ?? null}
         politicianSlug={politicianSlug}
       />
-      <main className="bg-white px-[15px] py-6 pb-1">
+      <main className="px-[15px] pt-[15px] pb-1 flex flex-col flex-1" style={{ backgroundColor: "var(--system-bg0, #ffffff)" }}>
       <QuestionFeedFilter
         questions={feedQuestions}
         allTags={[...allTagsSet]}
@@ -226,6 +230,7 @@ export default async function BorgerFeed({
           )}
         </div>
       </main>
+      </div>
     </>
   );
 }

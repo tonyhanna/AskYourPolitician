@@ -4,6 +4,7 @@ import { useState } from "react";
 import { cancelUpvote } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { useSystemColors } from "./SystemColorProvider";
 
 export function AwaitingAnswerButton({
   questionId,
@@ -14,6 +15,7 @@ export function AwaitingAnswerButton({
   partySlug: string;
   politicianSlug: string;
 }) {
+  const { error: colorError } = useSystemColors();
   const [hovered, setHovered] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
@@ -40,7 +42,7 @@ export function AwaitingAnswerButton({
       style={{
         width: 110,
         backgroundColor: "#E8E7E5",
-        color: showCancel ? "#FF4105" : "#7E7D7A",
+        color: showCancel ? colorError : "#7E7D7A",
       }}
     >
       {showCancel && <FontAwesomeIcon icon={faXmark} className="text-xs" />}

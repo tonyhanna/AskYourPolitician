@@ -255,7 +255,7 @@ export async function deleteQuestion(questionId: string): Promise<{ error?: stri
   return {};
 }
 
-export async function submitAnswerUrl(questionId: string, answerUrl: string, photoUrl?: string, duration?: number, aspectRatio?: number) {
+export async function submitAnswerUrl(questionId: string, answerUrl: string, photoUrl?: string, duration?: number, aspectRatio?: number, clipUrl?: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -282,17 +282,44 @@ export async function submitAnswerUrl(questionId: string, answerUrl: string, pho
 
   const isUpdate = !!question.answerUrl;
 
-  await db.insert(answerHistory).values({
-    questionId,
-    answerUrl,
-    answerPhotoUrl: photoUrl ?? null,
-    answerDuration: duration ?? null,
-    answerAspectRatio: aspectRatio ?? null,
-  });
+  // Clean up old blob files when editing an existing answer
+  // Skip poster blob if it's being kept (same URL reused)
+  if (isUpdate) {
+    const keepingPoster = photoUrl && photoUrl === question.answerPhotoUrl;
+    const oldBlobUrls = [
+      question.answerUrl,
+      keepingPoster ? null : question.answerPhotoUrl,
+      question.answerClipUrl,
+    ].filter((url): url is string => !!url && isBlobUrl(url));
+    if (oldBlobUrls.length > 0) del(oldBlobUrls).catch(() => {});
+  }
+
+  if (isUpdate) {
+    // Update existing answer_history entry with the new URLs
+    await db
+      .update(answerHistory)
+      .set({
+        answerUrl,
+        answerPhotoUrl: photoUrl ?? null,
+        answerClipUrl: clipUrl ?? null,
+        answerDuration: duration ?? null,
+        answerAspectRatio: aspectRatio ?? null,
+      })
+      .where(eq(answerHistory.questionId, questionId));
+  } else {
+    await db.insert(answerHistory).values({
+      questionId,
+      answerUrl,
+      answerPhotoUrl: photoUrl ?? null,
+      answerClipUrl: clipUrl ?? null,
+      answerDuration: duration ?? null,
+      answerAspectRatio: aspectRatio ?? null,
+    });
+  }
 
   await db
     .update(questions)
-    .set({ answerUrl, answerPhotoUrl: photoUrl ?? null, answerDuration: duration ?? null, answerAspectRatio: aspectRatio ?? null, deadlineMissed: false })
+    .set({ answerUrl, answerPhotoUrl: photoUrl ?? null, answerClipUrl: clipUrl ?? null, answerDuration: duration ?? null, answerAspectRatio: aspectRatio ?? null, deadlineMissed: false })
     .where(eq(questions.id, questionId));
 
   const upvoters = await db
@@ -321,7 +348,10 @@ export async function submitAnswerUrl(questionId: string, answerUrl: string, pho
     )
   );
 
-  revalidatePath("/politiker/dashboard");
+  // NOTE: Do NOT revalidate /politiker/dashboard here — it resets client-side
+  // state (submitStep) mid-flow, causing the UI to flash "Svar indsendt" before
+  // clip generation finishes.  The dashboard is revalidated later by
+  // submitAnswerClipUrl once the full flow (answer + clip) is complete.
   revalidatePath(`/${politician.partySlug}/${politician.slug}`);
 }
 
@@ -383,6 +413,65 @@ export async function submitAnswerClipUrl(questionId: string, clipUrl: string, p
   revalidatePath(`/${politician.partySlug}/${politician.slug}`);
 }
 
+/** Update only the poster for an existing answer (no new video). */
+export async function updateAnswerPoster(questionId: string, posterUrl: string | null, clipUrl?: string, autoPosterUrl?: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const politician = await getActivePolitician();
+  if (!politician) throw new Error("Politician not found");
+
+  const [question] = await db
+    .select({
+      id: questions.id,
+      answerUrl: questions.answerUrl,
+      answerPhotoUrl: questions.answerPhotoUrl,
+      answerClipUrl: questions.answerClipUrl,
+    })
+    .from(questions)
+    .where(
+      and(
+        eq(questions.id, questionId),
+        eq(questions.politicianId, politician.id)
+      )
+    )
+    .limit(1);
+
+  if (!question || !question.answerUrl) throw new Error("Spørgsmål eller svar ikke fundet");
+
+  // Delete old poster + clip blobs
+  const oldBlobUrls = [question.answerPhotoUrl, question.answerClipUrl]
+    .filter((url): url is string => !!url && isBlobUrl(url));
+  if (oldBlobUrls.length > 0) del(oldBlobUrls).catch(() => {});
+
+  // Update question
+  // When removing poster and regenerating clip: posterUrl=null, but use autoPosterUrl + clipUrl from clip generation
+  const finalPhotoUrl = posterUrl ?? autoPosterUrl ?? null;
+  const finalClipUrl = clipUrl ?? null;
+  await db
+    .update(questions)
+    .set({ answerPhotoUrl: finalPhotoUrl, answerClipUrl: finalClipUrl })
+    .where(eq(questions.id, questionId));
+
+  // Update latest answer_history entry
+  const [latestHistory] = await db
+    .select({ id: answerHistory.id })
+    .from(answerHistory)
+    .where(eq(answerHistory.questionId, questionId))
+    .orderBy(sql`${answerHistory.createdAt} DESC`)
+    .limit(1);
+
+  if (latestHistory) {
+    await db
+      .update(answerHistory)
+      .set({ answerPhotoUrl: finalPhotoUrl, answerClipUrl: finalClipUrl })
+      .where(eq(answerHistory.id, latestHistory.id));
+  }
+
+  revalidatePath("/politiker/dashboard");
+  revalidatePath(`/${politician.partySlug}/${politician.slug}`);
+}
+
 export async function togglePinQuestion(questionId: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -404,9 +493,24 @@ export async function togglePinQuestion(questionId: string) {
 
   if (!question) throw new Error("Spørgsmål ikke fundet");
 
+  const newPinned = !question.pinned;
+
+  // Only one question can be pinned at a time — unpin all others first
+  if (newPinned) {
+    await db
+      .update(questions)
+      .set({ pinned: false })
+      .where(
+        and(
+          eq(questions.politicianId, politician.id),
+          eq(questions.pinned, true)
+        )
+      );
+  }
+
   await db
     .update(questions)
-    .set({ pinned: !question.pinned })
+    .set({ pinned: newPinned })
     .where(eq(questions.id, questionId));
 
   revalidatePath("/politiker/dashboard");
@@ -596,6 +700,8 @@ export async function approveSuggestion(formData: FormData) {
   const suggestionId = formData.get("suggestionId") as string;
   const upvoteGoal = parseInt(formData.get("upvoteGoal") as string) || 1000;
   const tagsRaw = formData.get("tags") as string;
+  const editedText = (formData.get("editedText") as string)?.trim();
+  const editReason = (formData.get("editReason") as string)?.trim() || undefined;
 
   const politician = await getActivePolitician();
   if (!politician) throw new Error("Politician not found");
@@ -614,12 +720,15 @@ export async function approveSuggestion(formData: FormData) {
 
   if (!suggestion) throw new Error("Forslag ikke fundet");
 
-  // Create the question from the suggestion
+  // Create the question from the suggestion (use edited text if provided)
+  const questionText = editedText || suggestion.text;
+  const wasEdited = editReason && questionText !== suggestion.text;
+
   const [question] = await db
     .insert(questions)
     .values({
       politicianId: politician.id,
-      text: suggestion.text,
+      text: questionText,
       upvoteGoal,
       suggestedByCitizenId: suggestion.citizenId,
     })
@@ -669,8 +778,9 @@ export async function approveSuggestion(formData: FormData) {
       firstName: citizen.firstName,
       politicianName: politician.name,
       partyName: politician.party,
-      questionText: suggestion.text,
+      questionText: questionText,
       questionUrl,
+      ...(wasEdited ? { originalText: suggestion.text, editReason } : {}),
     });
   }
 
@@ -759,4 +869,18 @@ export async function verifyQuestionLink(url: string): Promise<{ valid: boolean;
   } catch {
     return { valid: false };
   }
+}
+
+export async function revalidateDashboard() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  revalidatePath("/politiker/dashboard");
+}
+
+/** Delete a blob URL uploaded by the current politician (fire-and-forget). */
+export async function deleteBlobUrl(url: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  if (!url || !isBlobUrl(url)) return;
+  del(url).catch(() => {});
 }

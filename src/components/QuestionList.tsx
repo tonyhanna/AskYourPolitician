@@ -1,13 +1,36 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { upload } from "@vercel/blob/client";
-import { deleteQuestion, editQuestion, submitAnswerUrl, submitAnswerClipUrl, togglePinQuestion } from "@/app/politiker/dashboard/actions";
+import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster } from "@/app/politiker/dashboard/actions";
 import { generateVideoClip } from "@/lib/clip-generator";
 import { compressVideo } from "@/lib/video-compressor";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { SuggestionList } from "./SuggestionList";
 import { isBlobUrl, getBlobMediaType } from "@/lib/answer-utils";
+
+// ── Module-level store for submit steps ──────────────────────────────
+// Lives outside React so it survives component remounts caused by
+// server-action Router Cache invalidation moving questions between
+// the "unanswered" → "answered" section (different tree positions).
+type SubmitStep = "compressing" | "uploading" | "submitting" | "generating" | "done";
+const _steps = new Map<string, SubmitStep>();
+const _subs = new Set<() => void>();
+function _notify() { _subs.forEach((fn) => fn()); }
+
+const submitStepStore = {
+  get: (id: string): SubmitStep | null => _steps.get(id) ?? null,
+  set: (id: string, step: SubmitStep) => { _steps.set(id, step); _notify(); },
+  clear: (id: string) => { _steps.delete(id); _notify(); },
+  subscribe: (fn: () => void) => { _subs.add(fn); return () => { _subs.delete(fn); }; },
+};
+
+// Track whether a custom poster was used per question (survives remounts).
+const _customPosterUsed = new Map<string, boolean>();
+// Track poster-only updates (no new video) for correct progress labels.
+const _posterOnlyUpdate = new Map<string, boolean>();
+// Track whether the current submit is an audio answer (survives remounts).
+const _isAudioSubmit = new Map<string, boolean>();
 
 /** Read duration + aspect ratio from a media file using a temporary element. */
 function getMediaInfo(file: File): Promise<{ duration?: number; aspectRatio?: number }> {
@@ -52,6 +75,7 @@ type Question = {
   deadlineMissed: boolean;
   answerUrl: string | null;
   answerPhotoUrl: string | null;
+  answerClipUrl: string | null;
   suggestedBy: string | null;
   pinned: boolean;
 };
@@ -140,27 +164,37 @@ function QuestionItem({
   const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [submittingAnswer, setSubmittingAnswer] = useState(false);
   const [editingAnswer, setEditingAnswer] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set(question.tags));
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [pendingAudioUrl, setPendingAudioUrl] = useState<string | null>(null);
-  const [pendingVideoUrl, setPendingVideoUrl] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingDuration, setPendingDuration] = useState<number | undefined>(undefined);
   const [pendingAspectRatio, setPendingAspectRatio] = useState<number | undefined>(undefined);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [photoProgress, setPhotoProgress] = useState(0);
-  const [pinning, setPinning] = useState(false);
-  const [compressing, setCompressing] = useState(false);
   const [compressProgress, setCompressProgress] = useState(0);
-  const [clipGenerating, setClipGenerating] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+  const [pinning, setPinning] = useState(false);
+
   const [clipError, setClipError] = useState<string | null>(null);
-  const [submitStep, setSubmitStep] = useState<"idle" | "submitting" | "generating" | "done">("idle");
-  const [customPosterUrl, setCustomPosterUrl] = useState<string | null>(null);
+  // Operation counter — incremented on every new submit attempt.
+  // Stale operations (from cancelled/restarted flows) compare their captured
+  // opId against the current ref and bail out if they no longer match.
+  const submitOpRef = useRef(0);
+  // Submit step lives in a module-level store so it survives component
+  // remounts caused by the question moving between dashboard sections.
+  const submitStep = useSyncExternalStore(
+    submitStepStore.subscribe,
+    () => submitStepStore.get(question.id),
+    () => null, // server snapshot — no active submissions during SSR
+  );
+  const [pendingPosterFile, setPendingPosterFile] = useState<File | null>(null);
+  const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
   const [showPosterUpload, setShowPosterUpload] = useState(false);
+  const [removePoster, setRemovePoster] = useState(false);
+  // Detect if current answer has a custom poster (vs auto-generated)
+  const hasExistingCustomPoster = !!question.answerPhotoUrl && !question.answerClipUrl && !!question.answerUrl;
+  const isCurrentAnswerAudio = !!question.answerUrl && isBlobUrl(question.answerUrl) && getBlobMediaType(question.answerUrl) === "audio";
   const hasUpvotes = question.upvoteCount > 0;
 
   // Countdown timer for unanswered goal-reached questions
@@ -179,7 +213,7 @@ function QuestionItem({
     return () => clearInterval(interval);
   }, [question.goalReachedAt, question.answerUrl, question.deadlineMissed]);
 
-  async function handleFileUpload(file: File) {
+  async function handleFileSelect(file: File) {
     if (file.size > 500 * 1024 * 1024) {
       setUploadError("Filen er for stor (maks 500 MB)");
       return;
@@ -191,7 +225,7 @@ function QuestionItem({
 
     setUploadError(null);
 
-    // Read duration + aspect ratio from the original file before compression
+    // Read duration + aspect ratio from the original file
     let duration: number | undefined;
     let aspectRatio: number | undefined;
     try {
@@ -208,47 +242,14 @@ function QuestionItem({
       return;
     }
 
-    // Compress video files before uploading (skip for audio)
-    let fileToUpload = file;
-    if (file.type.startsWith("video/")) {
-      setCompressing(true);
-      setCompressProgress(0);
-      try {
-        fileToUpload = await compressVideo(file, undefined, (p) => setCompressProgress(p));
-      } catch (e) {
-        console.error("Video compression failed, uploading original:", e);
-        // Fall back to original file if compression fails
-      } finally {
-        setCompressing(false);
-        setCompressProgress(0);
-      }
-    }
-
-    setUploading(true);
-    setUploadProgress(0);
-    try {
-      const folder = file.type.startsWith("audio/") ? "answers/sound" : "answers/video";
-      const blob = await upload(`${folder}/${fileToUpload.name}`, fileToUpload, {
-        access: "public",
-        handleUploadUrl: "/api/upload",
-        onUploadProgress: ({ percentage }) => setUploadProgress(percentage),
-      });
-      if (file.type.startsWith("audio/")) {
-        setPendingAudioUrl(blob.url);
-      } else {
-        setPendingVideoUrl(blob.url);
-      }
-      setPendingDuration(duration);
-      setPendingAspectRatio(aspectRatio);
-    } catch (e) {
-      setUploadError(e instanceof Error ? e.message : "Upload fejlede");
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
-    }
+    // Just store the file — compression + upload happen when user clicks submit
+    setPendingFile(file);
+    setPendingDuration(duration);
+    setPendingAspectRatio(aspectRatio);
   }
 
-  async function handlePhotoUpload(file: File, target: "audio" | "poster" = "audio") {
+  /** Validate and store audio selfie file locally — actual upload deferred to submit flow. */
+  async function handlePhotoSelect(file: File) {
     if (file.size > 10 * 1024 * 1024) {
       setUploadError("Billedet er for stort (maks 10 MB)");
       return;
@@ -257,46 +258,72 @@ function QuestionItem({
       setUploadError("Kun billedfiler er tilladt");
       return;
     }
-    setUploadingPhoto(true);
     setUploadError(null);
-    setPhotoProgress(0);
-    try {
-      // Read photo aspect ratio
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      await new Promise<void>((resolve) => { img.onload = () => resolve(); img.onerror = () => resolve(); });
-      if (img.naturalWidth && img.naturalHeight) {
-        const ar = img.naturalWidth / img.naturalHeight;
-        if (ar >= 1) {
-          URL.revokeObjectURL(img.src);
-          setUploadError("Billedet skal være i portrait-format (3:4). Landscape- og kvadratiske billeder er ikke tilladt.");
-          setUploadingPhoto(false);
-          return;
-        }
-        if (target === "audio") setPendingAspectRatio(ar);
+    // Read photo aspect ratio
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    await new Promise<void>((resolve) => { img.onload = () => resolve(); img.onerror = () => resolve(); });
+    if (img.naturalWidth && img.naturalHeight) {
+      const ar = img.naturalWidth / img.naturalHeight;
+      if (ar >= 1) {
+        URL.revokeObjectURL(img.src);
+        setUploadError("Billedet skal være i portrait-format (3:4). Landscape- og kvadratiske billeder er ikke tilladt.");
+        return;
       }
-      URL.revokeObjectURL(img.src);
-
-      const blob = await upload(`answers/photo/${file.name}`, file, {
-        access: "public",
-        handleUploadUrl: "/api/upload",
-        onUploadProgress: ({ percentage }) => setPhotoProgress(percentage),
-      });
-      if (target === "poster") {
-        setCustomPosterUrl(blob.url);
-      } else {
-        setPhotoUrl(blob.url);
-      }
-    } catch (e) {
-      setUploadError(e instanceof Error ? e.message : "Upload fejlede");
-    } finally {
-      setUploadingPhoto(false);
-      setPhotoProgress(0);
+      setPendingAspectRatio(ar);
     }
+    URL.revokeObjectURL(img.src);
+    // Revoke previous preview URL if replacing
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    setPendingPhotoFile(file);
+    setPhotoPreviewUrl(URL.createObjectURL(file));
   }
 
-  async function generateClipInBackground(questionId: string, videoUrl: string) {
-    setClipGenerating(true);
+  function clearPendingPhoto() {
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    setPendingPhotoFile(null);
+    setPhotoPreviewUrl(null);
+  }
+
+  /** Validate and store poster file locally — actual upload deferred to submit flow. */
+  async function handlePosterSelect(file: File) {
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError("Billedet er for stort (maks 10 MB)");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Kun billedfiler er tilladt");
+      return;
+    }
+    setUploadError(null);
+    // Validate portrait aspect ratio
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    await new Promise<void>((resolve) => { img.onload = () => resolve(); img.onerror = () => resolve(); });
+    if (img.naturalWidth && img.naturalHeight) {
+      const ar = img.naturalWidth / img.naturalHeight;
+      if (ar >= 1) {
+        URL.revokeObjectURL(img.src);
+        setUploadError("Billedet skal være i portrait-format (3:4). Landscape- og kvadratiske billeder er ikke tilladt.");
+        return;
+      }
+    }
+    URL.revokeObjectURL(img.src);
+    // Revoke previous preview URL if replacing
+    if (posterPreviewUrl) URL.revokeObjectURL(posterPreviewUrl);
+    setPendingPosterFile(file);
+    setPosterPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function clearPendingPoster() {
+    if (posterPreviewUrl) URL.revokeObjectURL(posterPreviewUrl);
+    setPendingPosterFile(null);
+    setPosterPreviewUrl(null);
+    setShowPosterUpload(false);
+  }
+
+  /** Generate clip + auto-poster, upload them, and return URLs (does NOT save to DB). */
+  async function generateAndUploadClip(videoUrl: string): Promise<{ clipUrl: string; posterUrl: string } | null> {
     setClipError(null);
     try {
       // Timeout after 2 minutes to prevent hanging if video can't be loaded (e.g. Blob bandwidth exceeded)
@@ -305,91 +332,217 @@ function QuestionItem({
         new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Timeout: klip-generering tog for lang tid")), 120_000)),
       ]);
       if (!result) {
-        setClipGenerating(false);
-        return; // Browser doesn't support MediaRecorder — skip silently
+        return null; // Browser doesn't support MediaRecorder — skip silently
       }
-      // Upload clip (always) and auto-poster (only if no custom poster was uploaded)
-      const hasCustomPoster = !!customPosterUrl;
-      const clipBlobPromise = upload(`answers/clips/${result.clip.name}`, result.clip, {
-        access: "public",
-        handleUploadUrl: "/api/upload",
-      });
-
-      if (hasCustomPoster) {
-        // Custom poster already saved — only upload clip, don't overwrite poster
-        const clipBlob = await clipBlobPromise;
-        await submitAnswerClipUrl(questionId, clipBlob.url);
-      } else {
-        // No custom poster — upload auto-generated poster alongside clip
-        const [clipBlob, posterBlob] = await Promise.all([
-          clipBlobPromise,
-          upload(`answers/posters/${result.poster.name}`, result.poster, {
-            access: "public",
-            handleUploadUrl: "/api/upload",
-          }),
-        ]);
-        await submitAnswerClipUrl(questionId, clipBlob.url, posterBlob.url);
-      }
+      const [clipBlob, posterBlob] = await Promise.all([
+        upload(`answers/clips/${result.clip.name}`, result.clip, {
+          access: "public",
+          handleUploadUrl: "/api/upload",
+        }),
+        upload(`answers/posters/${result.poster.name}`, result.poster, {
+          access: "public",
+          handleUploadUrl: "/api/upload",
+        }),
+      ]);
+      return { clipUrl: clipBlob.url, posterUrl: posterBlob.url };
     } catch (e) {
       console.error("Clip generation failed:", e);
       setClipError(e instanceof Error ? e.message : "Klip-generering fejlede");
-    } finally {
-      setClipGenerating(false);
+      return null;
     }
   }
 
   async function handleSubmitAudioAnswer() {
-    if (!pendingAudioUrl) return;
+    if (!pendingFile) return;
     if (editingAnswer) {
       const confirmed = confirm(
         `Er du sikker på at du vil sende dette opdateret svar ud til ${question.upvoteCount} ${question.upvoteCount === 1 ? "borger" : "borgere"}?`
       );
       if (!confirmed) return;
     }
-    setSubmittingAnswer(true);
+    const file = pendingFile;
+    const photoFile = pendingPhotoFile;
+    const questionId = question.id;
+    _isAudioSubmit.set(questionId, true);
     try {
-      await submitAnswerUrl(question.id, pendingAudioUrl, photoUrl ?? undefined, pendingDuration, pendingAspectRatio);
-      setPendingAudioUrl(null);
+      // Upload audio + selfie photo in parallel
+      submitStepStore.set(questionId, "uploading");
+      setUploadProgress(0);
+      // When editing: keep existing custom poster if user didn't upload a new one
+      const keepExistingAudioPoster = editingAnswer && !photoFile && hasExistingCustomPoster;
+      const [audioBlob, photoBlobUrl] = await Promise.all([
+        upload(`answers/sound/${file.name}`, file, {
+          access: "public",
+          handleUploadUrl: "/api/upload",
+          onUploadProgress: ({ percentage }) => setUploadProgress(percentage),
+        }),
+        photoFile
+          ? upload(`answers/posters/${photoFile.name}`, photoFile, {
+              access: "public",
+              handleUploadUrl: "/api/upload",
+            }).then((b) => b.url)
+          : Promise.resolve(keepExistingAudioPoster ? question.answerPhotoUrl : null),
+      ]);
+      // Submit answer
+      submitStepStore.set(questionId, "submitting");
+      await submitAnswerUrl(questionId, audioBlob.url, photoBlobUrl ?? undefined, pendingDuration, pendingAspectRatio);
+      setPendingFile(null);
       setPendingDuration(undefined);
       setPendingAspectRatio(undefined);
-      setPhotoUrl(null);
+      clearPendingPhoto();
       setEditingAnswer(false);
+      submitStepStore.set(questionId, "done");
+      setTimeout(() => { submitStepStore.clear(questionId); _isAudioSubmit.delete(questionId); }, 3000);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Der opstod en fejl");
-    } finally {
-      setSubmittingAnswer(false);
+      submitStepStore.clear(questionId);
+      _isAudioSubmit.delete(questionId);
+    }
+  }
+
+  /** Handle poster-only changes (no new video) — scenarie A + B */
+  async function handlePosterOnlyUpdate() {
+    const questionId = question.id;
+
+    submitOpRef.current++;
+    const opId = submitOpRef.current;
+
+    _posterOnlyUpdate.set(questionId, true);
+
+    try {
+      if (pendingPosterFile) {
+        // Scenarie A: Upload new poster, keep video
+        submitStepStore.set(questionId, "uploading");
+        const posterBlob = await upload(`answers/posters/${pendingPosterFile.name}`, pendingPosterFile, {
+          access: "public",
+          handleUploadUrl: "/api/upload",
+        });
+
+        if (opId !== submitOpRef.current) return;
+
+        submitStepStore.set(questionId, "submitting");
+        await updateAnswerPoster(questionId, posterBlob.url);
+      } else if (removePoster) {
+        // Scenarie B: Remove poster, regenerate clip first, then submit all at once
+        submitStepStore.set(questionId, "generating");
+        const clipResult = await generateAndUploadClip(question.answerUrl!);
+
+        if (opId !== submitOpRef.current) return;
+
+        submitStepStore.set(questionId, "submitting");
+        if (clipResult) {
+          await updateAnswerPoster(questionId, null, clipResult.clipUrl, clipResult.posterUrl);
+        } else {
+          await updateAnswerPoster(questionId, null);
+        }
+      }
+
+      clearPendingPoster();
+      setRemovePoster(false);
+      setEditingAnswer(false);
+      submitStepStore.set(questionId, "done");
+      setTimeout(() => { submitStepStore.clear(questionId); _posterOnlyUpdate.delete(questionId); }, 3000);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Der opstod en fejl");
+      submitStepStore.clear(questionId);
+      _posterOnlyUpdate.delete(questionId);
     }
   }
 
   async function handleSubmitVideoAnswer() {
-    if (!pendingVideoUrl) return;
+    if (!pendingFile) return;
     if (editingAnswer) {
       const confirmed = confirm(
         `Er du sikker på at du vil sende dette opdateret svar ud til ${question.upvoteCount} ${question.upvoteCount === 1 ? "borger" : "borgere"}?`
       );
       if (!confirmed) return;
     }
-    setSubmitStep("submitting");
-    setSubmittingAnswer(true);
+    // Capture values before any state resets — the component may remount
+    // mid-flow when the question moves from "unanswered" to "answered".
+    const file = pendingFile;
+    const questionId = question.id;
+    const posterFile = pendingPosterFile;
+    const duration = pendingDuration;
+    const aspectRatio = pendingAspectRatio;
+    // When editing: keep existing custom poster if user didn't change or remove it
+    const keepExistingPoster = editingAnswer && !posterFile && !removePoster && hasExistingCustomPoster;
+    const effectiveHasPoster = !!posterFile || keepExistingPoster;
+
+    // Increment op counter — any in-flight stale operation will see a mismatch and bail out
+    submitOpRef.current++;
+    const opId = submitOpRef.current;
+
+    // Remember if custom poster was used (survives remount)
+    if (effectiveHasPoster) _customPosterUsed.set(questionId, true);
+    else _customPosterUsed.delete(questionId);
+
     try {
-      await submitAnswerUrl(question.id, pendingVideoUrl, customPosterUrl ?? undefined, pendingDuration, pendingAspectRatio);
-      const videoUrl = pendingVideoUrl;
-      const questionId = question.id;
-      setPendingVideoUrl(null);
+      // Step 1: Compress video
+      submitStepStore.set(questionId, "compressing");
+      setCompressProgress(0);
+      let fileToUpload = file;
+      try {
+        fileToUpload = await compressVideo(file, undefined, (p) => {
+          if (opId !== submitOpRef.current) return; // stale — don't update progress
+          setCompressProgress(p);
+        });
+      } catch (e) {
+        console.error("Video compression failed, uploading original:", e);
+      }
+
+      // Check if user cancelled or started a new submission during compression
+      if (opId !== submitOpRef.current) return;
+
+      // Step 2: Upload to blob storage (poster + video in parallel)
+      submitStepStore.set(questionId, "uploading");
+      setUploadProgress(0);
+      const [videoBlob, posterBlobUrl] = await Promise.all([
+        upload(`answers/video/${fileToUpload.name}`, fileToUpload, {
+          access: "public",
+          handleUploadUrl: "/api/upload",
+          onUploadProgress: ({ percentage }) => setUploadProgress(percentage),
+        }),
+        posterFile
+          ? upload(`answers/posters/${posterFile.name}`, posterFile, {
+              access: "public",
+              handleUploadUrl: "/api/upload",
+            }).then((b) => b.url)
+          : Promise.resolve(null),
+      ]);
+      const videoUrl = videoBlob.url;
+      // Determine poster URL: new upload > keep existing > none
+      const finalPosterUrl = posterBlobUrl ?? (keepExistingPoster ? question.answerPhotoUrl : null);
+
+      // Step 3: Generate clip + auto-poster (only when no custom poster)
+      let clipUrl: string | undefined;
+      let autoPosterUrl: string | undefined;
+      if (!effectiveHasPoster) {
+        submitStepStore.set(questionId, "generating");
+        const clipResult = await generateAndUploadClip(videoUrl);
+        if (clipResult) {
+          clipUrl = clipResult.clipUrl;
+          autoPosterUrl = clipResult.posterUrl;
+        }
+      }
+
+      // Step 4: Submit answer with all URLs ready (triggers server action + revalidation)
+      submitStepStore.set(questionId, "submitting");
+      const posterUrlForSubmit = finalPosterUrl ?? autoPosterUrl ?? undefined;
+      await submitAnswerUrl(questionId, videoUrl, posterUrlForSubmit, duration, aspectRatio, clipUrl);
+      // These setState calls may be no-ops if the component remounted
+      setPendingFile(null);
       setPendingDuration(undefined);
       setPendingAspectRatio(undefined);
-      setCustomPosterUrl(null);
-      setShowPosterUpload(false);
+      clearPendingPoster();
+      setRemovePoster(false);
       setEditingAnswer(false);
-      // Generate clip — blocking so the UI shows progress until done
-      setSubmitStep("generating");
-      await generateClipInBackground(questionId, videoUrl);
-      setSubmitStep("done");
+
+      // Done
+      submitStepStore.set(questionId, "done");
+      setTimeout(() => { submitStepStore.clear(questionId); _customPosterUsed.delete(questionId); }, 3000);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Der opstod en fejl");
-      setSubmitStep("idle");
-    } finally {
-      setSubmittingAnswer(false);
+      submitStepStore.clear(questionId);
     }
   }
 
@@ -524,26 +677,28 @@ function QuestionItem({
         >
           {question.text}
         </a>
-        <button
-          onClick={async () => {
-            setPinning(true);
-            try {
-              await togglePinQuestion(question.id);
-            } catch (e) {
-              alert(e instanceof Error ? e.message : "Der opstod en fejl");
-            } finally {
-              setPinning(false);
-            }
-          }}
-          disabled={pinning}
-          className={`text-sm shrink-0 cursor-pointer disabled:opacity-50 ${
-            question.pinned
-              ? "text-amber-600 hover:text-amber-800"
-              : "text-gray-400 hover:text-amber-600"
-          }`}
-        >
-          {pinning ? "..." : question.pinned ? "Unpin" : "Pin"}
-        </button>
+        {question.answerUrl && (
+          <button
+            onClick={async () => {
+              setPinning(true);
+              try {
+                await togglePinQuestion(question.id);
+              } catch (e) {
+                alert(e instanceof Error ? e.message : "Der opstod en fejl");
+              } finally {
+                setPinning(false);
+              }
+            }}
+            disabled={pinning}
+            className={`text-sm shrink-0 cursor-pointer disabled:opacity-50 ${
+              question.pinned
+                ? "text-amber-600 hover:text-amber-800"
+                : "text-gray-400 hover:text-amber-600"
+            }`}
+          >
+            {pinning ? "..." : question.pinned ? "Unpin" : "Pin"}
+          </button>
+        )}
       </div>
       {question.suggestedBy && (
         <p className="text-xs mb-1">
@@ -565,46 +720,106 @@ function QuestionItem({
 
       {question.goalReached && (
         <div className="mt-2 mb-3">
-          {question.answerUrl && !editingAnswer ? (
-            submitStep === "submitting" || submitStep === "generating" ? (
+          {submitStep && submitStep !== "done" ? (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                 <div className="space-y-3">
-                  {/* Step 1: Upload */}
-                  <div className="flex items-center gap-2">
-                    {submitStep === "submitting" ? (
-                      <svg className="w-4 h-4 text-amber-600 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
-                    ) : (
-                      <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    )}
-                    <span className={`text-sm ${submitStep === "submitting" ? "text-amber-800 font-medium" : "text-green-800"}`}>
-                      {submitStep === "submitting" ? "Indsender svar..." : "Video uploadet"}
-                    </span>
+                  {/* Steps shown as a checklist */}
+                  {(() => {
+                    const posterOnly = !!_posterOnlyUpdate.get(question.id);
+                    const isAudio = !!_isAudioSubmit.get(question.id);
+                    const hasCustomPosterFlag = !!_customPosterUsed.get(question.id);
+                    if (posterOnly) {
+                      return removePoster
+                        ? (["uploading", "generating", "submitting"] as const)
+                        : (["uploading", "submitting"] as const);
+                    }
+                    if (isAudio) return (["uploading", "submitting"] as const);
+                    if (hasCustomPosterFlag) return (["compressing", "uploading", "submitting"] as const);
+                    return (["compressing", "uploading", "generating", "submitting"] as const);
+                  })().map((step, _i, stepOrder) => {
+                    const currentIdx = (stepOrder as readonly string[]).indexOf(submitStep);
+                    const stepIdx = _i;
+                    if (stepIdx > currentIdx) return null; // future step — don't show
+                    const isActive = step === submitStep;
+                    const isPosterOnly = !!_posterOnlyUpdate.get(question.id);
+                    const isAudio = !!_isAudioSubmit.get(question.id);
+                    // Only say "og poster/billede" when actually uploading a new file (not keeping existing)
+                    const isUploadingNewPoster = !!pendingPosterFile;
+                    const isUploadingNewPhoto = !!pendingPhotoFile;
+                    const isRemovingPoster = isPosterOnly && !!removePoster;
+                    const uploadLabel = isPosterOnly
+                      ? (isRemovingPoster ? "Fjerner poster-billede..." : "Uploader poster-billede...")
+                      : isAudio
+                        ? (isUploadingNewPhoto ? `Uploader lyd og poster... ${Math.round(uploadProgress)}%` : `Uploader lyd... ${Math.round(uploadProgress)}%`)
+                        : (isUploadingNewPoster ? `Uploader video og poster... ${Math.round(uploadProgress)}%` : `Uploader video... ${Math.round(uploadProgress)}%`);
+                    const uploadDoneLabel = isPosterOnly
+                      ? (isRemovingPoster ? "Poster-billede fjernet" : "Poster-billede uploadet")
+                      : isAudio
+                        ? (isUploadingNewPhoto ? "Lyd og poster uploadet" : "Lyd uploadet")
+                        : (isUploadingNewPoster ? "Video og poster uploadet" : "Video uploadet");
+                    const labels: Record<string, [string, string]> = {
+                      compressing: [`Komprimerer video... ${Math.round(compressProgress * 100)}%`, "Video komprimeret"],
+                      uploading: [uploadLabel, uploadDoneLabel],
+                      submitting: [isPosterOnly ? "Opdaterer poster..." : "Indsender svar...", isPosterOnly ? "Poster opdateret" : "Svar indsendt"],
+                      generating: ["Genererer forhåndsvisning...", "Forhåndsvisning klar"],
+                    };
+                    const [activeLabel, doneLabel] = labels[step];
+                    return (
+                      <div key={step} className="flex items-center gap-2">
+                        {isActive ? (
+                          <svg className="w-4 h-4 text-amber-600 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                        ) : (
+                          <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        )}
+                        <span className={`text-sm flex-1 ${isActive ? "text-amber-800 font-medium" : "text-green-800"}`}>
+                          {isActive ? activeLabel : doneLabel}
+                        </span>
+                        {isActive && step === "compressing" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Invalidate the current operation so its completion is ignored
+                              submitOpRef.current++;
+                              submitStepStore.clear(question.id);
+                            }}
+                            className="text-sm text-red-500 hover:text-red-700 cursor-pointer"
+                          >
+                            Annullér
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {/* Progress bar */}
+                  <div className="w-full bg-amber-200 rounded-full h-2 overflow-hidden">
+                    <div className="bg-amber-500 h-2 rounded-full transition-all" style={{
+                      width: submitStep === "compressing" ? `${Math.round(compressProgress * 100)}%`
+                        : submitStep === "uploading" ? `${Math.round(uploadProgress)}%`
+                        : submitStep === "submitting" ? "100%" : "100%",
+                    }} />
                   </div>
-                  {/* Step 2: Clip generation */}
-                  {submitStep === "generating" && (
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-amber-600 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
-                      <span className="text-sm text-amber-800 font-medium">Genererer forhåndsvisning...</span>
+                  {submitStep === "compressing" ? (
+                    <p className="text-xs text-amber-600">Dette kan tage et øjeblik.</p>
+                  ) : (
+                    <div className="bg-amber-100 border border-amber-300 rounded-md px-3 py-2 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-amber-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 3a9 9 0 110 18 9 9 0 010-18z" /></svg>
+                      <p className="text-sm text-amber-800 font-medium">Luk ikke browseren — dette kan tage op til 2 minutter.</p>
                     </div>
                   )}
-                  {/* Progress bar (indeterminate) */}
-                  <div className="w-full bg-amber-200 rounded-full h-2 overflow-hidden">
-                    <div className="bg-amber-500 h-2 rounded-full animate-pulse" style={{ width: submitStep === "submitting" ? "30%" : "60%" }} />
-                  </div>
-                  <p className="text-xs text-amber-600">Luk ikke browseren — dette kan tage op til 2 minutter.</p>
                 </div>
               </div>
-            ) : (
+          ) : (question.answerUrl && !editingAnswer) || submitStep === "done" ? (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-sm text-green-800 font-medium mb-1">Svar indsendt</p>
-                  {isBlobUrl(question.answerUrl!) ? (
+                  {question.answerUrl && isBlobUrl(question.answerUrl) ? (
                     <p className="text-sm text-green-700">
-                      {getBlobMediaType(question.answerUrl!) === "audio" ? "Lydfil" : "Video"} uploadet
-                      {getBlobMediaType(question.answerUrl!) === "audio" && question.answerPhotoUrl && " (med billede)"}
+                      {getBlobMediaType(question.answerUrl) === "audio" ? "Lydfil" : "Video"} uploadet
+                      {getBlobMediaType(question.answerUrl) === "audio" && question.answerPhotoUrl && " (med poster)"}
+                      {getBlobMediaType(question.answerUrl) !== "audio" && question.answerPhotoUrl && !question.answerClipUrl && " (med eget poster-billede)"}
                     </p>
-                  ) : (
+                  ) : question.answerUrl ? (
                     <a
                       href={question.answerUrl}
                       target="_blank"
@@ -613,6 +828,8 @@ function QuestionItem({
                     >
                       {question.answerUrl}
                     </a>
+                  ) : (
+                    <p className="text-sm text-green-700">Video uploadet</p>
                   )}
                   {clipError && (
                     <p className="text-xs text-red-500 mt-1">Forhåndsvisning fejlede: {clipError}</p>
@@ -626,7 +843,6 @@ function QuestionItem({
                 </button>
               </div>
             </div>
-            )
           ) : (
             <div className={`${question.deadlineMissed ? "bg-red-50 border border-red-200" : "bg-amber-50 border border-amber-200"} rounded-lg p-3`}>
               <div className="flex items-center justify-between mb-2">
@@ -650,178 +866,216 @@ function QuestionItem({
                   </button>
                 )}
               </div>
-              {pendingVideoUrl ? (
+              {/* Edit mode: show current answer overview with granular edit options */}
+              {editingAnswer && question.answerUrl && !pendingFile ? (
+                <div className="space-y-3">
+                  {/* Current video */}
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-gray-700">
+                        {question.answerUrl && isBlobUrl(question.answerUrl) && getBlobMediaType(question.answerUrl) === "audio"
+                          ? "Nuværende svar: Lydfil"
+                          : "Nuværende svar: Video"}
+                      </p>
+                      <label className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
+                        <input
+                          type="file"
+                          accept="video/*,audio/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileSelect(file);
+                          }}
+                        />
+                        Erstat
+                      </label>
+                    </div>
+                  </div>
+                  {/* Poster section */}
+                  {posterPreviewUrl ? (
+                    <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+                      <img src={posterPreviewUrl} alt="Poster preview" className="w-12 h-12 rounded-lg object-cover" />
+                      <span className="text-xs text-gray-600 flex-1">Nyt poster-billede valgt</span>
+                      <button type="button" onClick={() => clearPendingPoster()} className="text-xs text-red-600 hover:text-red-800 cursor-pointer">Fjern</button>
+                    </div>
+                  ) : removePoster ? (
+                    <div className="flex items-center justify-between bg-red-50 rounded-lg p-3">
+                      <p className="text-sm text-red-700">Poster fjernes — auto-genereret clip bruges i stedet</p>
+                      <button type="button" onClick={() => setRemovePoster(false)} className="text-xs text-gray-600 hover:text-gray-800 cursor-pointer">Fortryd</button>
+                    </div>
+                  ) : showPosterUpload ? (
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-gray-500">Vælg eget poster-billede (portrait-format)</p>
+                        <button type="button" onClick={() => setShowPosterUpload(false)} className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer">Luk</button>
+                      </div>
+                      <label className="block w-full border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:border-gray-400 transition">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handlePosterSelect(file); }} />
+                        <span className="text-sm text-gray-600">Vælg billede</span>
+                      </label>
+                    </div>
+                  ) : hasExistingCustomPoster ? (
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <img src={question.answerPhotoUrl!} alt="Current poster" className="w-10 h-10 rounded-lg object-cover" />
+                          <span className="text-xs text-gray-600">Eget poster-billede</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">Ændre</button>
+                          {!isCurrentAnswerAudio && (
+                            <button type="button" onClick={() => setRemovePoster(true)} className="text-xs text-red-600 hover:text-red-800 cursor-pointer">Fjern</button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs text-gray-500 hover:text-gray-700 underline cursor-pointer">
+                      Tilføj eget poster-billede
+                    </button>
+                  )}
+                  {/* Submit button — only if something changed */}
+                  {(pendingPosterFile || removePoster) && (
+                    <button
+                      onClick={handlePosterOnlyUpdate}
+                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium cursor-pointer"
+                    >
+                      {pendingPosterFile ? "Gem poster-ændring" : "Fjern poster og generér clip"}
+                    </button>
+                  )}
+                </div>
+              ) : pendingFile && pendingFile.type.startsWith("video/") ? (
                 <div className="space-y-3">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-sm text-green-800 font-medium">Video klar til indsendelse</p>
-                  </div>
-                  {/* Collapsible poster upload */}
-                  {customPosterUrl ? (
-                    <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
-                      <img src={customPosterUrl} alt="Poster preview" className="w-12 h-12 rounded-lg object-cover" />
-                      <span className="text-xs text-gray-600 flex-1">Eget poster-billede valgt</span>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-green-800 font-medium">Video klar til indsendelse</p>
                       <button
                         type="button"
-                        onClick={() => { setCustomPosterUrl(null); setShowPosterUpload(false); }}
+                        onClick={() => { clearPendingPoster(); setRemovePoster(false); setPendingFile(null); setPendingDuration(undefined); setPendingAspectRatio(undefined); }}
                         className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
                       >
                         Fjern
                       </button>
                     </div>
+                  </div>
+                  {/* Collapsible poster upload */}
+                  {posterPreviewUrl ? (
+                    <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+                      <img src={posterPreviewUrl} alt="Poster preview" className="w-12 h-12 rounded-lg object-cover" />
+                      <span className="text-xs text-gray-600 flex-1">Eget poster-billede valgt</span>
+                      <button type="button" onClick={() => clearPendingPoster()} className="text-xs text-red-600 hover:text-red-800 cursor-pointer">Fjern</button>
+                    </div>
                   ) : showPosterUpload ? (
                     <div className="bg-gray-50 rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-500">Upload eget poster-billede (portrait-format)</p>
+                        <p className="text-xs text-gray-500">Vælg eget poster-billede (portrait-format)</p>
                         <button type="button" onClick={() => setShowPosterUpload(false)} className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer">Luk</button>
                       </div>
                       <label className="block w-full border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:border-gray-400 transition">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handlePosterSelect(file); }} />
+                        <span className="text-sm text-gray-600">Vælg billede</span>
+                      </label>
+                    </div>
+                  ) : editingAnswer && hasExistingCustomPoster && !removePoster ? (
+                    <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+                      <img src={question.answerPhotoUrl!} alt="Current poster" className="w-10 h-10 rounded-lg object-cover" />
+                      <span className="text-xs text-gray-600 flex-1">Beholder eksisterende poster</span>
+                      <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">Ændre</button>
+                      <button type="button" onClick={() => setRemovePoster(true)} className="text-xs text-red-600 hover:text-red-800 cursor-pointer">Fjern</button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs text-gray-500 hover:text-gray-700 underline cursor-pointer">
+                      Tilføj eget poster-billede (valgfrit)
+                    </button>
+                  )}
+                  <button
+                    onClick={handleSubmitVideoAnswer}
+                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer"
+                  >
+                    {editingAnswer
+                      ? (pendingPosterFile ? "Erstat video (med ny poster)" : (hasExistingCustomPoster && !removePoster) ? "Erstat video (behold poster)" : "Erstat video")
+                      : (pendingPosterFile ? "Indsend video med poster" : "Indsend video")}
+                  </button>
+                </div>
+              ) : pendingFile && pendingFile.type.startsWith("audio/") ? (
+                <div className="space-y-3">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-green-800 font-medium">Lydfil klar til indsendelse</p>
+                      <button
+                        type="button"
+                        onClick={() => { setPendingFile(null); setPendingDuration(undefined); setPendingAspectRatio(undefined); clearPendingPhoto(); }}
+                        className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+                      >
+                        Fjern
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    {photoPreviewUrl ? (
+                      <div className="flex items-center gap-2">
+                        <img src={photoPreviewUrl} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => clearPendingPhoto()}
+                          className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+                        >
+                          Fjern poster
+                        </button>
+                      </div>
+                    ) : editingAnswer && hasExistingCustomPoster ? (
+                      <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+                        <img src={question.answerPhotoUrl!} alt="Current poster" className="w-10 h-10 rounded-lg object-cover" />
+                        <span className="text-xs text-gray-600 flex-1">Beholder eksisterende poster</span>
+                        <label className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
+                          Ændre
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoSelect(f); }} />
+                        </label>
+                      </div>
+                    ) : (
+                      <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
                         <input
                           type="file"
                           accept="image/*"
                           className="hidden"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (file) handlePhotoUpload(file, "poster");
+                            if (file) handlePhotoSelect(file);
                           }}
-                          disabled={uploadingPhoto || submittingAnswer}
                         />
-                        <span className="text-sm text-gray-600">Vælg billede</span>
+                        <span className="text-sm text-amber-700">
+                          Tilføj eget poster-billede (portrait-format)
+                        </span>
                       </label>
-                      {uploadingPhoto && (
-                        <div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: `${photoProgress}%` }} />
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">Uploader poster... {Math.round(photoProgress)}%</p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setShowPosterUpload(true)}
-                      className="text-xs text-gray-500 hover:text-gray-700 underline cursor-pointer"
-                    >
-                      Tilføj eget poster-billede (valgfrit)
-                    </button>
-                  )}
-                  {submittingAnswer ? (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                      <div className="flex items-center gap-2">
-                        <svg className="w-4 h-4 text-amber-600 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
-                        <span className="text-sm text-amber-800 font-medium">Indsender svar...</span>
-                      </div>
-                      <p className="text-xs text-amber-600 mt-1">Luk ikke browseren.</p>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleSubmitVideoAnswer}
-                      disabled={uploadingPhoto}
-                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer"
-                    >
-                      {customPosterUrl ? "Indsend video med poster" : "Indsend video"}
-                    </button>
-                  )}
-                </div>
-              ) : pendingAudioUrl ? (
-                <div className="space-y-3">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-sm text-green-800 font-medium">Lydfil klar til indsendelse</p>
-                  </div>
-                  <div>
-                    <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handlePhotoUpload(file);
-                        }}
-                        disabled={uploadingPhoto || submittingAnswer}
-                      />
-                      <span className="text-sm text-amber-700">
-                        Tilføj et billede af dig selv
-                      </span>
-                    </label>
-                    {uploadingPhoto && (
-                      <div className="mt-2">
-                        <div className="w-full bg-amber-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all"
-                            style={{ width: `${photoProgress}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-amber-600 mt-1">
-                          Uploader billede... {Math.round(photoProgress)}%
-                        </p>
-                      </div>
-                    )}
-                    {photoUrl && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <img src={photoUrl} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setPhotoUrl(null)}
-                          className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
-                        >
-                          Fjern billede
-                        </button>
-                      </div>
                     )}
                   </div>
                   <button
                     onClick={handleSubmitAudioAnswer}
-                    disabled={submittingAnswer || uploadingPhoto || !photoUrl}
+                    disabled={!pendingPhotoFile && !(editingAnswer && hasExistingCustomPoster)}
                     className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer"
                   >
-                    {submittingAnswer ? "Sender..." : photoUrl ? "Indsend svar med billede" : "Upload et billede for at indsende"}
+                    {pendingPhotoFile
+                      ? (editingAnswer ? "Erstat med lyd (ny poster)" : "Indsend lyd med poster")
+                      : editingAnswer && hasExistingCustomPoster
+                        ? "Erstat med lyd (behold poster)"
+                        : "Tilføj en poster for at indsende"}
                   </button>
                 </div>
               ) : (
-                <>
-                  <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
-                    <input
-                      type="file"
-                      accept="video/*,audio/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileUpload(file);
-                      }}
-                      disabled={uploading || submittingAnswer}
-                    />
-                    <span className="text-sm text-amber-700">
-                      Upload video eller lydfil (maks 500 MB)
-                    </span>
-                  </label>
-                  {compressing && (
-                    <div className="mt-2">
-                      <div className="w-full bg-amber-200 rounded-full h-2">
-                        <div
-                          className="bg-purple-600 h-2 rounded-full transition-all"
-                          style={{ width: `${compressProgress * 100}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-amber-600 mt-1">
-                        Komprimerer video... {Math.round(compressProgress * 100)}%
-                      </p>
-                    </div>
-                  )}
-                  {uploading && (
-                    <div className="mt-2">
-                      <div className="w-full bg-amber-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full transition-all"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-amber-600 mt-1">
-                        Uploader... {Math.round(uploadProgress)}%
-                      </p>
-                    </div>
-                  )}
-                </>
+                <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
+                  <input
+                    type="file"
+                    accept="video/*,audio/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileSelect(file);
+                    }}
+                  />
+                  <span className="text-sm text-amber-700">
+                    Upload video eller lydfil (maks 500 MB)
+                  </span>
+                </label>
               )}
               {uploadError && (
                 <p className="text-sm text-red-600 mt-2">{uploadError}</p>

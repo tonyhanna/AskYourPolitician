@@ -4,6 +4,7 @@ import {
   questionSuggestions,
   politicians,
   citizens,
+  questions,
 } from "@/db/schema";
 import { eq, and, gt } from "drizzle-orm";
 import {
@@ -14,11 +15,13 @@ import { sendNewSuggestionNotificationEmail } from "@/lib/email";
 import { NextResponse } from "next/server";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+  const url = new URL(request.url);
+  const customRedirect = url.searchParams.get("redirect");
 
   // Find valid, unused token
   const [verification] = await db
@@ -83,10 +86,33 @@ export async function GET(
     }
   }
 
+  // Determine redirect destination with fallback
+  const citizenPageUrl = `${appUrl}/${verification.partySlug}/${verification.politicianSlug}`;
+  let baseDest = citizenPageUrl;
+
+  if (customRedirect) {
+    // Check if redirect points to a question detail page — verify question still exists
+    const questionMatch = customRedirect.match(/\/q\/([^/?]+)/);
+    if (questionMatch) {
+      const questionId = questionMatch[1];
+      const [q] = await db
+        .select({ id: questions.id })
+        .from(questions)
+        .where(eq(questions.id, questionId))
+        .limit(1);
+      if (q) {
+        baseDest = `${appUrl}${customRedirect}`;
+      }
+      // If question doesn't exist, baseDest stays as citizen page (fallback)
+    } else {
+      baseDest = `${appUrl}${customRedirect}`;
+    }
+  }
+
   // Create citizen session and set cookie on the redirect response
   const sessionToken = await createCitizenSession(verification.citizenId);
   const response = NextResponse.redirect(
-    `${appUrl}/${verification.partySlug}/${verification.politicianSlug}?suggestion_verified=true`
+    `${baseDest}${baseDest.includes("?") ? "&" : "?"}suggestion_verified=true`
   );
   setCitizenSessionCookieOnResponse(response, sessionToken);
   return response;

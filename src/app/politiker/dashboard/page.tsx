@@ -11,6 +11,7 @@ import { CauseForm } from "@/components/CauseForm";
 import { CauseList } from "@/components/CauseList";
 import { getActivePolitician, getImpersonatingPoliticianId } from "@/lib/admin";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
+import { DashboardTabs } from "@/components/DashboardTabs";
 
 export async function generateMetadata(): Promise<Metadata> {
   const politician = await getActivePolitician();
@@ -64,6 +65,7 @@ export default async function Dashboard() {
     deadlineMissed: boolean;
     answerUrl: string | null;
     answerPhotoUrl: string | null;
+    answerClipUrl: string | null;
     suggestedBy: string | null;
     pinned: boolean;
   }[] = [];
@@ -135,6 +137,7 @@ export default async function Dashboard() {
       deadlineMissed: q.deadlineMissed,
       answerUrl: q.answerUrl,
       answerPhotoUrl: q.answerPhotoUrl,
+      answerClipUrl: q.answerClipUrl,
       suggestedBy: q.suggestedByCitizenId
         ? suggestedByNames.get(q.suggestedByCitizenId) ?? null
         : null,
@@ -208,20 +211,20 @@ export default async function Dashboard() {
   const uniqueUrl = politician ? `${appUrl}/${politician.partySlug}/${politician.slug}` : null;
 
   return (
-    <main className="max-w-4xl mx-auto p-6 space-y-8">
+    <main className="max-w-4xl mx-auto p-6 space-y-6">
       {impersonatingId && politician && (
         <ImpersonationBanner politicianName={politician.name} />
       )}
 
-      <h1 className="text-3xl font-bold">
-        {politician ? (
-          <>
-            <span className="text-[#AAAAAA]">Dashboard:</span> {politician.party} / {politician.name}
-          </>
-        ) : "Dashboard"}
-      </h1>
-      {uniqueUrl && (
-        <>
+      <div className="flex items-baseline justify-between">
+        <h1 className="text-3xl font-bold">
+          {politician ? (
+            <>
+              <span className="text-[#AAAAAA]">Dashboard:</span> {politician.party} / {politician.name}
+            </>
+          ) : "Dashboard"}
+        </h1>
+        {uniqueUrl && (
           <a
             href={uniqueUrl}
             target="_blank"
@@ -230,103 +233,108 @@ export default async function Dashboard() {
           >
             Se Borgerside &rarr;
           </a>
-          <hr className="border-gray-200" />
-        </>
-      )}
-
-      {politician && (
-        <>
-          <h2 className="text-2xl font-bold text-gray-900">Spørgsmål</h2>
-
-          <QuestionForm
-            politicianId={politician.id}
-            disabled={false}
-            availableTags={availableTags}
-            defaultUpvoteGoal={politician.defaultUpvoteGoal}
-          />
-
-          {(politicianQuestions.length > 0 || pendingSuggestions.length > 0) && (
-            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <QuestionList
-                questions={politicianQuestions}
-                availableTags={availableTags}
-                basePath={uniqueUrl!}
-                pendingSuggestions={pendingSuggestions}
-              />
-            </section>
-          )}
-
-          <h2 className="text-2xl font-bold text-gray-900">Mærkesager</h2>
-
-          <CauseForm politicianId={politician.id} />
-
-          {politicianCauses.length > 0 && (
-            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <CauseList causes={politicianCauses} />
-            </section>
-          )}
-        </>
-      )}
-
-      <h2 className="text-2xl font-bold text-gray-900">Indstillinger</h2>
-
-      <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <SettingsForm
-          politician={
-            politician
-              ? {
-                  name: politician.name,
-                  partyId: politician.partyId,
-                  email: politician.email,
-                  slug: politician.slug,
-                  constituency: politician.constituency,
-                  profilePhotoUrl: politician.profilePhotoUrl,
-                  bannerUrl: politician.bannerUrl,
-                  ogImageUrl: politician.ogImageUrl,
-                  bannerBgColor: politician.bannerBgColor,
-                  heroLine1: politician.heroLine1,
-                  heroLine1Color: politician.heroLine1Color,
-                  heroLine2: politician.heroLine2,
-                  heroLine2Color: politician.heroLine2Color,
-                  chatbaseId: politician.chatbaseId,
-                  defaultUpvoteGoal: politician.defaultUpvoteGoal,
-                }
-              : null
-          }
-          allParties={allParties}
-          googleEmail={session.user.email!}
-          googleName={session.user.name ?? ""}
-        />
-        {uniqueUrl && (
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600">
-              Din unikke URL:{" "}
-              <a
-                href={uniqueUrl}
-                className="text-blue-600 underline font-medium"
-                target="_blank"
-              >
-                {uniqueUrl}
-              </a>
-            </p>
-          </div>
         )}
-      </section>
+      </div>
 
-      <form
-        action={async () => {
-          "use server";
-          await signOut({ redirectTo: "/politiker" });
-        }}
-        className="text-center"
-      >
-        <button
-          type="submit"
-          className="text-sm text-gray-500 hover:text-red-600 transition cursor-pointer"
-        >
-          Log ud
-        </button>
-      </form>
+      {politician ? (
+        <DashboardTabs
+          questionsTab={
+            <div key="questions" className="space-y-6">
+              <QuestionForm
+                politicianId={politician.id}
+                disabled={false}
+                availableTags={availableTags}
+                defaultUpvoteGoal={politician.defaultUpvoteGoal}
+              />
+              {(politicianQuestions.length > 0 || pendingSuggestions.length > 0) && (
+                <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <QuestionList
+                    questions={politicianQuestions}
+                    availableTags={availableTags}
+                    basePath={uniqueUrl!}
+                    pendingSuggestions={pendingSuggestions}
+                  />
+                </section>
+              )}
+            </div>
+          }
+          causesTab={
+            <div key="causes" className="space-y-6">
+              <CauseForm politicianId={politician.id} />
+              {politicianCauses.length > 0 && (
+                <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <CauseList causes={politicianCauses} />
+                </section>
+              )}
+            </div>
+          }
+          settingsTab={
+            <div key="settings" className="space-y-6">
+              {uniqueUrl && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    Din unikke URL:{" "}
+                    <a
+                      href={uniqueUrl}
+                      className="text-blue-600 underline font-medium"
+                      target="_blank"
+                    >
+                      {uniqueUrl}
+                    </a>
+                  </p>
+                </div>
+              )}
+              <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <SettingsForm
+                  politician={{
+                    name: politician.name,
+                    partyId: politician.partyId,
+                    email: politician.email,
+                    slug: politician.slug,
+                    constituency: politician.constituency,
+                    profilePhotoUrl: politician.profilePhotoUrl,
+                    bannerUrl: politician.bannerUrl,
+                    ogImageUrl: politician.ogImageUrl,
+                    bannerBgColor: politician.bannerBgColor,
+                    heroLine1: politician.heroLine1,
+                    heroLine1Color: politician.heroLine1Color,
+                    heroLine2: politician.heroLine2,
+                    heroLine2Color: politician.heroLine2Color,
+                    chatbaseId: politician.chatbaseId,
+                    defaultUpvoteGoal: politician.defaultUpvoteGoal,
+                  }}
+                  allParties={allParties}
+                  googleEmail={session.user.email!}
+                  googleName={session.user.name ?? ""}
+                />
+              </section>
+              <form
+                action={async () => {
+                  "use server";
+                  await signOut({ redirectTo: "/politiker" });
+                }}
+                className="text-center"
+              >
+                <button
+                  type="submit"
+                  className="text-sm text-gray-500 hover:text-red-600 transition cursor-pointer"
+                >
+                  Log ud
+                </button>
+              </form>
+            </div>
+          }
+        />
+      ) : (
+        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <SettingsForm
+            politician={null}
+            allParties={allParties}
+            googleEmail={session.user.email!}
+            googleName={session.user.name ?? ""}
+          />
+        </section>
+      )}
     </main>
   );
 }

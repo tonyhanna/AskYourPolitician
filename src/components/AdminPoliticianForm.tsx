@@ -224,7 +224,7 @@ export function AdminPoliticianForm({ politician, allParties }: { politician: Po
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Socialt delingsbillede (OpenGraph)</label>
         {ogImageUrl ? (
-          <img src={ogImageUrl} alt="OpenGraph billede" className="w-full max-w-md rounded-lg border border-gray-200 mb-2" style={{ aspectRatio: "1200/630" }} />
+          <img src={ogImageUrl} alt="OpenGraph billede" className="max-w-md rounded-lg border border-gray-200 mb-2" />
         ) : (
           <div className="w-full max-w-md rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs mb-2" style={{ aspectRatio: "1200/630" }}>Intet delingsbillede</div>
         )}

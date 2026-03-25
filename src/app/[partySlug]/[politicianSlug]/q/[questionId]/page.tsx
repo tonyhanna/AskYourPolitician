@@ -1,15 +1,14 @@
 import { db } from "@/db";
-import { politicians, questions, questionTags, upvotes, citizens } from "@/db/schema";
+import { politicians, questions, questionTags, upvotes, citizens, parties } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getCitizenFromSession } from "@/lib/citizen-session";
-import { UpvoteButton } from "@/components/UpvoteButton";
-import { CancelUpvoteButton } from "@/components/CancelUpvoteButton";
-import { AwaitingAnswerButton } from "@/components/AwaitingAnswerButton";
-import { CopyLinkButton } from "@/components/CopyLinkButton";
-import { AnswerPlayer } from "@/components/AnswerPlayer";
-import { citizenLogout } from "../../actions";
+import { PoliticianTopBar } from "@/components/PoliticianTopBar";
+import { QuestionDetailCard } from "@/components/QuestionDetailCard";
+import { QuestionDetailEllipsis } from "@/components/QuestionDetailEllipsis";
+import { ChatbaseWidget } from "@/components/ChatbaseWidget";
 import type { Metadata } from "next";
+import { getAppSettings } from "@/lib/settings";
 
 type Props = {
   params: Promise<{
@@ -61,7 +60,23 @@ async function getQuestionData(partySlug: string, politicianSlug: string, questi
     if (suggester) suggestedByName = suggester.firstName + (suggester.age ? `, ${suggester.age} år` : "");
   }
 
-  return { politician, question, tags: tags.map((t) => t.tag), suggestedByName };
+  // Fetch party data for TopBar
+  let party: { color: string | null; colorDark: string | null; colorLight: string | null; logoUrl: string | null } | null = null;
+  if (politician.partyId) {
+    const [p] = await db
+      .select({
+        color: parties.color,
+        colorDark: parties.colorDark,
+        colorLight: parties.colorLight,
+        logoUrl: parties.logoUrl,
+      })
+      .from(parties)
+      .where(eq(parties.id, politician.partyId))
+      .limit(1);
+    party = p ?? null;
+  }
+
+  return { politician, question, tags: tags.map((t) => t.tag), suggestedByName, party };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -93,10 +108,9 @@ export default async function QuestionLandingPage({ params }: Props) {
 
   if (!data) notFound();
 
-  const { politician, question, tags, suggestedByName } = data;
+  const { politician, question, tags, suggestedByName, party } = data;
   const basePath = `/${partySlug}/${politicianSlug}`;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  const pageUrl = `${appUrl}${basePath}/q/${questionId}`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
 
   const citizen = await getCitizenFromSession();
   let isUpvoted = false;
@@ -116,122 +130,86 @@ export default async function QuestionLandingPage({ params }: Props) {
     isUpvoted = !!existing;
   }
 
+  const appSettings = await getAppSettings();
+  const partyColor = party?.color ?? null;
+  const partyColorDark = party?.colorDark ?? null;
+
   return (
-    <main className="max-w-xl mx-auto p-6 mt-8">
-      <div className="mb-4">
-        <a
-          href={basePath}
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          &larr; Se alle spørgsmål fra {politician.name}
-        </a>
-      </div>
-
-      <div className={`rounded-xl shadow-sm p-6 space-y-6 ${
-        question.answerUrl
-          ? "bg-gray-900 border border-gray-900"
-          : "bg-white border border-gray-200"
-      }`}>
-        <div>
-          <p className={`text-sm mb-1 ${question.answerUrl ? "text-gray-400" : "text-gray-500"}`}>
-            Spørgsmål til {politician.name} ({politician.party})
-          </p>
-          <h1 className={`text-2xl font-bold ${question.answerUrl ? "text-white" : "text-gray-900"}`}>{question.text}</h1>
-          {suggestedByName && (
-            <p className="text-xs text-gray-400 mt-1">
-              {suggestedByName}
-            </p>
-          )}
-        </div>
-
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {tags.map((tag) => (
-              <span
-                key={tag}
-                className={`text-xs px-2 py-0.5 rounded-full ${
-                  question.answerUrl
-                    ? "bg-gray-700 text-gray-300"
-                    : "bg-blue-100 text-blue-800"
-                }`}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {question.answerUrl && (
-          <div className="pt-2 border-t border-gray-700">
-            <AnswerPlayer answerUrl={question.answerUrl} photoUrl={question.answerPhotoUrl} className="w-full rounded-lg" />
-          </div>
-        )}
-
-        <div className={`flex items-center justify-between pt-2 ${!question.answerUrl ? `border-t ${question.answerUrl ? "border-gray-700" : "border-gray-100"}` : ""}`}>
-          {!question.answerUrl && (
-            <span className="text-lg font-semibold text-gray-700">
-              {question.upvoteCount} {question.upvoteCount === 1 ? "upvote" : "upvotes"}
-            </span>
-          )}
-          {question.answerUrl ? (
-            isUpvoted ? (
-              <CancelUpvoteButton
-                questionId={question.id}
-                partySlug={partySlug}
-                politicianSlug={politicianSlug}
-              />
-            ) : null
-          ) : question.goalReachedEmailSent && isUpvoted ? (
-            <AwaitingAnswerButton
-              questionId={question.id}
-              partySlug={partySlug}
-              politicianSlug={politicianSlug}
-            />
-          ) : question.goalReachedEmailSent ? (
-            <span className="text-sm text-amber-600 font-medium">Afventer svar...</span>
-          ) : isUpvoted ? (
-            <CancelUpvoteButton
-              questionId={question.id}
-              partySlug={partySlug}
-              politicianSlug={politicianSlug}
-            />
-          ) : (
-            <UpvoteButton
-              questionId={question.id}
-              basePath={basePath}
-              isUpvoted={false}
-              hasSession={!!citizen}
-              partySlug={partySlug}
-              politicianSlug={politicianSlug}
-            />
-          )}
-        </div>
-
-        <div className="flex items-center gap-3 pt-2">
-          <CopyLinkButton url={pageUrl} title={question.text} />
-        </div>
-      </div>
-
-      {citizen && (
-        <div className="text-center mt-6 space-y-2">
-          <p className="text-sm text-gray-500">
-            Logget ind som {citizen.email}
-          </p>
-          <form
-            action={async () => {
-              "use server";
-              await citizenLogout(partySlug, politicianSlug);
-            }}
-          >
-            <button
-              type="submit"
-              className="text-sm text-gray-500 hover:text-red-600 transition cursor-pointer"
-            >
-              Log ud
-            </button>
-          </form>
-        </div>
+    <>
+      {/* Theme color meta tag */}
+      {partyColor && (
+        <meta name="theme-color" content={partyColor} />
       )}
-    </main>
+      <style>{`:root { --party-color: ${partyColor || "#3B82F6"}; }`}</style>
+
+      <div className="min-h-dvh flex flex-col">
+      {/* PoliticianTopBar */}
+      <PoliticianTopBar
+        politicianName={politician.name}
+        partyName={politician.party}
+        profilePhotoUrl={politician.profilePhotoUrl}
+        partyLogoUrl={party?.logoUrl ?? null}
+        constituency={politician.constituency}
+        partyColor={partyColor}
+        partyColorDark={partyColorDark}
+        partyColorLight={party?.colorLight ?? null}
+        politicianId={politician.id}
+        partySlug={partySlug}
+        politicianSlug={politicianSlug}
+        hasSession={!!citizen}
+        backHref={basePath}
+        redirectPath={`${basePath}/q/${question.id}`}
+      />
+
+      <main className="px-[15px] py-6 pb-1 flex flex-col flex-1" style={{ backgroundColor: "var(--system-bg0, #ffffff)" }}>
+        {/* Question detail card */}
+        <QuestionDetailCard
+          question={{
+            id: question.id,
+            text: question.text,
+            upvoteCount: question.upvoteCount,
+            answerUrl: question.answerUrl,
+            answerPhotoUrl: question.answerPhotoUrl,
+            answerClipUrl: question.answerClipUrl,
+            answerDuration: question.answerDuration,
+            answerAspectRatio: question.answerAspectRatio,
+            tags,
+            suggestedByName,
+            isUpvoted,
+            goalReached: question.goalReachedEmailSent,
+            goalReachedAt: question.goalReachedAt?.toISOString() ?? null,
+            deadlineMissed: question.deadlineMissed,
+          }}
+          basePath={basePath}
+          appUrl={appUrl}
+          partySlug={partySlug}
+          politicianSlug={politicianSlug}
+          partyColor={partyColor}
+          partyColorDark={partyColorDark}
+          partyColorLight={party?.colorLight ?? null}
+          hasSession={!!citizen}
+          politicianName={politician.name}
+          politicianFirstName={politician.name.split(" ")[0]}
+          partyName={politician.party}
+        />
+
+        {/* Ellipse menu for logged-in citizens */}
+        <QuestionDetailEllipsis
+          hasSession={!!citizen}
+          citizenEmail={citizen?.email ?? null}
+          partySlug={partySlug}
+          politicianSlug={politicianSlug}
+          partyColor={partyColor}
+          partyColorDark={partyColorDark}
+        />
+
+        {politician.chatbaseId && (
+          <div className="max-w-2xl mx-auto">
+            <ChatbaseWidget chatbotId={politician.chatbaseId} />
+          </div>
+        )}
+      </main>
+      </div>
+    </>
   );
 }

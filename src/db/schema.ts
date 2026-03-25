@@ -262,3 +262,9 @@ export const suggestionTokens = pgTable("suggestion_tokens", {
   expiresAt: timestamp("expires_at").notNull(),
   used: boolean("used").notNull().default(false),
 });
+
+export const appSettings = pgTable("app_settings", {
+  key: varchar("key", { length: 255 }).primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

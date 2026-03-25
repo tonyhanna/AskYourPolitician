@@ -4,6 +4,7 @@ import { useState } from "react";
 import { cancelUpvote } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { useSystemColors } from "./SystemColorProvider";
 
 export function CancelUpvoteButton({
   questionId,
@@ -14,6 +15,7 @@ export function CancelUpvoteButton({
   partySlug: string;
   politicianSlug: string;
 }) {
+  const { error: colorError } = useSystemColors();
   const [cancelling, setCancelling] = useState(false);
 
   async function handleCancel() {
@@ -32,7 +34,7 @@ export function CancelUpvoteButton({
       onClick={handleCancel}
       disabled={cancelling}
       className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full cursor-pointer transition hover:opacity-70 disabled:opacity-50"
-      style={{ backgroundColor: "#E8E7E5", color: "#FF4105" }}
+      style={{ backgroundColor: "#E8E7E5", color: colorError }}
     >
       <FontAwesomeIcon icon={faXmark} className="text-xs" />
       {cancelling ? "Fjerner..." : "Fjern upvote"}

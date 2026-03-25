@@ -42,6 +42,9 @@ function SuggestionItem({
   const [mode, setMode] = useState<"idle" | "approve" | "reject">("idle");
   const [pending, setPending] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+  const [editedText, setEditedText] = useState(suggestion.text);
+  const [editReason, setEditReason] = useState("");
+  const isEdited = editedText.trim() !== suggestion.text;
   const [rejectReason, setRejectReason] = useState("");
   const [customReason, setCustomReason] = useState("");
   const [rejectLink, setRejectLink] = useState("");
@@ -61,6 +64,10 @@ function SuggestionItem({
     setPending(true);
     formData.set("suggestionId", suggestion.id);
     formData.set("tags", Array.from(selectedTags).join(","));
+    formData.set("editedText", editedText.trim());
+    if (isEdited) {
+      formData.set("editReason", editReason.trim());
+    }
     try {
       await approveSuggestion(formData);
     } catch (e) {
@@ -107,7 +114,16 @@ function SuggestionItem({
 
   return (
     <div className="border border-gray-200 rounded-lg p-4">
-      <p className="font-medium text-gray-900 mb-1">{suggestion.text}</p>
+      {mode === "approve" ? (
+        <textarea
+          value={editedText}
+          onChange={(e) => setEditedText(e.target.value)}
+          rows={3}
+          className="w-full font-medium text-gray-900 mb-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+        />
+      ) : (
+        <p className="font-medium text-gray-900 mb-1">{suggestion.text}</p>
+      )}
       <p className="text-sm text-gray-500 mb-3">
         Foreslået af {suggestion.citizenFirstName} &middot;{" "}
         {new Date(suggestion.createdAt).toLocaleDateString("da-DK")}
@@ -132,6 +148,23 @@ function SuggestionItem({
 
       {mode === "approve" && (
         <form action={handleApprove} className="space-y-3 mt-3 border-t border-gray-100 pt-3">
+          {isEdited && (
+            <div>
+              <label htmlFor={`edit-reason-${suggestion.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+                Grund til rettelse
+              </label>
+              <textarea
+                id={`edit-reason-${suggestion.id}`}
+                value={editReason}
+                onChange={(e) => setEditReason(e.target.value)}
+                placeholder="Forklar borgeren hvorfor du har rettet spørgsmålet..."
+                rows={2}
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              />
+            </div>
+          )}
+
           <div>
             <label htmlFor={`goal-${suggestion.id}`} className="block text-sm font-medium text-gray-700 mb-1">
               Upvote-mål
@@ -180,7 +213,7 @@ function SuggestionItem({
             </button>
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || (isEdited && !editReason.trim())}
               className="text-sm bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50 cursor-pointer"
             >
               {pending ? "Godkender..." : "Godkend spørgsmål"}
