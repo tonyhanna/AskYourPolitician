@@ -896,7 +896,7 @@ function QuestionItem({
                     <div className="bg-gray-50 rounded-lg p-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <img src={question.answerPhotoUrl!} alt="Current poster" className="w-10 h-10 rounded-lg object-cover" />
+                          <img src={question.answerPhotoUrl!} alt="Current poster" className="w-12 h-12 rounded-lg object-cover" />
                           <span className="text-xs text-gray-600">Eget poster-billede</span>
                         </div>
                         <div className="flex gap-2">
@@ -992,7 +992,7 @@ function QuestionItem({
                   <div>
                     {(photoPreviewUrl || posterPreviewUrl) ? (
                       <div className="flex items-center gap-2">
-                        <img src={(photoPreviewUrl || posterPreviewUrl)!} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
+                        <img src={(photoPreviewUrl || posterPreviewUrl)!} alt="Preview" className="w-12 h-12 rounded-lg object-cover" />
                         <button
                           type="button"
                           onClick={() => { clearPendingPhoto(); clearPendingPoster(); }}
@@ -1003,7 +1003,7 @@ function QuestionItem({
                       </div>
                     ) : editingAnswer && hasExistingCustomPoster ? (
                       <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
-                        <img src={question.answerPhotoUrl!} alt="Current poster" className="w-10 h-10 rounded-lg object-cover" />
+                        <img src={question.answerPhotoUrl!} alt="Current poster" className="w-12 h-12 rounded-lg object-cover" />
                         <span className="text-xs text-gray-600 flex-1">Beholder eksisterende poster</span>
                         <label className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
                           Ændre
