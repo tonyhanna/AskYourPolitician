@@ -44,7 +44,9 @@ export function PlayableMediaCard({
 
   const muxPlaybackId = mediaInfo?.playbackId || null;
   const muxThumbnailUrl = muxPlaybackId && isReady ? getMuxThumbnailUrl(muxPlaybackId) : null;
-  const muxClipUrl = muxPlaybackId && isReady && hasVideoAnswer ? getMuxMp4Url(muxPlaybackId) : null;
+  const hasCustomPoster = !!question.answerPhotoUrl;
+  // Only show clip when there's no custom poster — custom poster takes priority
+  const muxClipUrl = muxPlaybackId && isReady && hasVideoAnswer && !hasCustomPoster ? getMuxMp4Url(muxPlaybackId) : null;
 
   // Poster: custom poster (Blob) takes priority, then Mux auto-thumbnail
   const thumbnailPhotoUrl = question.answerPhotoUrl || muxThumbnailUrl;

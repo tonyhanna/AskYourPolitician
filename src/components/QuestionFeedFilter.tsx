@@ -559,10 +559,11 @@ function AnsweredQuestionCard({
   const hasAudioAnswer = mediaInfo?.type === "audio";
   const hasPlayableMedia = isReady && (hasVideoAnswer || hasAudioAnswer);
 
-  const muxClipUrl = muxPlaybackId && isReady && hasVideoAnswer ? getMuxMp4Url(muxPlaybackId) : null;
+  const hasCustomPoster = !!question.answerPhotoUrl;
+  // Only show clip when there's no custom poster
+  const muxClipUrl = muxPlaybackId && isReady && hasVideoAnswer && !hasCustomPoster ? getMuxMp4Url(muxPlaybackId) : null;
   const muxThumbnailUrl = muxPlaybackId && isReady ? getMuxThumbnailUrl(muxPlaybackId) : null;
   const photoUrl = question.answerPhotoUrl || muxThumbnailUrl;
-  const hasCustomPoster = hasVideoAnswer && !muxClipUrl && !!photoUrl;
   const cardRef = useRef<HTMLDivElement>(null);
   const fullVideoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
