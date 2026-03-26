@@ -433,6 +433,7 @@ export async function updateAnswerPoster(questionId: string, posterUrl: string |
       answerUrl: questions.answerUrl,
       answerPhotoUrl: questions.answerPhotoUrl,
       answerClipUrl: questions.answerClipUrl,
+      muxAssetStatus: questions.muxAssetStatus,
     })
     .from(questions)
     .where(
@@ -443,7 +444,7 @@ export async function updateAnswerPoster(questionId: string, posterUrl: string |
     )
     .limit(1);
 
-  if (!question || !question.answerUrl) throw new Error("Spørgsmål eller svar ikke fundet");
+  if (!question || (!question.answerUrl && !question.muxAssetStatus)) throw new Error("Spørgsmål eller svar ikke fundet");
 
   // Delete old poster + clip blobs
   const oldBlobUrls = [question.answerPhotoUrl, question.answerClipUrl]
