@@ -863,12 +863,18 @@ function AnsweredQuestionCard({
         <div
           ref={(el) => { if (el) setTimeout(() => { el.style.opacity = "1"; }, 300); }}
           className="absolute"
-          style={{ zIndex: 5, bottom: 25, left: 20, right: 20, height: 4, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 9999, mixBlendMode: "difference", overflow: "hidden", opacity: 0, transition: "opacity 150ms ease" }}
+          style={{ zIndex: 5, bottom: 25, left: 20, right: 20, opacity: 0, transition: "opacity 150ms ease" }}
         >
-          <div
-            ref={progressBarRef}
-            style={{ height: "100%", width: "100%", backgroundColor: "#ffffff", transformOrigin: "left", transform: "scaleX(0)", willChange: "transform" }}
-          />
+          {/* Outline border */}
+          <div style={{ position: "absolute", inset: -2, borderRadius: 9999, border: "2px solid rgba(0,0,0,0.5)" }} />
+          {/* Track background */}
+          <div style={{ height: 4, borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.75)", overflow: "hidden" }}>
+            {/* Progress fill */}
+            <div
+              ref={progressBarRef}
+              style={{ height: "100%", width: "100%", backgroundColor: "#ffffff", transformOrigin: "left", transform: "scaleX(0)", willChange: "transform" }}
+            />
+          </div>
         </div>
       )}
 
@@ -888,17 +894,24 @@ function AnsweredQuestionCard({
 
       {/* Buffering spinner — ref-controlled to avoid re-renders during playback */}
       {isWatching && (
-        <div ref={bufferingRef} className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 4, opacity: 0, pointerEvents: "none", transition: "opacity 150ms", mixBlendMode: "difference" }}>
-          <div
-            className="animate-spin"
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              border: "4px solid rgba(255,255,255,0.25)",
-              borderTopColor: "#ffffff",
-            }}
-          />
+        <div ref={(el) => {
+          (bufferingRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+          // TEST: always show spinner for 5 seconds
+          if (el) { el.style.opacity = "1"; setTimeout(() => { el.style.opacity = "0"; }, 5000); }
+        }} className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 4, opacity: 0, pointerEvents: "none", transition: "opacity 150ms" }}>
+          <div style={{ position: "relative", width: 40, height: 40 }}>
+            <div style={{ position: "absolute", inset: -2, borderRadius: "50%", border: "2px solid rgba(0,0,0,0.5)" }} />
+            <div
+              className="animate-spin"
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                border: "4px solid rgba(255,255,255,0.75)",
+                borderTopColor: "#ffffff",
+              }}
+            />
+          </div>
         </div>
       )}
 
