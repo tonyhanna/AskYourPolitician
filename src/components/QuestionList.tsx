@@ -673,7 +673,7 @@ function QuestionItem({
         >
           {question.text}
         </a>
-        {question.answerUrl && (
+        {(question.answerUrl || question.muxAssetStatus === "ready") && (
           <button
             onClick={async () => {
               setPinning(true);
