@@ -604,43 +604,26 @@ function AnsweredQuestionCard({
   }, [isHovering, isWatching, muxClipUrl]);
 
   // Mobile: autoplay clip when visible — fade in once actually playing (no frame jump)
+  // Mobile: autoplay clip when card is current, reset when not
   useEffect(() => {
-    const card = cardRef.current;
-    if (!card || !muxClipUrl) return;
+    if (!muxClipUrl) return;
     const isTouch = window.matchMedia("(pointer: coarse)").matches;
     if (!isTouch) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const clip = clipRef.current;
-        if (!clip) return;
-        if (entry.isIntersecting && !isWatchingRef.current) {
-          clip.currentTime = 0;
-          // Wait until clip is actually playing before fading in — this hides the
-          // frame mismatch between Mux thumbnail and clip's first frame
-          const onPlaying = () => { clip.style.opacity = "1"; };
-          clip.addEventListener("playing", onPlaying, { once: true });
-          clip.play().catch(() => {});
-        }
-      },
-      { threshold: 0.3 }
-    );
-    // Separate observer: reset clip only when card is fully off-screen
-    const resetObserver = new IntersectionObserver(
-      ([entry]) => {
-        const clip = clipRef.current;
-        if (!clip) return;
-        if (!entry.isIntersecting && !isWatchingRef.current) {
-          clip.pause();
-          clip.currentTime = 0;
-          clip.style.opacity = "0";
-        }
-      },
-      { threshold: 0 }
-    );
-    observer.observe(card);
-    resetObserver.observe(card);
-    return () => { observer.disconnect(); resetObserver.disconnect(); };
-  }, [muxClipUrl]);
+    const clip = clipRef.current;
+    if (!clip) return;
+
+    if (isVisible && !isWatchingRef.current) {
+      clip.currentTime = 0;
+      const onPlaying = () => { clip.style.opacity = "1"; };
+      clip.addEventListener("playing", onPlaying, { once: true });
+      clip.play().catch(() => {});
+      return () => clip.removeEventListener("playing", onPlaying);
+    } else if (!isVisible) {
+      clip.pause();
+      clip.currentTime = 0;
+      clip.style.opacity = "0";
+    }
+  }, [isVisible, muxClipUrl]);
 
   // Share/copy state — blink copy icon twice then return to share
   const [copied, setCopied] = useState(false);
