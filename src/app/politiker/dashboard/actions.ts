@@ -992,7 +992,7 @@ export async function submitMuxAnswer(
     if (oldBlobUrls.length > 0) del(oldBlobUrls).catch(() => {});
   }
 
-  // Update question — clear blob URLs, set Mux status to preparing
+  // Update question — clear blob URLs, set Mux status to preparing, increment update count if replacing
   await db
     .update(questions)
     .set({
@@ -1003,25 +1003,12 @@ export async function submitMuxAnswer(
       answerAspectRatio: aspectRatio ?? null,
       muxAssetStatus: "preparing",
       muxMediaType: mediaType,
-      muxPlaybackId: null, // Will be set by webhook
-      muxAssetId: null, // Will be set by webhook
+      muxPlaybackId: null,
+      muxAssetId: null,
       deadlineMissed: false,
+      ...(isUpdate ? { answerUpdateCount: sql`answer_update_count + 1` } : {}),
     })
     .where(eq(questions.id, questionId));
-
-  // Always insert a new answer_history entry (so we can count entries to detect updates)
-  {
-    await db.insert(answerHistory).values({
-      questionId,
-      answerUrl: null,
-      answerPhotoUrl: posterUrl ?? null,
-      answerClipUrl: null,
-      answerDuration: duration ?? null,
-      answerAspectRatio: aspectRatio ?? null,
-      muxAssetStatus: "preparing",
-      muxMediaType: mediaType,
-    });
-  }
 
   // NOTE: Notification emails are sent from the Mux webhook when the asset is ready,
   // so citizens only get notified when the video/audio is actually playable.

@@ -138,6 +138,7 @@ export const questions = pgTable("questions", {
   muxPlaybackId: varchar("mux_playback_id", { length: 255 }),
   muxAssetStatus: varchar("mux_asset_status", { length: 50 }),
   muxMediaType: varchar("mux_media_type", { length: 10 }),
+  answerUpdateCount: integer("answer_update_count").notNull().default(0),
   pinned: boolean("pinned").notNull().default(false),
   suggestedByCitizenId: uuid("suggested_by_citizen_id").references(
     () => citizens.id

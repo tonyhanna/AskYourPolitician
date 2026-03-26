@@ -127,12 +127,13 @@ export async function POST(req: NextRequest) {
           .where(eq(questions.id, updatedQuestion.id))
           .limit(1);
 
-        // Determine if this is an update (more than 1 answer_history entry)
-        const historyCount = await db
-          .select({ id: answerHistory.id })
-          .from(answerHistory)
-          .where(eq(answerHistory.questionId, updatedQuestion.id));
-        const isUpdate = historyCount.length > 1;
+        // Determine if this is an update (answerUpdateCount > 0)
+        const [questionData] = await db
+          .select({ answerUpdateCount: questions.answerUpdateCount })
+          .from(questions)
+          .where(eq(questions.id, updatedQuestion.id))
+          .limit(1);
+        const isUpdate = (questionData?.answerUpdateCount ?? 0) > 0;
 
         // Send notification emails to all upvoters
         const upvoterList = await db
