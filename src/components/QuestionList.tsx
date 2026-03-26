@@ -506,15 +506,17 @@ function QuestionItem({
   function pollMuxStatus(questionId: string, onDone?: () => void) {
     // Don't start duplicate polling
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-    pollIntervalRef.current = setInterval(async () => {
+
+    async function check() {
       try {
         const status = await checkMuxAnswerStatus(questionId);
         if (status === "ready") {
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           pollIntervalRef.current = null;
-          submitStepStore.set(questionId, "done");
-          setTimeout(() => { submitStepStore.clear(questionId); onDone?.(); }, 3000);
-          window.location.reload();
+          submitStepStore.clear(questionId);
+          onDone?.();
+          // Use cache-busting reload to ensure fresh server data
+          window.location.href = window.location.pathname + "?t=" + Date.now();
         } else if (status === "errored") {
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           pollIntervalRef.current = null;
@@ -525,7 +527,11 @@ function QuestionItem({
       } catch {
         // Network error — keep polling
       }
-    }, 5000);
+    }
+
+    // Immediate first check, then every 5 seconds
+    check();
+    pollIntervalRef.current = setInterval(check, 5000);
   }
 
   // Auto-start polling whenever muxAssetStatus is "preparing" (covers both
