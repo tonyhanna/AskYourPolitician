@@ -5,182 +5,167 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { sendAnswerNotificationEmail } from "@/lib/email";
 
-// Mux webhook types we care about
-type MuxWebhookEvent = {
-  type: string;
-  data: {
-    id: string;
-    upload_id?: string;
-    passthrough?: string;
-    playback_ids?: { id: string; policy: string }[];
-    duration?: number;
-    aspect_ratio?: string;
-    status?: string;
-    tracks?: { type: string; max_width?: number; max_height?: number }[];
-  };
-};
-
 /**
- * Mux sends webhooks when uploads complete and assets become ready.
+ * Mux webhook handler.
  *
- * Events we handle:
- * - video.upload.asset_created: Upload completed, asset created. We store the asset ID.
- * - video.asset.ready: Transcoding complete. We store the playback ID, duration, aspect ratio.
- * - video.asset.errored: Transcoding failed. We mark the status as errored.
+ * We primarily use `video.asset.ready` which fires when transcoding is complete.
+ * This event contains the asset's `passthrough` field (our question ID),
+ * playback IDs, duration, and aspect ratio — everything we need.
+ *
+ * `video.asset.errored` handles transcoding failures.
  */
 export async function POST(req: NextRequest) {
-  // Verify webhook signature if secret is configured
+  // Basic webhook secret check (header presence)
   const webhookSecret = process.env.MUX_WEBHOOK_SECRET;
   if (webhookSecret) {
     const signature = req.headers.get("mux-signature");
     if (!signature) {
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
-    // TODO: Implement proper HMAC verification with mux-signature header
-    // For now, we rely on the webhook URL being secret
+    // TODO: Implement full HMAC verification
   }
 
-  const event: MuxWebhookEvent = await req.json();
+  let event: { type: string; data: Record<string, unknown> };
+  try {
+    event = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
 
-  switch (event.type) {
-    case "video.upload.asset_created": {
-      // The upload completed and Mux created an asset.
-      // Find the question via passthrough (question ID).
-      const passthrough = event.data.passthrough;
-      if (!passthrough) break;
+  const eventType = event.type;
+  const data = event.data;
 
-      const assetId = event.data.id;
+  if (eventType === "video.asset.ready") {
+    const assetId = data.id as string;
+    const passthrough = data.passthrough as string | undefined;
+    const playbackIds = data.playback_ids as { id: string; policy: string }[] | undefined;
+    const playbackId = playbackIds?.[0]?.id;
+    const duration = data.duration as number | undefined;
+    const aspectRatioStr = data.aspect_ratio as string | undefined;
+    const tracks = data.tracks as { type: string }[] | undefined;
 
-      await db
-        .update(questions)
-        .set({ muxAssetId: assetId })
-        .where(eq(questions.id, passthrough));
-
-      // Also update answer_history
-      await db
-        .update(answerHistory)
-        .set({ muxAssetId: assetId })
-        .where(eq(answerHistory.questionId, passthrough));
-
-      break;
+    let aspectRatio: number | undefined;
+    if (aspectRatioStr) {
+      const [w, h] = aspectRatioStr.split(":").map(Number);
+      if (w && h) aspectRatio = w / h;
     }
 
-    case "video.asset.ready": {
-      // Transcoding complete. Extract playback ID, duration, aspect ratio.
-      const assetId = event.data.id;
-      const playbackId = event.data.playback_ids?.[0]?.id;
-      const duration = event.data.duration;
-      const aspectRatioStr = event.data.aspect_ratio; // e.g. "9:16"
+    const hasVideo = tracks?.some((t) => t.type === "video");
+    const mediaType = hasVideo ? "video" : "audio";
 
-      let aspectRatio: number | undefined;
-      if (aspectRatioStr) {
-        const [w, h] = aspectRatioStr.split(":").map(Number);
-        if (w && h) aspectRatio = w / h;
-      }
+    // Find question by passthrough (question ID) or by muxAssetId
+    let questionId = passthrough;
 
-      // Determine media type from tracks
-      const tracks = event.data.tracks || [];
-      const hasVideo = tracks.some((t) => t.type === "video");
-      const mediaType = hasVideo ? "video" : "audio";
-
-      // Update questions table
-      const [updatedQuestion] = await db
-        .update(questions)
-        .set({
-          muxPlaybackId: playbackId,
-          muxAssetStatus: "ready",
-          muxMediaType: mediaType,
-          answerDuration: duration,
-          answerAspectRatio: aspectRatio,
-        })
+    if (!questionId) {
+      // Fallback: look up by asset ID if passthrough is missing
+      const [q] = await db
+        .select({ id: questions.id })
+        .from(questions)
         .where(eq(questions.muxAssetId, assetId))
-        .returning({
-          id: questions.id,
-          politicianId: questions.politicianId,
-        });
+        .limit(1);
+      questionId = q?.id;
+    }
 
-      // Update answer_history
-      await db
-        .update(answerHistory)
-        .set({
-          muxPlaybackId: playbackId,
-          muxAssetStatus: "ready",
-          muxMediaType: mediaType,
-          answerDuration: duration,
-          answerAspectRatio: aspectRatio,
+    if (!questionId) {
+      console.error("Mux webhook: could not find question for asset", assetId);
+      return NextResponse.json({ received: true });
+    }
+
+    // Update questions table
+    const [updatedQuestion] = await db
+      .update(questions)
+      .set({
+        muxAssetId: assetId,
+        muxPlaybackId: playbackId,
+        muxAssetStatus: "ready",
+        muxMediaType: mediaType,
+        answerDuration: duration,
+        answerAspectRatio: aspectRatio,
+      })
+      .where(eq(questions.id, questionId))
+      .returning({
+        id: questions.id,
+        politicianId: questions.politicianId,
+      });
+
+    // Update answer_history
+    await db
+      .update(answerHistory)
+      .set({
+        muxAssetId: assetId,
+        muxPlaybackId: playbackId,
+        muxAssetStatus: "ready",
+        muxMediaType: mediaType,
+        answerDuration: duration,
+        answerAspectRatio: aspectRatio,
+      })
+      .where(eq(answerHistory.questionId, questionId));
+
+    // Revalidate pages + send notification emails
+    if (updatedQuestion) {
+      const [politician] = await db
+        .select({
+          name: politicians.name,
+          slug: politicians.slug,
+          partySlug: parties.slug,
+          partyName: parties.name,
         })
-        .where(eq(answerHistory.muxAssetId, assetId));
+        .from(politicians)
+        .innerJoin(parties, eq(politicians.partyId, parties.id))
+        .where(eq(politicians.id, updatedQuestion.politicianId))
+        .limit(1);
 
-      // Revalidate pages + send notification emails
-      if (updatedQuestion) {
-        // Fetch politician info for revalidation and emails
-        const [politician] = await db
-          .select({
-            name: politicians.name,
-            slug: politicians.slug,
-            partySlug: parties.slug,
-            partyName: parties.name,
-          })
-          .from(politicians)
-          .innerJoin(parties, eq(politicians.partyId, parties.id))
-          .where(eq(politicians.id, updatedQuestion.politicianId))
+      if (politician) {
+        revalidatePath(`/${politician.partySlug}/${politician.slug}`);
+        revalidatePath(`/${politician.partySlug}/${politician.slug}/q/${updatedQuestion.id}`);
+        revalidatePath("/politiker/dashboard");
+
+        // Fetch question text for email
+        const [q] = await db
+          .select({ text: questions.text })
+          .from(questions)
+          .where(eq(questions.id, updatedQuestion.id))
           .limit(1);
 
-        if (politician) {
-          revalidatePath(`/${politician.partySlug}/${politician.slug}`);
-          revalidatePath(`/${politician.partySlug}/${politician.slug}/q/${updatedQuestion.id}`);
-          revalidatePath("/politiker/dashboard");
+        // Send notification emails to all upvoters
+        const upvoterList = await db
+          .select({ firstName: citizens.firstName, email: citizens.email })
+          .from(upvotes)
+          .innerJoin(citizens, eq(upvotes.citizenId, citizens.id))
+          .where(eq(upvotes.questionId, updatedQuestion.id));
 
-          // Fetch question text for email
-          const [q] = await db
-            .select({ text: questions.text })
-            .from(questions)
-            .where(eq(questions.id, updatedQuestion.id))
-            .limit(1);
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+        const questionPageUrl = `${appUrl}/${politician.partySlug}/${politician.slug}/q/${updatedQuestion.id}`;
 
-          // Send notification emails to all upvoters
-          const upvoterList = await db
-            .select({ firstName: citizens.firstName, email: citizens.email })
-            .from(upvotes)
-            .innerJoin(citizens, eq(upvotes.citizenId, citizens.id))
-            .where(eq(upvotes.questionId, updatedQuestion.id));
-
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-          const questionPageUrl = `${appUrl}/${politician.partySlug}/${politician.slug}/q/${updatedQuestion.id}`;
-
-          await Promise.allSettled(
-            upvoterList.map((citizen) =>
-              sendAnswerNotificationEmail({
-                to: citizen.email,
-                firstName: citizen.firstName,
-                politicianName: politician.name,
-                partyName: politician.partyName,
-                questionText: q?.text ?? "",
-                answerUrl: questionPageUrl,
-                isUpdate: false,
-              })
-            )
-          );
-        }
+        await Promise.allSettled(
+          upvoterList.map((citizen) =>
+            sendAnswerNotificationEmail({
+              to: citizen.email,
+              firstName: citizen.firstName,
+              politicianName: politician.name,
+              partyName: politician.partyName,
+              questionText: q?.text ?? "",
+              answerUrl: questionPageUrl,
+              isUpdate: false,
+            })
+          )
+        );
       }
-
-      break;
     }
+  } else if (eventType === "video.asset.errored") {
+    const assetId = data.id as string;
+    const passthrough = data.passthrough as string | undefined;
 
-    case "video.asset.errored": {
-      const assetId = event.data.id;
-
+    if (passthrough) {
       await db
         .update(questions)
-        .set({ muxAssetStatus: "errored" })
-        .where(eq(questions.muxAssetId, assetId));
+        .set({ muxAssetId: assetId, muxAssetStatus: "errored" })
+        .where(eq(questions.id, passthrough));
 
       await db
         .update(answerHistory)
-        .set({ muxAssetStatus: "errored" })
-        .where(eq(answerHistory.muxAssetId, assetId));
-
-      break;
+        .set({ muxAssetId: assetId, muxAssetStatus: "errored" })
+        .where(eq(answerHistory.questionId, passthrough));
     }
   }
 
