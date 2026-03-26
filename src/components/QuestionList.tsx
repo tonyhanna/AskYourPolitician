@@ -784,28 +784,7 @@ function QuestionItem({
                             Fjern poster
                           </button>
                         ) : (
-                          <label className="text-xs text-blue-600 hover:text-blue-800 underline cursor-pointer mt-1 inline-block">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                try {
-                                  const { upload } = await import("@vercel/blob/client");
-                                  const blob = await upload(`answers/posters/${file.name}`, file, {
-                                    access: "public",
-                                    handleUploadUrl: "/api/upload",
-                                  });
-                                  await updateAnswerPoster(question.id, blob.url);
-                                } catch (err) {
-                                  alert(err instanceof Error ? err.message : "Der opstod en fejl");
-                                }
-                              }}
-                            />
-                            Tilføj poster
-                          </label>
+                          <PosterUploadInline questionId={question.id} />
                         )
                       )}
                     </div>
@@ -921,7 +900,7 @@ function QuestionItem({
                     </div>
                   ) : (
                     <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs text-gray-500 hover:text-gray-700 underline cursor-pointer">
-                      Tilføj eget poster-billede
+                      {question.answerPhotoUrl ? "Erstat poster-billede" : "Tilføj eget poster-billede"}
                     </button>
                   )}
                   {/* Submit button — only if something changed */}
@@ -1105,5 +1084,87 @@ function QuestionItem({
         )}
       </div>
     </div>
+  );
+}
+
+// ── Inline poster upload with drop zone, compression, and progress ──
+
+function PosterUploadInline({ questionId }: { questionId: string }) {
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    if (!file.type.startsWith("image/")) {
+      alert("Kun billedfiler er tilladt");
+      return;
+    }
+    setUploading(true);
+    setProgress(0);
+    try {
+      // Compress non-JPEG to JPEG at 85% quality
+      const { compressImageToJpeg } = await import("@/lib/image-utils");
+      const compressed = await compressImageToJpeg(file, 0.85);
+      setProgress(20);
+
+      const blob = await upload(`answers/posters/${compressed.name}`, compressed, {
+        access: "public",
+        handleUploadUrl: "/api/upload",
+        onUploadProgress: ({ percentage }) => setProgress(20 + percentage * 0.7),
+      });
+      setProgress(95);
+      await updateAnswerPoster(questionId, blob.url);
+      setProgress(100);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Der opstod en fejl");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  if (uploading) {
+    return (
+      <div className="mt-2">
+        <div className="flex items-center gap-2 text-xs text-amber-700">
+          <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          </svg>
+          Uploader poster... {Math.round(progress)}%
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1 overflow-hidden">
+          <div className="bg-amber-500 h-1.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <label
+      className={`mt-2 flex items-center justify-center border-2 border-dashed rounded-lg p-3 cursor-pointer transition-colors ${
+        isDragging ? "border-blue-400 bg-blue-50" : "border-gray-300 hover:border-blue-400 hover:bg-gray-50"
+      }`}
+      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files[0];
+        if (file) handleFile(file);
+      }}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFile(file);
+        }}
+      />
+      <span className="text-xs text-gray-500">Tilføj poster-billede (træk eller klik)</span>
+    </label>
   );
 }
