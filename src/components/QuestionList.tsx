@@ -528,13 +528,17 @@ function QuestionItem({
     }, 5000);
   }
 
-  // Auto-start polling for questions stuck in "preparing" state (e.g. after page refresh)
+  // Auto-start polling whenever muxAssetStatus is "preparing" (covers both
+  // initial submit flow and page refresh / revalidation scenarios)
   useEffect(() => {
-    if (question.muxAssetStatus === "preparing" && !submitStep) {
+    if (question.muxAssetStatus === "preparing") {
       pollMuxStatus(question.id);
     }
     return () => {
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
     };
   }, [question.muxAssetStatus]);
 
