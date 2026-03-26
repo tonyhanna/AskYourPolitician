@@ -100,10 +100,11 @@ export function QuestionList({
   basePath: string;
   pendingSuggestions?: PendingSuggestion[];
 }) {
-  const missed = questions.filter((q) => q.goalReached && !q.answerUrl && q.deadlineMissed);
-  const forUpvoting = questions.filter((q) => !q.goalReached && !q.answerUrl);
-  const unanswered = questions.filter((q) => q.goalReached && !q.answerUrl && !q.deadlineMissed);
-  const answered = questions.filter((q) => !!q.answerUrl);
+  const hasAnswer = (q: typeof questions[number]) => !!q.answerUrl || !!q.muxAssetStatus;
+  const missed = questions.filter((q) => q.goalReached && !hasAnswer(q) && q.deadlineMissed);
+  const forUpvoting = questions.filter((q) => !q.goalReached && !hasAnswer(q));
+  const unanswered = questions.filter((q) => q.goalReached && !hasAnswer(q) && !q.deadlineMissed);
+  const answered = questions.filter((q) => hasAnswer(q));
 
   return (
     <div className="space-y-6">
