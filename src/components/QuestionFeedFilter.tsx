@@ -6,7 +6,7 @@ import { faVideo, faMicrophone, faXmark, faChevronLeft, faChevronRight, faChevro
 import { faShare, faFilter, faUpRightAndDownLeftFromCenter } from "@fortawesome/pro-duotone-svg-icons";
 import { PlayableMediaCard } from "./PlayableMediaCard";
 import { getAnswerMediaInfo } from "@/lib/answer-utils";
-import { getMuxThumbnailUrl, getMuxAnimatedGifUrl } from "@/lib/mux";
+import { getMuxThumbnailUrl, getMuxMp4Url } from "@/lib/mux";
 import { useHlsPlayer } from "@/hooks/useHlsPlayer";
 import { UpvoteModal } from "./UpvoteModal";
 import { CircularUpvoteButton } from "./CircularUpvoteButton";
@@ -559,10 +559,10 @@ function AnsweredQuestionCard({
   const hasAudioAnswer = mediaInfo?.type === "audio";
   const hasPlayableMedia = isReady && (hasVideoAnswer || hasAudioAnswer);
 
-  const muxGifUrl = muxPlaybackId && isReady && hasVideoAnswer ? getMuxAnimatedGifUrl(muxPlaybackId) : null;
+  const muxClipUrl = muxPlaybackId && isReady && hasVideoAnswer ? getMuxMp4Url(muxPlaybackId) : null;
   const muxThumbnailUrl = muxPlaybackId && isReady ? getMuxThumbnailUrl(muxPlaybackId) : null;
   const photoUrl = question.answerPhotoUrl || muxThumbnailUrl;
-  const hasCustomPoster = hasVideoAnswer && !muxGifUrl && !!photoUrl;
+  const hasCustomPoster = hasVideoAnswer && !muxClipUrl && !!photoUrl;
   const cardRef = useRef<HTMLDivElement>(null);
   const fullVideoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -771,13 +771,15 @@ function AnsweredQuestionCard({
           style={{ backgroundColor: partyColor || "#7E7D7A" }}
         />
       )}
-      {/* Mux animated GIF for hover preview */}
-      {muxGifUrl && (
-        <img
-          src={muxGifUrl}
-          alt=""
+      {/* Mux MP4 clip for hover preview */}
+      {muxClipUrl && (
+        <video
+          src={muxClipUrl}
+          muted
+          loop
+          playsInline
+          preload="metadata"
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ opacity: isHovering && !isWatching ? 1 : 0, transition: "opacity 200ms ease" }}
         />
       )}
 

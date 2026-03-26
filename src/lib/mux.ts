@@ -16,6 +16,9 @@ export async function createDirectUpload(questionId: string, corsOrigin: string)
     new_asset_settings: {
       playback_policy: ["public"],
       passthrough: questionId,
+      static_renditions: [
+        { resolution: "highest" },
+      ],
     },
     // Upload expires after 1 hour
     timeout: 3600,
@@ -50,9 +53,9 @@ export function getMuxAnimatedGifUrl(
   return `https://image.mux.com/${playbackId}/animated.gif?start=${start}&end=${end}&width=${width}&fps=${fps}`;
 }
 
-/** MP4 fallback URL for browsers without HLS support */
-export function getMuxMp4Url(playbackId: string, quality: "high" | "medium" | "low" = "medium") {
-  return `https://stream.mux.com/${playbackId}/${quality}.mp4`;
+/** Static MP4 rendition URL (for hover clips and fallback playback) */
+export function getMuxMp4Url(playbackId: string) {
+  return `https://stream.mux.com/${playbackId}/highest.mp4`;
 }
 
 /** Delete a Mux asset */

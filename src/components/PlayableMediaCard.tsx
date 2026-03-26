@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay } from "@fortawesome/free-solid-svg-icons";
 import { getAnswerMediaInfo } from "@/lib/answer-utils";
-import { getMuxThumbnailUrl, getMuxAnimatedGifUrl } from "@/lib/mux";
+import { getMuxThumbnailUrl, getMuxMp4Url } from "@/lib/mux";
 import { useHlsPlayer } from "@/hooks/useHlsPlayer";
 
 type PlayableMediaCardProps = {
@@ -44,7 +44,7 @@ export function PlayableMediaCard({
 
   const muxPlaybackId = mediaInfo?.playbackId || null;
   const muxThumbnailUrl = muxPlaybackId && isReady ? getMuxThumbnailUrl(muxPlaybackId) : null;
-  const muxGifUrl = muxPlaybackId && isReady && hasVideoAnswer ? getMuxAnimatedGifUrl(muxPlaybackId) : null;
+  const muxClipUrl = muxPlaybackId && isReady && hasVideoAnswer ? getMuxMp4Url(muxPlaybackId) : null;
 
   // Poster: custom poster (Blob) takes priority, then Mux auto-thumbnail
   const thumbnailPhotoUrl = question.answerPhotoUrl || muxThumbnailUrl;
@@ -53,6 +53,7 @@ export function PlayableMediaCard({
   const thumbnailWrapRef = useRef<HTMLDivElement>(null);
   const fullVideoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const clipRef = useRef<HTMLVideoElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const bufferingRef = useRef<HTMLDivElement>(null);
 
@@ -65,6 +66,44 @@ export function PlayableMediaCard({
 
   // HLS player for Mux video
   useHlsPlayer(fullVideoRef, isReady && hasVideoAnswer ? muxPlaybackId : null);
+
+  // Hover clip: play forward on hover, reset on leave (desktop only)
+  useEffect(() => {
+    const clip = clipRef.current;
+    if (!clip || !muxClipUrl) return;
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+    if (isHovering && !isWatching) {
+      clip.currentTime = 0;
+      clip.play().catch(() => {});
+    } else {
+      clip.pause();
+      clip.currentTime = 0;
+    }
+  }, [isHovering, isWatching, muxClipUrl]);
+
+  // Mobile: autoplay clip when visible, pause on scroll away
+  useEffect(() => {
+    const wrap = thumbnailWrapRef.current;
+    if (!wrap || !muxClipUrl) return;
+    const isTouch = window.matchMedia("(pointer: coarse)").matches;
+    if (!isTouch) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const clip = clipRef.current;
+        if (!clip) return;
+        if (entry.isIntersecting && !isWatchingRef.current) {
+          clip.currentTime = 0;
+          clip.play().catch(() => {});
+        } else if (!entry.isIntersecting && !isWatchingRef.current) {
+          clip.pause();
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(wrap);
+    return () => observer.disconnect();
+  }, [muxClipUrl]);
 
   // Stop if another card started playing (multi-card coordination)
   useEffect(() => {
@@ -117,6 +156,7 @@ export function PlayableMediaCard({
       setIsWatching(false);
       setPlayingId?.(null);
     } else if (hasVideoAnswer) {
+      if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
       if (fullVideoRef.current) {
         fullVideoRef.current.currentTime = 0;
         fullVideoRef.current.play().catch(() => {});
@@ -125,6 +165,7 @@ export function PlayableMediaCard({
       setPlayingId?.(question.id);
       scrollIntoView();
     } else if (hasAudioAnswer) {
+      if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(() => {});
@@ -163,7 +204,7 @@ export function PlayableMediaCard({
     return () => el.removeEventListener("timeupdate", onTimeUpdate);
   }, [isWatching, hasVideoAnswer, question.answerDuration]);
 
-  if (!thumbnailPhotoUrl && !muxGifUrl && !isPreparing) return null;
+  if (!thumbnailPhotoUrl && !muxClipUrl && !isPreparing) return null;
 
   return (
     <div
@@ -245,13 +286,16 @@ export function PlayableMediaCard({
         <img src={thumbnailPhotoUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
       )}
 
-      {/* Mux animated GIF for hover preview */}
-      {muxGifUrl && (
-        <img
-          src={muxGifUrl}
-          alt=""
+      {/* Mux MP4 clip for hover preview */}
+      {muxClipUrl && (
+        <video
+          ref={clipRef}
+          src={muxClipUrl}
+          muted
+          loop
+          playsInline
+          preload="metadata"
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ opacity: isHovering && !isWatching ? 1 : 0, transition: "opacity 200ms ease" }}
         />
       )}
     </div>
