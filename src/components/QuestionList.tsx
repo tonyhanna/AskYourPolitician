@@ -762,10 +762,28 @@ function QuestionItem({
                 <div>
                   <p className="text-sm text-green-800 font-medium mb-1">Svar indsendt</p>
                   {question.muxAssetStatus ? (
-                    <p className="text-sm text-green-700">
-                      {question.muxMediaType === "audio" ? "Lydfil" : "Video"} {question.muxAssetStatus === "ready" ? "klar" : "behandles..."}
-                      {question.answerPhotoUrl && " (med poster)"}
-                    </p>
+                    <div>
+                      <p className="text-sm text-green-700">
+                        {question.muxMediaType === "audio" ? "Lydfil" : "Video"} {question.muxAssetStatus === "ready" ? "klar" : "behandles..."}
+                        {question.answerPhotoUrl && " (med poster)"}
+                      </p>
+                      {question.answerPhotoUrl && question.muxAssetStatus === "ready" && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!confirm("Er du sikker på at du vil fjerne poster-billedet?")) return;
+                            try {
+                              await updateAnswerPoster(question.id, null);
+                            } catch (e) {
+                              alert(e instanceof Error ? e.message : "Der opstod en fejl");
+                            }
+                          }}
+                          className="text-xs text-red-500 hover:text-red-700 underline cursor-pointer mt-1"
+                        >
+                          Fjern poster
+                        </button>
+                      )}
+                    </div>
                   ) : question.answerUrl ? (
                     <a
                       href={question.answerUrl}
