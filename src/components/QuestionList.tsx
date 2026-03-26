@@ -767,21 +767,46 @@ function QuestionItem({
                         {question.muxMediaType === "audio" ? "Lydfil" : "Video"} {question.muxAssetStatus === "ready" ? "klar" : "behandles..."}
                         {question.answerPhotoUrl && " (med poster)"}
                       </p>
-                      {question.answerPhotoUrl && question.muxAssetStatus === "ready" && (
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!confirm("Er du sikker på at du vil fjerne poster-billedet?")) return;
-                            try {
-                              await updateAnswerPoster(question.id, null);
-                            } catch (e) {
-                              alert(e instanceof Error ? e.message : "Der opstod en fejl");
-                            }
-                          }}
-                          className="text-xs text-red-500 hover:text-red-700 underline cursor-pointer mt-1"
-                        >
-                          Fjern poster
-                        </button>
+                      {question.muxAssetStatus === "ready" && (
+                        question.answerPhotoUrl ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!confirm("Er du sikker på at du vil fjerne poster-billedet?")) return;
+                              try {
+                                await updateAnswerPoster(question.id, null);
+                              } catch (e) {
+                                alert(e instanceof Error ? e.message : "Der opstod en fejl");
+                              }
+                            }}
+                            className="text-xs text-red-500 hover:text-red-700 underline cursor-pointer mt-1"
+                          >
+                            Fjern poster
+                          </button>
+                        ) : (
+                          <label className="text-xs text-blue-600 hover:text-blue-800 underline cursor-pointer mt-1 inline-block">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                  const { upload } = await import("@vercel/blob/client");
+                                  const blob = await upload(`answers/posters/${file.name}`, file, {
+                                    access: "public",
+                                    handleUploadUrl: "/api/upload",
+                                  });
+                                  await updateAnswerPoster(question.id, blob.url);
+                                } catch (err) {
+                                  alert(err instanceof Error ? err.message : "Der opstod en fejl");
+                                }
+                              }}
+                            />
+                            Tilføj poster
+                          </label>
+                        )
                       )}
                     </div>
                   ) : question.answerUrl ? (
@@ -832,7 +857,7 @@ function QuestionItem({
                 )}
               </div>
               {/* Edit mode: show current answer overview with granular edit options */}
-              {editingAnswer && question.answerUrl && !pendingFile ? (
+              {editingAnswer && (question.answerUrl || question.muxAssetStatus) && !pendingFile ? (
                 <div className="space-y-3">
                   {/* Current video */}
                   <div className="bg-gray-50 rounded-lg p-3">
