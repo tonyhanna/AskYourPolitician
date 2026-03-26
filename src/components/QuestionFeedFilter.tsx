@@ -566,6 +566,7 @@ function AnsweredQuestionCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const fullVideoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const clipRef = useRef<HTMLVideoElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
 
   // HLS player for Mux video
@@ -578,6 +579,43 @@ function AnsweredQuestionCard({
   const bufferingRef = useRef<HTMLDivElement>(null);
   useEffect(() => { isWatchingRef.current = isWatching; }, [isWatching]);
   useEffect(() => { setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches); }, []);
+
+  // Hover clip: play on hover, reset on leave (desktop only)
+  useEffect(() => {
+    const clip = clipRef.current;
+    if (!clip || !muxClipUrl) return;
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+    if (isHovering && !isWatching) {
+      clip.currentTime = 0;
+      clip.play().catch(() => {});
+    } else {
+      clip.pause();
+      clip.currentTime = 0;
+    }
+  }, [isHovering, isWatching, muxClipUrl]);
+
+  // Mobile: autoplay clip when visible
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card || !muxClipUrl) return;
+    const isTouch = window.matchMedia("(pointer: coarse)").matches;
+    if (!isTouch) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const clip = clipRef.current;
+        if (!clip) return;
+        if (entry.isIntersecting && !isWatchingRef.current) {
+          clip.currentTime = 0;
+          clip.play().catch(() => {});
+        } else if (!entry.isIntersecting && !isWatchingRef.current) {
+          clip.pause();
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [muxClipUrl]);
 
   // Share/copy state — blink copy icon twice then return to share
   const [copied, setCopied] = useState(false);
@@ -774,6 +812,7 @@ function AnsweredQuestionCard({
       {/* Mux MP4 clip for hover preview */}
       {muxClipUrl && (
         <video
+          ref={clipRef}
           src={muxClipUrl}
           muted
           loop
