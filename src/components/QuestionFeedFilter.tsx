@@ -918,7 +918,7 @@ function AnsweredQuestionCard({
       {/* Bottom: highlighted text + share + tags */}
       <div
         className="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-20"
-        style={{ zIndex: 3, pointerEvents: "none", opacity: isWatching ? 0 : 1, transform: isWatching ? "translateY(-20px)" : "translateY(0)", transition: "opacity 300ms ease, transform 300ms ease" }}
+        style={{ zIndex: 3, pointerEvents: "none", opacity: isWatching ? 0 : 1, transform: isWatching ? "translateY(-20px)" : "translateZ(0)", transition: "opacity 300ms ease, transform 300ms ease", backfaceVisibility: "hidden", willChange: "opacity, transform" }}
       >
         <span
           style={{
@@ -966,6 +966,8 @@ function AnsweredQuestionCard({
                 width: 48,
                 height: 48,
                 opacity: isWatching ? 0 : 1,
+                backfaceVisibility: "hidden",
+                transform: "translateZ(0)",
               }}
             >
               <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ backgroundColor: partyColor || "#00D564", opacity: isHovering ? 1 : 0.75 }} />
