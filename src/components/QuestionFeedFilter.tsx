@@ -620,16 +620,26 @@ function AnsweredQuestionCard({
           const onPlaying = () => { clip.style.opacity = "1"; };
           clip.addEventListener("playing", onPlaying, { once: true });
           clip.play().catch(() => {});
-        } else if (!entry.isIntersecting && !isWatchingRef.current) {
+        }
+      },
+      { threshold: 0.3 }
+    );
+    // Separate observer: reset clip only when card is fully off-screen
+    const resetObserver = new IntersectionObserver(
+      ([entry]) => {
+        const clip = clipRef.current;
+        if (!clip) return;
+        if (!entry.isIntersecting && !isWatchingRef.current) {
           clip.pause();
           clip.currentTime = 0;
           clip.style.opacity = "0";
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0 }
     );
     observer.observe(card);
-    return () => observer.disconnect();
+    resetObserver.observe(card);
+    return () => { observer.disconnect(); resetObserver.disconnect(); };
   }, [muxClipUrl]);
 
   // Share/copy state — blink copy icon twice then return to share
