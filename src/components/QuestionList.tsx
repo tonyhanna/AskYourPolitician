@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useSyncExternalStore } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster, getMuxUploadUrl, submitMuxAnswer, checkMuxAnswerStatus } from "@/app/politiker/dashboard/actions";
 import { CopyLinkButton } from "./CopyLinkButton";
@@ -500,53 +501,79 @@ function QuestionItem({
     }
   }
 
-  /** Poll Mux processing status every 5s until ready, then refresh the page */
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  /** Poll Mux processing status until ready, then refresh server data.
+   *  Uses setTimeout chain (not setInterval) + visibilitychange for iOS reliability.
+   *  router.refresh() fetches fresh server data without full page reload. */
+  const router = useRouter();
+  const pollingRef = useRef(false);
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onDoneRef = useRef<(() => void) | undefined>(undefined);
+
+  const pollCheck = useCallback(async (questionId: string) => {
+    if (!pollingRef.current) return;
+    try {
+      const status = await checkMuxAnswerStatus(questionId);
+      if (status === "ready") {
+        pollingRef.current = false;
+        submitStepStore.clear(questionId);
+        onDoneRef.current?.();
+        onDoneRef.current = undefined;
+        router.refresh();
+        return;
+      } else if (status === "errored") {
+        pollingRef.current = false;
+        submitStepStore.clear(questionId);
+        onDoneRef.current?.();
+        onDoneRef.current = undefined;
+        alert("Der opstod en fejl under behandling af din video/lyd. Prøv venligst igen.");
+        return;
+      }
+    } catch {
+      // Network error — keep polling
+    }
+    // Schedule next check
+    if (pollingRef.current) {
+      pollTimeoutRef.current = setTimeout(() => pollCheck(questionId), 5000);
+    }
+  }, [router]);
 
   function pollMuxStatus(questionId: string, onDone?: () => void) {
-    // Don't start duplicate polling
-    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    // Stop any existing polling
+    pollingRef.current = false;
+    if (pollTimeoutRef.current) { clearTimeout(pollTimeoutRef.current); pollTimeoutRef.current = null; }
 
-    async function check() {
-      try {
-        const status = await checkMuxAnswerStatus(questionId);
-        if (status === "ready") {
-          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-          submitStepStore.clear(questionId);
-          onDone?.();
-          // Use cache-busting reload to ensure fresh server data
-          window.location.href = window.location.pathname + "?t=" + Date.now();
-        } else if (status === "errored") {
-          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-          submitStepStore.clear(questionId);
-          onDone?.();
-          alert("Der opstod en fejl under behandling af din video/lyd. Prøv venligst igen.");
-        }
-      } catch {
-        // Network error — keep polling
-      }
-    }
+    pollingRef.current = true;
+    onDoneRef.current = onDone;
 
-    // Immediate first check, then every 5 seconds
-    check();
-    pollIntervalRef.current = setInterval(check, 5000);
+    // Immediate first check
+    pollCheck(questionId);
   }
 
-  // Auto-start polling whenever muxAssetStatus is "preparing" (covers both
-  // initial submit flow and page refresh / revalidation scenarios)
+  // Auto-start polling whenever muxAssetStatus is "preparing"
   useEffect(() => {
     if (question.muxAssetStatus === "preparing") {
       pollMuxStatus(question.id);
     }
     return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
+      pollingRef.current = false;
+      if (pollTimeoutRef.current) { clearTimeout(pollTimeoutRef.current); pollTimeoutRef.current = null; }
     };
   }, [question.muxAssetStatus]);
+
+  // Re-check immediately when tab becomes visible (iOS throttles timers in background)
+  useEffect(() => {
+    if (question.muxAssetStatus !== "preparing") return;
+
+    function handleVisibility() {
+      if (document.visibilityState === "visible" && pollingRef.current) {
+        // Clear pending timeout and check immediately
+        if (pollTimeoutRef.current) { clearTimeout(pollTimeoutRef.current); pollTimeoutRef.current = null; }
+        pollCheck(question.id);
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [question.muxAssetStatus, question.id, pollCheck]);
 
   async function handleDelete() {
     if (!confirm("Er du sikker på at du vil slette dette spørgsmål?")) return;
