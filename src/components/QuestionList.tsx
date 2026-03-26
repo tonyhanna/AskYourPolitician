@@ -991,14 +991,15 @@ function QuestionItem({
                   </div>
                   <div>
                     {(photoPreviewUrl || posterPreviewUrl) ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
                         <img src={(photoPreviewUrl || posterPreviewUrl)!} alt="Preview" className="w-12 h-12 rounded-lg object-cover" />
+                        <span className="text-xs text-gray-600 flex-1">Nyt poster-billede valgt</span>
                         <button
                           type="button"
                           onClick={() => { clearPendingPhoto(); clearPendingPoster(); }}
                           className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
                         >
-                          Fjern poster
+                          Fjern
                         </button>
                       </div>
                     ) : editingAnswer && hasExistingCustomPoster ? (
