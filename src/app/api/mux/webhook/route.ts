@@ -127,6 +127,13 @@ export async function POST(req: NextRequest) {
           .where(eq(questions.id, updatedQuestion.id))
           .limit(1);
 
+        // Determine if this is an update (more than 1 answer_history entry)
+        const historyCount = await db
+          .select({ id: answerHistory.id })
+          .from(answerHistory)
+          .where(eq(answerHistory.questionId, updatedQuestion.id));
+        const isUpdate = historyCount.length > 1;
+
         // Send notification emails to all upvoters
         const upvoterList = await db
           .select({ firstName: citizens.firstName, email: citizens.email })
@@ -146,7 +153,7 @@ export async function POST(req: NextRequest) {
               partyName: politician.partyName,
               questionText: q?.text ?? "",
               answerUrl: questionPageUrl,
-              isUpdate: false,
+              isUpdate,
             })
           )
         );
