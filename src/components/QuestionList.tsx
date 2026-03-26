@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { upload } from "@vercel/blob/client";
-import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster, getMuxUploadUrl, submitMuxAnswer } from "@/app/politiker/dashboard/actions";
+import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster, getMuxUploadUrl, submitMuxAnswer, checkMuxAnswerStatus } from "@/app/politiker/dashboard/actions";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { SuggestionList } from "./SuggestionList";
-import { isBlobUrl, getBlobMediaType } from "@/lib/answer-utils";
+import { isBlobUrl } from "@/lib/answer-utils";
 
 // ── Module-level store for submit steps ──────────────────────────────
 // Lives outside React so it survives component remounts caused by
 // server-action Router Cache invalidation moving questions between
 // the "unanswered" → "answered" section (different tree positions).
-type SubmitStep = "compressing" | "uploading" | "submitting" | "generating" | "done";
+type SubmitStep = "uploading" | "submitting" | "processing" | "done";
 const _steps = new Map<string, SubmitStep>();
 const _subs = new Set<() => void>();
 function _notify() { _subs.forEach((fn) => fn()); }
@@ -172,7 +172,6 @@ function QuestionItem({
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingDuration, setPendingDuration] = useState<number | undefined>(undefined);
   const [pendingAspectRatio, setPendingAspectRatio] = useState<number | undefined>(undefined);
-  const [compressProgress, setCompressProgress] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
@@ -196,7 +195,7 @@ function QuestionItem({
   const [removePoster, setRemovePoster] = useState(false);
   // Detect if current answer has a custom poster (vs auto-generated)
   const hasExistingCustomPoster = !!question.answerPhotoUrl && !question.answerClipUrl && !!question.answerUrl;
-  const isCurrentAnswerAudio = !!question.answerUrl && isBlobUrl(question.answerUrl) && getBlobMediaType(question.answerUrl) === "audio";
+  const isCurrentAnswerAudio = question.muxMediaType === "audio";
   const hasUpvotes = question.upvoteCount > 0;
 
   // Countdown timer for unanswered goal-reached questions
@@ -324,35 +323,6 @@ function QuestionItem({
     setShowPosterUpload(false);
   }
 
-  /** Legacy: Generate clip + auto-poster from blob URL, upload them, return URLs. Only for old blob-based answers. */
-  async function generateAndUploadClipLegacy(videoUrl: string, generateVideoClip: (url: string) => Promise<{ clip: File; poster: File } | null>): Promise<{ clipUrl: string; posterUrl: string } | null> {
-    setClipError(null);
-    try {
-      const result = await Promise.race([
-        generateVideoClip(videoUrl),
-        new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Timeout: klip-generering tog for lang tid")), 120_000)),
-      ]);
-      if (!result) {
-        return null; // Browser doesn't support MediaRecorder — skip silently
-      }
-      const [clipBlob, posterBlob] = await Promise.all([
-        upload(`answers/clips/${result.clip.name}`, result.clip, {
-          access: "public",
-          handleUploadUrl: "/api/upload",
-        }),
-        upload(`answers/posters/${result.poster.name}`, result.poster, {
-          access: "public",
-          handleUploadUrl: "/api/upload",
-        }),
-      ]);
-      return { clipUrl: clipBlob.url, posterUrl: posterBlob.url };
-    } catch (e) {
-      console.error("Clip generation failed:", e);
-      setClipError(e instanceof Error ? e.message : "Klip-generering fejlede");
-      return null;
-    }
-  }
-
   async function handleSubmitAudioAnswer() {
     if (!pendingFile) return;
     if (editingAnswer) {
@@ -404,8 +374,8 @@ function QuestionItem({
       setPendingAspectRatio(undefined);
       clearPendingPhoto();
       setEditingAnswer(false);
-      submitStepStore.set(questionId, "done");
-      setTimeout(() => { submitStepStore.clear(questionId); _isAudioSubmit.delete(questionId); }, 3000);
+      submitStepStore.set(questionId, "processing");
+      pollMuxStatus(questionId, () => { _isAudioSubmit.delete(questionId); });
     } catch (e) {
       alert(e instanceof Error ? e.message : "Der opstod en fejl");
       submitStepStore.clear(questionId);
@@ -438,23 +408,8 @@ function QuestionItem({
       } else if (removePoster) {
         // Scenarie B: Remove poster — for Mux answers, just clear poster (Mux auto-generates thumbnails).
         // For legacy blob answers, regenerate clip.
-        if (question.muxAssetId || question.muxPlaybackId) {
-          submitStepStore.set(questionId, "submitting");
-          await updateAnswerPoster(questionId, null);
-        } else if (question.answerUrl) {
-          submitStepStore.set(questionId, "generating");
-          const { generateVideoClip } = await import("@/lib/clip-generator");
-          const clipResult = await generateAndUploadClipLegacy(question.answerUrl, generateVideoClip);
-
-          if (opId !== submitOpRef.current) return;
-
-          submitStepStore.set(questionId, "submitting");
-          if (clipResult) {
-            await updateAnswerPoster(questionId, null, clipResult.clipUrl, clipResult.posterUrl);
-          } else {
-            await updateAnswerPoster(questionId, null);
-          }
-        }
+        submitStepStore.set(questionId, "submitting");
+        await updateAnswerPoster(questionId, null);
       }
 
       clearPendingPoster();
@@ -534,12 +489,35 @@ function QuestionItem({
       setRemovePoster(false);
       setEditingAnswer(false);
 
-      submitStepStore.set(questionId, "done");
-      setTimeout(() => { submitStepStore.clear(questionId); _customPosterUsed.delete(questionId); }, 3000);
+      submitStepStore.set(questionId, "processing");
+      pollMuxStatus(questionId, () => { _customPosterUsed.delete(questionId); });
     } catch (e) {
       alert(e instanceof Error ? e.message : "Der opstod en fejl");
       submitStepStore.clear(questionId);
     }
+  }
+
+  /** Poll Mux processing status every 5s until ready, then refresh the page */
+  function pollMuxStatus(questionId: string, onDone?: () => void) {
+    const interval = setInterval(async () => {
+      try {
+        const status = await checkMuxAnswerStatus(questionId);
+        if (status === "ready") {
+          clearInterval(interval);
+          submitStepStore.set(questionId, "done");
+          setTimeout(() => { submitStepStore.clear(questionId); onDone?.(); }, 3000);
+          // Force a page refresh to show the updated answer
+          window.location.reload();
+        } else if (status === "errored") {
+          clearInterval(interval);
+          submitStepStore.clear(questionId);
+          onDone?.();
+          alert("Der opstod en fejl under behandling af din video/lyd. Prøv venligst igen.");
+        }
+      } catch {
+        // Network error — keep polling
+      }
+    }, 5000);
   }
 
   async function handleDelete() {
@@ -722,42 +700,29 @@ function QuestionItem({
                   {/* Steps shown as a checklist */}
                   {(() => {
                     const posterOnly = !!_posterOnlyUpdate.get(question.id);
-                    const isAudio = !!_isAudioSubmit.get(question.id);
-                    const hasCustomPosterFlag = !!_customPosterUsed.get(question.id);
                     if (posterOnly) {
-                      return removePoster
-                        ? (["uploading", "generating", "submitting"] as const)
-                        : (["uploading", "submitting"] as const);
+                      return (["uploading", "submitting"] as const);
                     }
-                    if (isAudio) return (["uploading", "submitting"] as const);
-                    if (hasCustomPosterFlag) return (["compressing", "uploading", "submitting"] as const);
-                    return (["compressing", "uploading", "generating", "submitting"] as const);
+                    return (["uploading", "submitting", "processing"] as const);
                   })().map((step, _i, stepOrder) => {
                     const currentIdx = (stepOrder as readonly string[]).indexOf(submitStep);
                     const stepIdx = _i;
-                    if (stepIdx > currentIdx) return null; // future step — don't show
+                    if (stepIdx > currentIdx) return null;
                     const isActive = step === submitStep;
                     const isPosterOnly = !!_posterOnlyUpdate.get(question.id);
                     const isAudio = !!_isAudioSubmit.get(question.id);
-                    // Only say "og poster/billede" when actually uploading a new file (not keeping existing)
-                    const isUploadingNewPoster = !!pendingPosterFile;
-                    const isUploadingNewPhoto = !!pendingPhotoFile;
-                    const isRemovingPoster = isPosterOnly && !!removePoster;
                     const uploadLabel = isPosterOnly
-                      ? (isRemovingPoster ? "Fjerner poster-billede..." : "Uploader poster-billede...")
+                      ? "Uploader poster-billede..."
                       : isAudio
-                        ? (isUploadingNewPhoto ? `Uploader lyd og poster... ${Math.round(uploadProgress)}%` : `Uploader lyd... ${Math.round(uploadProgress)}%`)
-                        : (isUploadingNewPoster ? `Uploader video og poster... ${Math.round(uploadProgress)}%` : `Uploader video... ${Math.round(uploadProgress)}%`);
+                        ? `Uploader lyd... ${Math.round(uploadProgress)}%`
+                        : `Uploader video... ${Math.round(uploadProgress)}%`;
                     const uploadDoneLabel = isPosterOnly
-                      ? (isRemovingPoster ? "Poster-billede fjernet" : "Poster-billede uploadet")
-                      : isAudio
-                        ? (isUploadingNewPhoto ? "Lyd og poster uploadet" : "Lyd uploadet")
-                        : (isUploadingNewPoster ? "Video og poster uploadet" : "Video uploadet");
+                      ? "Poster-billede uploadet"
+                      : isAudio ? "Lyd uploadet" : "Video uploadet";
                     const labels: Record<string, [string, string]> = {
-                      compressing: [`Komprimerer video... ${Math.round(compressProgress * 100)}%`, "Video komprimeret"],
                       uploading: [uploadLabel, uploadDoneLabel],
                       submitting: [isPosterOnly ? "Opdaterer poster..." : "Indsender svar...", isPosterOnly ? "Poster opdateret" : "Svar indsendt"],
-                      generating: ["Genererer forhåndsvisning...", "Forhåndsvisning klar"],
+                      processing: ["Behandler video hos Mux...", "Video klar"],
                     };
                     const [activeLabel, doneLabel] = labels[step];
                     return (
@@ -770,50 +735,39 @@ function QuestionItem({
                         <span className={`text-sm flex-1 ${isActive ? "text-amber-800 font-medium" : "text-green-800"}`}>
                           {isActive ? activeLabel : doneLabel}
                         </span>
-                        {isActive && step === "compressing" && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              // Invalidate the current operation so its completion is ignored
-                              submitOpRef.current++;
-                              submitStepStore.clear(question.id);
-                            }}
-                            className="text-sm text-red-500 hover:text-red-700 cursor-pointer"
-                          >
-                            Annullér
-                          </button>
-                        )}
                       </div>
                     );
                   })}
                   {/* Progress bar */}
                   <div className="w-full bg-amber-200 rounded-full h-2 overflow-hidden">
                     <div className="bg-amber-500 h-2 rounded-full transition-all" style={{
-                      width: submitStep === "compressing" ? `${Math.round(compressProgress * 100)}%`
-                        : submitStep === "uploading" ? `${Math.round(uploadProgress)}%`
-                        : submitStep === "submitting" ? "100%" : "100%",
+                      width: submitStep === "uploading" ? `${Math.round(uploadProgress)}%`
+                        : submitStep === "processing" ? "100%"
+                        : "100%",
                     }} />
                   </div>
-                  {submitStep === "compressing" ? (
-                    <p className="text-xs text-amber-600">Dette kan tage et øjeblik.</p>
+                  {submitStep === "processing" ? (
+                    <div className="bg-amber-100 border border-amber-300 rounded-md px-3 py-2 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-amber-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 3a9 9 0 110 18 9 9 0 010-18z" /></svg>
+                      <p className="text-sm text-amber-800 font-medium">Din video behandles — du kan lukke browseren. Svaret offentliggøres automatisk.</p>
+                    </div>
                   ) : (
                     <div className="bg-amber-100 border border-amber-300 rounded-md px-3 py-2 flex items-center gap-2">
                       <svg className="w-4 h-4 text-amber-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 3a9 9 0 110 18 9 9 0 010-18z" /></svg>
-                      <p className="text-sm text-amber-800 font-medium">Luk ikke browseren — dette kan tage op til 2 minutter.</p>
+                      <p className="text-sm text-amber-800 font-medium">Luk ikke browseren.</p>
                     </div>
                   )}
                 </div>
               </div>
-          ) : (question.answerUrl && !editingAnswer) || submitStep === "done" ? (
+          ) : ((question.answerUrl || question.muxAssetStatus) && !editingAnswer) || submitStep === "done" ? (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-sm text-green-800 font-medium mb-1">Svar indsendt</p>
-                  {question.answerUrl && isBlobUrl(question.answerUrl) ? (
+                  {question.muxAssetStatus ? (
                     <p className="text-sm text-green-700">
-                      {getBlobMediaType(question.answerUrl) === "audio" ? "Lydfil" : "Video"} uploadet
-                      {getBlobMediaType(question.answerUrl) === "audio" && question.answerPhotoUrl && " (med poster)"}
-                      {getBlobMediaType(question.answerUrl) !== "audio" && question.answerPhotoUrl && !question.answerClipUrl && " (med eget poster-billede)"}
+                      {question.muxMediaType === "audio" ? "Lydfil" : "Video"} {question.muxAssetStatus === "ready" ? "klar" : "behandles..."}
+                      {question.answerPhotoUrl && " (med poster)"}
                     </p>
                   ) : question.answerUrl ? (
                     <a
@@ -869,7 +823,7 @@ function QuestionItem({
                   <div className="bg-gray-50 rounded-lg p-3">
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-gray-700">
-                        {question.answerUrl && isBlobUrl(question.answerUrl) && getBlobMediaType(question.answerUrl) === "audio"
+                        {question.muxMediaType === "audio"
                           ? "Nuværende svar: Lydfil"
                           : "Nuværende svar: Video"}
                       </p>

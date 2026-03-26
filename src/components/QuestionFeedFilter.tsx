@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faVideo, faMicrophone, faXmark, faChevronLeft, faChevronRight, faChevronDown, faPlay, faCopy } from "@fortawesome/free-solid-svg-icons";
 import { faShare, faFilter, faUpRightAndDownLeftFromCenter } from "@fortawesome/pro-duotone-svg-icons";
 import { PlayableMediaCard } from "./PlayableMediaCard";
-import { isBlobUrl, getBlobMediaType, getAnswerMediaInfo } from "@/lib/answer-utils";
+import { getAnswerMediaInfo } from "@/lib/answer-utils";
 import { getMuxThumbnailUrl, getMuxAnimatedGifUrl } from "@/lib/mux";
 import { useHlsPlayer } from "@/hooks/useHlsPlayer";
 import { UpvoteModal } from "./UpvoteModal";
@@ -128,12 +128,12 @@ export function QuestionFeedFilter({
       }
     });
 
-    // Split pinned from regular
-    const pinned = group === "all" ? result.filter((q) => q.pinned) : [];
+    // Split pinned from regular — only show pinned if answer is ready
+    const pinned = group === "all" ? result.filter((q) => q.pinned && q.muxAssetStatus === "ready") : [];
     const nonPinned = group === "all" ? result.filter((q) => !q.pinned) : result;
 
-    // Split answered from unanswered — a question is "answered" if it has a blob URL or a Mux asset
-    const isAnswered = (q: FeedQuestion) => q.answerUrl !== null || !!q.muxAssetStatus;
+    // Split answered from unanswered — only show answers that are ready (Mux transcoding complete)
+    const isAnswered = (q: FeedQuestion) => q.muxAssetStatus === "ready";
     const answered = nonPinned.filter(isAnswered);
     const unanswered = nonPinned.filter((q) => !isAnswered(q));
 
@@ -416,8 +416,8 @@ function PinnedQuestionCard({
   playingId: string | null;
   setPlayingId: (id: string | null) => void;
 }) {
-  const thumbnailClipUrl = question.answerClipUrl;
   const thumbnailPhotoUrl = question.answerPhotoUrl;
+  const hasMuxMedia = !!question.muxPlaybackId || !!question.muxAssetStatus;
 
   // Share/copy state — blink copy icon then return to share
   const [copied, setCopied] = useState(false);
@@ -515,7 +515,7 @@ function PinnedQuestionCard({
       </div>
 
       {/* Right: video/photo thumbnail with playback */}
-      {(thumbnailClipUrl || thumbnailPhotoUrl) && (
+      {(hasMuxMedia || thumbnailPhotoUrl) && (
         <PlayableMediaCard
           question={question}
           partyColor={partyColor}
@@ -553,27 +553,23 @@ function AnsweredQuestionCard({
   isVisible?: boolean;
 }) {
   const mediaInfo = getAnswerMediaInfo(question);
-  const isMux = mediaInfo?.source === "mux";
-  const isMuxReady = isMux && mediaInfo.status === "ready";
-  const muxPlaybackId = isMux ? mediaInfo.playbackId : null;
+  const isReady = mediaInfo?.status === "ready";
+  const muxPlaybackId = mediaInfo?.playbackId || null;
   const hasVideoAnswer = mediaInfo?.type === "video";
   const hasAudioAnswer = mediaInfo?.type === "audio";
-  const hasPlayableMedia = (isMuxReady || mediaInfo?.source === "blob") && (hasVideoAnswer || hasAudioAnswer);
+  const hasPlayableMedia = isReady && (hasVideoAnswer || hasAudioAnswer);
 
-  const blobVideoUrl = mediaInfo?.source === "blob" ? mediaInfo.url : null;
-  const clipUrl = !isMux ? question.answerClipUrl : null;
-  const muxGifUrl = muxPlaybackId && hasVideoAnswer ? getMuxAnimatedGifUrl(muxPlaybackId) : null;
-  const muxThumbnailUrl = muxPlaybackId ? getMuxThumbnailUrl(muxPlaybackId) : null;
+  const muxGifUrl = muxPlaybackId && isReady && hasVideoAnswer ? getMuxAnimatedGifUrl(muxPlaybackId) : null;
+  const muxThumbnailUrl = muxPlaybackId && isReady ? getMuxThumbnailUrl(muxPlaybackId) : null;
   const photoUrl = question.answerPhotoUrl || muxThumbnailUrl;
-  const hasCustomPoster = hasVideoAnswer && !clipUrl && !muxGifUrl && !!photoUrl;
+  const hasCustomPoster = hasVideoAnswer && !muxGifUrl && !!photoUrl;
   const cardRef = useRef<HTMLDivElement>(null);
-  const clipRef = useRef<HTMLVideoElement>(null);
   const fullVideoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
 
   // HLS player for Mux video
-  useHlsPlayer(fullVideoRef, isMuxReady && hasVideoAnswer ? muxPlaybackId : null);
+  useHlsPlayer(fullVideoRef, isReady && hasVideoAnswer ? muxPlaybackId : null);
 
   const [isHovering, setIsHovering] = useState(false);
   const [isWatching, setIsWatching] = useState(false);
@@ -624,66 +620,21 @@ function AnsweredQuestionCard({
     }
   }, [isVisible, isWatching, playingId, question.id]);
 
-  // Hover clip: play forward on hover, reset on leave (desktop only)
-  useEffect(() => {
-    const clip = clipRef.current;
-    if (!clip || !clipUrl) return;
-    // On touch devices, IntersectionObserver handles clip playback — skip hover logic entirely
-    if (window.matchMedia("(pointer: coarse)").matches) return;
-    if (isHovering && !isWatching) {
-      clip.currentTime = 0;
-      clip.play().catch(() => {});
-    } else {
-      clip.pause();
-      clip.currentTime = 0;
-    }
-  }, [isHovering, isWatching, clipUrl]);
-
-  // Mobile: autoplay clip when visible, pause everything when scrolled away
+  // Mobile: pause playback when scrolled away, resume when visible
   useEffect(() => {
     const card = cardRef.current;
     if (!card) return;
     const isTouch = window.matchMedia("(pointer: coarse)").matches;
     if (!isTouch) return;
 
-    let inViewport = false;
-    let checkTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const doReload = (clip: HTMLVideoElement) => {
-      clip.oncanplay = () => {
-        clip.oncanplay = null;
-        if (inViewport && !isWatchingRef.current) {
-          clip.currentTime = 0;
-          clip.play().catch(() => {});
-        }
-      };
-      clip.load();
-    };
-
     const observer = new IntersectionObserver(
       ([entry]) => {
-        inViewport = entry.isIntersecting;
-        const clip = clipRef.current;
-        if (checkTimer) { clearTimeout(checkTimer); checkTimer = null; }
-
         if (entry.isIntersecting) {
-          if (!isWatchingRef.current && clip && clipUrl) {
-            clip.currentTime = 0;
-            const p = clip.play();
-            if (p) {
-              p.catch(() => doReload(clip));
-            }
-            checkTimer = setTimeout(() => {
-              if (clip.currentTime < 0.05 && !clip.paused && !clip.ended && inViewport && !isWatchingRef.current) {
-                doReload(clip);
-              }
-            }, 400);
+          if (isWatchingRef.current) {
+            fullVideoRef.current?.play().catch(() => {});
+            audioRef.current?.play().catch(() => {});
           }
         } else {
-          if (clip && clipUrl && !isWatchingRef.current) {
-            clip.oncanplay = null;
-            clip.pause();
-          }
           if (isWatchingRef.current) {
             fullVideoRef.current?.pause();
             audioRef.current?.pause();
@@ -693,8 +644,8 @@ function AnsweredQuestionCard({
       { threshold: 0.3 }
     );
     observer.observe(card);
-    return () => { observer.disconnect(); if (checkTimer) clearTimeout(checkTimer); };
-  }, [clipUrl]);
+    return () => observer.disconnect();
+  }, []);
 
   // Click to play/pause full video
   const handleClick = useCallback(() => {
@@ -713,8 +664,6 @@ function AnsweredQuestionCard({
       setIsWatching(false);
       setPlayingId(null);
     } else if (hasVideoAnswer) {
-      // Stop clip to free mobile video decoder before starting full video
-      if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
       if (fullVideoRef.current) {
         fullVideoRef.current.currentTime = 0;
         fullVideoRef.current.play().catch(() => {});
@@ -742,8 +691,6 @@ function AnsweredQuestionCard({
         }
       });
     } else if (hasAudioAnswer) {
-      // Stop clip to free mobile video decoder before starting audio playback
-      if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(() => {});
@@ -824,15 +771,13 @@ function AnsweredQuestionCard({
           style={{ backgroundColor: partyColor || "#7E7D7A" }}
         />
       )}
-      {/* Clip video layered on top of the poster */}
-      {clipUrl && (
-        <video
-          ref={clipRef}
-          src={clipUrl}
-          muted
-          playsInline
-          preload="metadata"
+      {/* Mux animated GIF for hover preview */}
+      {muxGifUrl && (
+        <img
+          src={muxGifUrl}
+          alt=""
           className="absolute inset-0 w-full h-full object-cover"
+          style={{ opacity: isHovering && !isWatching ? 1 : 0, transition: "opacity 200ms ease" }}
         />
       )}
 
@@ -868,7 +813,6 @@ function AnsweredQuestionCard({
       {hasVideoAnswer && (
         <video
           ref={fullVideoRef}
-          src={blobVideoUrl || undefined}
           playsInline
           preload="none"
           onEnded={handleEnded}
@@ -896,8 +840,8 @@ function AnsweredQuestionCard({
       )}
 
       {/* Audio element */}
-      {hasAudioAnswer && (
-        <audio ref={audioRef} src={blobVideoUrl || (isMuxReady && muxPlaybackId ? `https://stream.mux.com/${muxPlaybackId}.m3u8` : undefined)} preload="none" onEnded={handleEnded} />
+      {hasAudioAnswer && muxPlaybackId && (
+        <audio ref={audioRef} src={`https://stream.mux.com/${muxPlaybackId}.m3u8`} preload="none" onEnded={handleEnded} />
       )}
 
       {/* Bottom: highlighted text + share + tags */}

@@ -1,6 +1,17 @@
 "use client";
 
-import { isBlobUrl, getBlobMediaType } from "@/lib/answer-utils";
+import { isBlobUrl } from "@/lib/answer-utils";
+
+function getBlobMediaType(url: string): "video" | "audio" | null {
+  const videoExtensions = [".mp4", ".mov", ".webm", ".avi", ".mkv", ".m4v"];
+  const audioExtensions = [".mp3", ".m4a", ".wav", ".ogg", ".aac", ".flac"];
+  try {
+    const pathname = new URL(url).pathname.toLowerCase();
+    if (videoExtensions.some((ext) => pathname.endsWith(ext))) return "video";
+    if (audioExtensions.some((ext) => pathname.endsWith(ext))) return "audio";
+  } catch { /* */ }
+  return null;
+}
 
 export function AnswerPlayer({
   answerUrl,

@@ -894,6 +894,23 @@ export async function deleteBlobUrl(url: string) {
 // ── Mux Integration ───────────────────────────────────────────────────
 
 /**
+ * Check if a Mux answer is ready (for dashboard polling).
+ * Returns the current muxAssetStatus.
+ */
+export async function checkMuxAnswerStatus(questionId: string): Promise<string | null> {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const [question] = await db
+    .select({ muxAssetStatus: questions.muxAssetStatus })
+    .from(questions)
+    .where(eq(questions.id, questionId))
+    .limit(1);
+
+  return question?.muxAssetStatus ?? null;
+}
+
+/**
  * Create a Mux direct upload URL.
  * The client PUTs the raw file directly to Mux — no server proxy needed.
  */
@@ -1020,30 +1037,8 @@ export async function submitMuxAnswer(
     });
   }
 
-  // Email upvoters
-  const upvoterList = await db
-    .select({ firstName: citizens.firstName, email: citizens.email })
-    .from(upvotes)
-    .innerJoin(citizens, eq(upvotes.citizenId, citizens.id))
-    .where(eq(upvotes.questionId, questionId));
+  // NOTE: Notification emails are sent from the Mux webhook when the asset is ready,
+  // so citizens only get notified when the video/audio is actually playable.
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  const questionPageUrl = `${appUrl}/${politician.partySlug}/${politician.slug}/q/${questionId}`;
-
-  await Promise.allSettled(
-    upvoterList.map((citizen) =>
-      sendAnswerNotificationEmail({
-        to: citizen.email,
-        firstName: citizen.firstName,
-        politicianName: politician.name,
-        partyName: politician.party,
-        questionText: question.text,
-        answerUrl: questionPageUrl,
-        isUpdate,
-      })
-    )
-  );
-
-  revalidatePath(`/${politician.partySlug}/${politician.slug}`);
   revalidatePath("/politiker/dashboard");
 }

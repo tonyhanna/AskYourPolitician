@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { questions, answerHistory } from "@/db/schema";
+import { questions, answerHistory, upvotes, citizens, politicians, parties } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { sendAnswerNotificationEmail } from "@/lib/email";
 
 // Mux webhook types we care about
 type MuxWebhookEvent = {
@@ -110,17 +111,56 @@ export async function POST(req: NextRequest) {
         })
         .where(eq(answerHistory.muxAssetId, assetId));
 
-      // Revalidate pages so the citizen side picks up the ready asset
+      // Revalidate pages + send notification emails
       if (updatedQuestion) {
-        // We need politician slug and party slug for revalidation.
-        // Fetch them from the politician table.
-        const result = await db.execute<{ slug: string; party_slug: string }>(
-          `SELECT p.slug, pa.slug as party_slug FROM politicians p JOIN parties pa ON p.party_id = pa.id WHERE p.id = '${updatedQuestion.politicianId}'`
-        );
-        const row = (result as unknown as { slug: string; party_slug: string }[])?.[0];
-        if (row) {
-          revalidatePath(`/${row.party_slug}/${row.slug}`);
-          revalidatePath(`/${row.party_slug}/${row.slug}/q/${updatedQuestion.id}`);
+        // Fetch politician info for revalidation and emails
+        const [politician] = await db
+          .select({
+            name: politicians.name,
+            slug: politicians.slug,
+            partySlug: parties.slug,
+            partyName: parties.name,
+          })
+          .from(politicians)
+          .innerJoin(parties, eq(politicians.partyId, parties.id))
+          .where(eq(politicians.id, updatedQuestion.politicianId))
+          .limit(1);
+
+        if (politician) {
+          revalidatePath(`/${politician.partySlug}/${politician.slug}`);
+          revalidatePath(`/${politician.partySlug}/${politician.slug}/q/${updatedQuestion.id}`);
+          revalidatePath("/politiker/dashboard");
+
+          // Fetch question text for email
+          const [q] = await db
+            .select({ text: questions.text })
+            .from(questions)
+            .where(eq(questions.id, updatedQuestion.id))
+            .limit(1);
+
+          // Send notification emails to all upvoters
+          const upvoterList = await db
+            .select({ firstName: citizens.firstName, email: citizens.email })
+            .from(upvotes)
+            .innerJoin(citizens, eq(upvotes.citizenId, citizens.id))
+            .where(eq(upvotes.questionId, updatedQuestion.id));
+
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+          const questionPageUrl = `${appUrl}/${politician.partySlug}/${politician.slug}/q/${updatedQuestion.id}`;
+
+          await Promise.allSettled(
+            upvoterList.map((citizen) =>
+              sendAnswerNotificationEmail({
+                to: citizen.email,
+                firstName: citizen.firstName,
+                politicianName: politician.name,
+                partyName: politician.partyName,
+                questionText: q?.text ?? "",
+                answerUrl: questionPageUrl,
+                isUpdate: false,
+              })
+            )
+          );
         }
       }
 
