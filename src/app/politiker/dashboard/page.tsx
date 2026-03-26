@@ -68,6 +68,10 @@ export default async function Dashboard() {
     answerClipUrl: string | null;
     suggestedBy: string | null;
     pinned: boolean;
+    muxAssetId: string | null;
+    muxPlaybackId: string | null;
+    muxAssetStatus: string | null;
+    muxMediaType: string | null;
   }[] = [];
 
   let politicianCauses: {
@@ -142,6 +146,10 @@ export default async function Dashboard() {
         ? suggestedByNames.get(q.suggestedByCitizenId) ?? null
         : null,
       pinned: q.pinned,
+      muxAssetId: q.muxAssetId ?? null,
+      muxPlaybackId: q.muxPlaybackId ?? null,
+      muxAssetStatus: q.muxAssetStatus ?? null,
+      muxMediaType: q.muxMediaType ?? null,
     }));
 
     // Fetch causes
