@@ -134,6 +134,10 @@ export const questions = pgTable("questions", {
   answerClipUrl: varchar("answer_clip_url", { length: 2048 }),
   answerDuration: real("answer_duration"),
   answerAspectRatio: real("answer_aspect_ratio"),
+  muxAssetId: varchar("mux_asset_id", { length: 255 }),
+  muxPlaybackId: varchar("mux_playback_id", { length: 255 }),
+  muxAssetStatus: varchar("mux_asset_status", { length: 50 }),
+  muxMediaType: varchar("mux_media_type", { length: 10 }),
   pinned: boolean("pinned").notNull().default(false),
   suggestedByCitizenId: uuid("suggested_by_citizen_id").references(
     () => citizens.id
@@ -216,11 +220,15 @@ export const answerHistory = pgTable("answer_history", {
   questionId: uuid("question_id")
     .notNull()
     .references(() => questions.id, { onDelete: "cascade" }),
-  answerUrl: varchar("answer_url", { length: 2048 }).notNull(),
+  answerUrl: varchar("answer_url", { length: 2048 }),
   answerPhotoUrl: varchar("answer_photo_url", { length: 2048 }),
   answerClipUrl: varchar("answer_clip_url", { length: 2048 }),
   answerDuration: real("answer_duration"),
   answerAspectRatio: real("answer_aspect_ratio"),
+  muxAssetId: varchar("mux_asset_id", { length: 255 }),
+  muxPlaybackId: varchar("mux_playback_id", { length: 255 }),
+  muxAssetStatus: varchar("mux_asset_status", { length: 50 }),
+  muxMediaType: varchar("mux_media_type", { length: 10 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

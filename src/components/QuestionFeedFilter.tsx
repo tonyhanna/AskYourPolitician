@@ -5,7 +5,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faVideo, faMicrophone, faXmark, faChevronLeft, faChevronRight, faChevronDown, faPlay, faCopy } from "@fortawesome/free-solid-svg-icons";
 import { faShare, faFilter, faUpRightAndDownLeftFromCenter } from "@fortawesome/pro-duotone-svg-icons";
 import { PlayableMediaCard } from "./PlayableMediaCard";
-import { isBlobUrl, getBlobMediaType } from "@/lib/answer-utils";
+import { isBlobUrl, getBlobMediaType, getAnswerMediaInfo } from "@/lib/answer-utils";
+import { getMuxThumbnailUrl, getMuxAnimatedGifUrl } from "@/lib/mux";
+import { useHlsPlayer } from "@/hooks/useHlsPlayer";
 import { UpvoteModal } from "./UpvoteModal";
 import { CircularUpvoteButton } from "./CircularUpvoteButton";
 import { QuestionDetailEllipsis } from "./QuestionDetailEllipsis";
@@ -29,6 +31,9 @@ type FeedQuestion = {
   isUpvoted: boolean;
   createdAt: string;
   pinned: boolean;
+  muxPlaybackId?: string | null;
+  muxAssetStatus?: string | null;
+  muxMediaType?: string | null;
 };
 
 type SortOption = "newest" | "oldest" | "most_upvoted" | "least_upvoted";
@@ -127,9 +132,10 @@ export function QuestionFeedFilter({
     const pinned = group === "all" ? result.filter((q) => q.pinned) : [];
     const nonPinned = group === "all" ? result.filter((q) => !q.pinned) : result;
 
-    // Split answered from unanswered
-    const answered = nonPinned.filter((q) => q.answerUrl !== null);
-    const unanswered = nonPinned.filter((q) => q.answerUrl === null);
+    // Split answered from unanswered — a question is "answered" if it has a blob URL or a Mux asset
+    const isAnswered = (q: FeedQuestion) => q.answerUrl !== null || !!q.muxAssetStatus;
+    const answered = nonPinned.filter(isAnswered);
+    const unanswered = nonPinned.filter((q) => !isAnswered(q));
 
     return { pinnedQuestions: pinned, answeredQuestions: answered, filteredQuestions: unanswered };
   }, [questions, group, selectedTags, sort]);
@@ -546,21 +552,28 @@ function AnsweredQuestionCard({
   setPlayingId: (id: string | null) => void;
   isVisible?: boolean;
 }) {
-  const mediaType = question.answerUrl && isBlobUrl(question.answerUrl)
-    ? getBlobMediaType(question.answerUrl)
-    : null;
-  const hasVideoAnswer = mediaType === "video";
-  const hasAudioAnswer = mediaType === "audio";
-  const hasPlayableMedia = hasVideoAnswer || hasAudioAnswer;
+  const mediaInfo = getAnswerMediaInfo(question);
+  const isMux = mediaInfo?.source === "mux";
+  const isMuxReady = isMux && mediaInfo.status === "ready";
+  const muxPlaybackId = isMux ? mediaInfo.playbackId : null;
+  const hasVideoAnswer = mediaInfo?.type === "video";
+  const hasAudioAnswer = mediaInfo?.type === "audio";
+  const hasPlayableMedia = (isMuxReady || mediaInfo?.source === "blob") && (hasVideoAnswer || hasAudioAnswer);
 
-  const clipUrl = question.answerClipUrl;
-  const photoUrl = question.answerPhotoUrl;
-  const hasCustomPoster = hasVideoAnswer && !clipUrl && !!photoUrl;
+  const blobVideoUrl = mediaInfo?.source === "blob" ? mediaInfo.url : null;
+  const clipUrl = !isMux ? question.answerClipUrl : null;
+  const muxGifUrl = muxPlaybackId && hasVideoAnswer ? getMuxAnimatedGifUrl(muxPlaybackId) : null;
+  const muxThumbnailUrl = muxPlaybackId ? getMuxThumbnailUrl(muxPlaybackId) : null;
+  const photoUrl = question.answerPhotoUrl || muxThumbnailUrl;
+  const hasCustomPoster = hasVideoAnswer && !clipUrl && !muxGifUrl && !!photoUrl;
   const cardRef = useRef<HTMLDivElement>(null);
   const clipRef = useRef<HTMLVideoElement>(null);
   const fullVideoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
+
+  // HLS player for Mux video
+  useHlsPlayer(fullVideoRef, isMuxReady && hasVideoAnswer ? muxPlaybackId : null);
 
   const [isHovering, setIsHovering] = useState(false);
   const [isWatching, setIsWatching] = useState(false);
@@ -855,7 +868,7 @@ function AnsweredQuestionCard({
       {hasVideoAnswer && (
         <video
           ref={fullVideoRef}
-          src={question.answerUrl!}
+          src={blobVideoUrl || undefined}
           playsInline
           preload="none"
           onEnded={handleEnded}
@@ -884,7 +897,7 @@ function AnsweredQuestionCard({
 
       {/* Audio element */}
       {hasAudioAnswer && (
-        <audio ref={audioRef} src={question.answerUrl!} preload="none" onEnded={handleEnded} />
+        <audio ref={audioRef} src={blobVideoUrl || (isMuxReady && muxPlaybackId ? `https://stream.mux.com/${muxPlaybackId}.m3u8` : undefined)} preload="none" onEnded={handleEnded} />
       )}
 
       {/* Bottom: highlighted text + share + tags */}

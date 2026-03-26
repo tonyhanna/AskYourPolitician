@@ -15,3 +15,39 @@ export function getBlobMediaType(url: string): "video" | "audio" | null {
   }
   return null;
 }
+
+/**
+ * Unified media info for a question's answer.
+ * Supports both Mux-based and legacy Vercel Blob answers.
+ */
+export type AnswerMediaInfo =
+  | { source: "mux"; type: "video" | "audio"; playbackId: string; status: string }
+  | { source: "blob"; type: "video" | "audio"; url: string }
+  | null;
+
+export function getAnswerMediaInfo(question: {
+  muxPlaybackId?: string | null;
+  muxAssetStatus?: string | null;
+  muxMediaType?: string | null;
+  answerUrl?: string | null;
+}): AnswerMediaInfo {
+  // Mux answer (ready or still processing)
+  if (question.muxPlaybackId || question.muxAssetStatus) {
+    return {
+      source: "mux",
+      type: (question.muxMediaType as "video" | "audio") ?? "video",
+      playbackId: question.muxPlaybackId ?? "",
+      status: question.muxAssetStatus ?? "preparing",
+    };
+  }
+
+  // Legacy Vercel Blob answer
+  if (question.answerUrl) {
+    const type = getBlobMediaType(question.answerUrl);
+    if (type) {
+      return { source: "blob", type, url: question.answerUrl };
+    }
+  }
+
+  return null;
+}

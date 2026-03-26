@@ -18,6 +18,9 @@ type QuestionDetailCardProps = {
     answerClipUrl: string | null;
     answerDuration: number | null;
     answerAspectRatio: number | null;
+    muxPlaybackId?: string | null;
+    muxAssetStatus?: string | null;
+    muxMediaType?: string | null;
     tags: string[];
     suggestedByName: string | null;
     isUpvoted: boolean;
@@ -52,8 +55,8 @@ export function QuestionDetailCard({
   politicianFirstName,
   partyName,
 }: QuestionDetailCardProps) {
-  const hasAnswer = !!question.answerUrl;
-  const hasThumbnail = question.answerClipUrl || question.answerPhotoUrl;
+  const hasAnswer = !!question.answerUrl || !!question.muxAssetStatus;
+  const hasThumbnail = question.answerClipUrl || question.answerPhotoUrl || question.muxPlaybackId || question.muxAssetStatus === "preparing";
 
   // Upvote modal for non-logged-in users
   const [showUpvoteModal, setShowUpvoteModal] = useState(false);

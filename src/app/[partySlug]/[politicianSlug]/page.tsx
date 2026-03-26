@@ -128,7 +128,7 @@ export default async function BorgerFeed({
   tagsByQuestion.forEach((tags) => tags.forEach((t) => allTagsSet.add(t)));
 
   const feedQuestions = allQuestions
-    .filter((q) => !(q.deadlineMissed && !q.answerUrl)) // Hide missed unanswered questions from citizens
+    .filter((q) => !(q.deadlineMissed && !q.answerUrl && !q.muxAssetStatus)) // Hide missed unanswered questions from citizens
     .map((q) => ({
       id: q.id,
       text: q.text,
@@ -139,6 +139,9 @@ export default async function BorgerFeed({
       answerClipUrl: q.answerClipUrl,
       answerDuration: q.answerDuration ?? null,
       answerAspectRatio: q.answerAspectRatio ?? null,
+      muxPlaybackId: q.muxPlaybackId ?? null,
+      muxAssetStatus: q.muxAssetStatus ?? null,
+      muxMediaType: q.muxMediaType ?? null,
       goalReachedEmailSent: q.goalReachedEmailSent,
       goalReachedAt: q.goalReachedAt ? q.goalReachedAt.toISOString() : null,
       deadlineMissed: q.deadlineMissed,

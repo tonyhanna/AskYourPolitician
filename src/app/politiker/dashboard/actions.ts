@@ -11,6 +11,7 @@ import { del } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { getActivePolitician } from "@/lib/admin";
 import { checkAndNotifyGoalReached } from "@/lib/goal-check";
+import { createDirectUpload, deleteMuxAsset } from "@/lib/mux";
 
 export async function createQuestion(formData: FormData) {
   const session = await auth();
@@ -207,9 +208,9 @@ export async function deleteQuestion(questionId: string): Promise<{ error?: stri
   const politician = await getActivePolitician();
   if (!politician) return { error: "Politician not found" };
 
-  // Fetch question + answer history to collect blob URLs before deleting
+  // Fetch question + answer history to collect blob URLs + Mux assets before deleting
   const [question] = await db
-    .select({ answerUrl: questions.answerUrl, answerPhotoUrl: questions.answerPhotoUrl, answerClipUrl: questions.answerClipUrl })
+    .select({ answerUrl: questions.answerUrl, answerPhotoUrl: questions.answerPhotoUrl, answerClipUrl: questions.answerClipUrl, muxAssetId: questions.muxAssetId })
     .from(questions)
     .where(
       and(
@@ -249,6 +250,11 @@ export async function deleteQuestion(questionId: string): Promise<{ error?: stri
   // Clean up blob storage (fire-and-forget, don't block on failure)
   if (blobUrls.length > 0) {
     del(blobUrls).catch(() => {});
+  }
+
+  // Clean up Mux asset
+  if (question.muxAssetId) {
+    deleteMuxAsset(question.muxAssetId).catch(() => {});
   }
 
   revalidatePath("/politiker/dashboard");
@@ -883,4 +889,161 @@ export async function deleteBlobUrl(url: string) {
   if (!session?.user?.id) throw new Error("Unauthorized");
   if (!url || !isBlobUrl(url)) return;
   del(url).catch(() => {});
+}
+
+// ── Mux Integration ───────────────────────────────────────────────────
+
+/**
+ * Create a Mux direct upload URL.
+ * The client PUTs the raw file directly to Mux — no server proxy needed.
+ */
+export async function getMuxUploadUrl(questionId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const politician = await getActivePolitician();
+  if (!politician) throw new Error("Politician not found");
+
+  // Verify the question belongs to this politician and has reached its goal
+  const [question] = await db
+    .select({ id: questions.id })
+    .from(questions)
+    .where(
+      and(
+        eq(questions.id, questionId),
+        eq(questions.politicianId, politician.id),
+        eq(questions.goalReachedEmailSent, true)
+      )
+    )
+    .limit(1);
+
+  if (!question) throw new Error("Spørgsmålet har ikke nået sit upvote-mål endnu");
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:4000";
+  const { uploadUrl, uploadId } = await createDirectUpload(questionId, appUrl);
+
+  return { uploadUrl, uploadId };
+}
+
+/**
+ * Submit a Mux-based answer. Called after the client has uploaded to Mux.
+ * Sets muxAssetStatus = "preparing" — the webhook will update it to "ready".
+ */
+export async function submitMuxAnswer(
+  questionId: string,
+  mediaType: "video" | "audio",
+  posterUrl?: string,
+  duration?: number,
+  aspectRatio?: number,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const politician = await getActivePolitician();
+  if (!politician) throw new Error("Politician not found");
+
+  const [question] = await db
+    .select()
+    .from(questions)
+    .where(
+      and(
+        eq(questions.id, questionId),
+        eq(questions.politicianId, politician.id),
+        eq(questions.goalReachedEmailSent, true)
+      )
+    )
+    .limit(1);
+
+  if (!question) throw new Error("Spørgsmålet har ikke nået sit upvote-mål endnu");
+
+  const isUpdate = !!(question.answerUrl || question.muxAssetId);
+
+  // Clean up old assets
+  if (isUpdate) {
+    // Delete old Mux asset
+    if (question.muxAssetId) {
+      deleteMuxAsset(question.muxAssetId).catch(() => {});
+    }
+    // Delete old blob URLs (video, clip — NOT poster if it's being reused)
+    const keepingPoster = posterUrl && posterUrl === question.answerPhotoUrl;
+    const oldBlobUrls = [
+      question.answerUrl,
+      keepingPoster ? null : question.answerPhotoUrl,
+      question.answerClipUrl,
+    ].filter((url): url is string => !!url && isBlobUrl(url));
+    if (oldBlobUrls.length > 0) del(oldBlobUrls).catch(() => {});
+  }
+
+  // Update question — clear blob URLs, set Mux status to preparing
+  await db
+    .update(questions)
+    .set({
+      answerUrl: null,
+      answerClipUrl: null,
+      answerPhotoUrl: posterUrl ?? null,
+      answerDuration: duration ?? null,
+      answerAspectRatio: aspectRatio ?? null,
+      muxAssetStatus: "preparing",
+      muxMediaType: mediaType,
+      muxPlaybackId: null, // Will be set by webhook
+      muxAssetId: null, // Will be set by webhook
+      deadlineMissed: false,
+    })
+    .where(eq(questions.id, questionId));
+
+  // Update or create answer_history
+  if (isUpdate) {
+    await db
+      .update(answerHistory)
+      .set({
+        answerUrl: null,
+        answerPhotoUrl: posterUrl ?? null,
+        answerClipUrl: null,
+        answerDuration: duration ?? null,
+        answerAspectRatio: aspectRatio ?? null,
+        muxAssetStatus: "preparing",
+        muxMediaType: mediaType,
+        muxPlaybackId: null,
+        muxAssetId: null,
+      })
+      .where(eq(answerHistory.questionId, questionId));
+  } else {
+    await db.insert(answerHistory).values({
+      questionId,
+      answerUrl: null,
+      answerPhotoUrl: posterUrl ?? null,
+      answerClipUrl: null,
+      answerDuration: duration ?? null,
+      answerAspectRatio: aspectRatio ?? null,
+      muxAssetStatus: "preparing",
+      muxMediaType: mediaType,
+    });
+  }
+
+  // Email upvoters
+  const upvoterList = await db
+    .select({ firstName: citizens.firstName, email: citizens.email })
+    .from(upvotes)
+    .innerJoin(citizens, eq(upvotes.citizenId, citizens.id))
+    .where(eq(upvotes.questionId, questionId));
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const questionPageUrl = `${appUrl}/${politician.partySlug}/${politician.slug}/q/${questionId}`;
+
+  await Promise.allSettled(
+    upvoterList.map((citizen) =>
+      sendAnswerNotificationEmail({
+        to: citizen.email,
+        firstName: citizen.firstName,
+        politicianName: politician.name,
+        partyName: politician.party,
+        questionText: question.text,
+        answerUrl: questionPageUrl,
+        isUpdate,
+      })
+    )
+  );
+
+  revalidatePath(`/${politician.partySlug}/${politician.slug}`);
+  revalidatePath("/politiker/dashboard");
 }

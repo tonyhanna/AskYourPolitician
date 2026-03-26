@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay } from "@fortawesome/free-solid-svg-icons";
-import { isBlobUrl, getBlobMediaType } from "@/lib/answer-utils";
+import { getAnswerMediaInfo } from "@/lib/answer-utils";
+import { getMuxThumbnailUrl, getMuxAnimatedGifUrl } from "@/lib/mux";
+import { useHlsPlayer } from "@/hooks/useHlsPlayer";
 
 type PlayableMediaCardProps = {
   question: {
@@ -12,6 +14,9 @@ type PlayableMediaCardProps = {
     answerClipUrl: string | null;
     answerPhotoUrl: string | null;
     answerDuration: number | null;
+    muxPlaybackId?: string | null;
+    muxAssetStatus?: string | null;
+    muxMediaType?: string | null;
   };
   partyColor?: string | null;
   partyColorDark?: string | null;
@@ -36,16 +41,26 @@ export function PlayableMediaCard({
   className = "",
   style,
 }: PlayableMediaCardProps) {
-  // Media type detection
-  const mediaType = question.answerUrl && isBlobUrl(question.answerUrl)
-    ? getBlobMediaType(question.answerUrl)
-    : null;
-  const hasVideoAnswer = mediaType === "video";
-  const hasAudioAnswer = mediaType === "audio";
-  const hasPlayableMedia = hasVideoAnswer || hasAudioAnswer;
+  // Unified media info — handles both Mux and legacy Blob
+  const mediaInfo = getAnswerMediaInfo(question);
+  const isMux = mediaInfo?.source === "mux";
+  const isMuxReady = isMux && mediaInfo.status === "ready";
+  const isMuxPreparing = isMux && mediaInfo.status === "preparing";
+  const hasVideoAnswer = mediaInfo?.type === "video";
+  const hasAudioAnswer = mediaInfo?.type === "audio";
+  const hasPlayableMedia = (isMuxReady || mediaInfo?.source === "blob") && (hasVideoAnswer || hasAudioAnswer);
 
-  const thumbnailClipUrl = question.answerClipUrl;
-  const thumbnailPhotoUrl = question.answerPhotoUrl;
+  // Mux URLs
+  const muxPlaybackId = isMux ? mediaInfo.playbackId : null;
+  const muxThumbnailUrl = muxPlaybackId ? getMuxThumbnailUrl(muxPlaybackId) : null;
+  const muxGifUrl = muxPlaybackId && hasVideoAnswer ? getMuxAnimatedGifUrl(muxPlaybackId) : null;
+
+  // Legacy blob URLs
+  const blobVideoUrl = mediaInfo?.source === "blob" ? mediaInfo.url : null;
+  const thumbnailClipUrl = !isMux ? question.answerClipUrl : null;
+
+  // Poster: custom poster (Blob) takes priority, then Mux auto-thumbnail, then nothing
+  const thumbnailPhotoUrl = question.answerPhotoUrl || muxThumbnailUrl;
 
   // Refs
   const thumbnailWrapRef = useRef<HTMLDivElement>(null);
@@ -54,6 +69,7 @@ export function PlayableMediaCard({
   const progressBarRef = useRef<HTMLDivElement>(null);
   const clipRef = useRef<HTMLVideoElement>(null);
   const bufferingRef = useRef<HTMLDivElement>(null);
+  const gifRef = useRef<HTMLImageElement>(null);
 
   // State
   const [isWatching, setIsWatching] = useState(false);
@@ -62,7 +78,10 @@ export function PlayableMediaCard({
 
   useEffect(() => { isWatchingRef.current = isWatching; }, [isWatching]);
 
-  // Hover clip: play forward on hover, reset to start on leave (desktop only)
+  // HLS player for Mux video
+  useHlsPlayer(fullVideoRef, isMuxReady && hasVideoAnswer ? muxPlaybackId : null);
+
+  // Hover clip: play forward on hover, reset to start on leave (desktop only) — legacy blob only
   useEffect(() => {
     const clip = clipRef.current;
     if (!clip || !thumbnailClipUrl) return;
@@ -77,7 +96,7 @@ export function PlayableMediaCard({
     }
   }, [isHovering, isWatching, thumbnailClipUrl]);
 
-  // Mobile: autoplay clip when visible, pause/resume on scroll
+  // Mobile: autoplay clip when visible, pause/resume on scroll — legacy blob only
   useEffect(() => {
     const wrap = thumbnailWrapRef.current;
     if (!wrap) return;
@@ -247,7 +266,8 @@ export function PlayableMediaCard({
     return () => el.removeEventListener("timeupdate", onTimeUpdate);
   }, [isWatching, hasVideoAnswer, question.answerDuration]);
 
-  if (!thumbnailClipUrl && !thumbnailPhotoUrl) return null;
+  // Nothing to show
+  if (!thumbnailClipUrl && !thumbnailPhotoUrl && !muxGifUrl && !isMuxPreparing) return null;
 
   return (
     <div
@@ -258,6 +278,14 @@ export function PlayableMediaCard({
       onMouseEnter={() => { if (hasPlayableMedia && !window.matchMedia("(pointer: coarse)").matches) setIsHovering(true); }}
       onMouseLeave={() => { if (!window.matchMedia("(pointer: coarse)").matches) setIsHovering(false); }}
     >
+      {/* Processing overlay for Mux assets still transcoding */}
+      {isMuxPreparing && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ zIndex: 10, backgroundColor: "rgba(0,0,0,0.6)" }}>
+          <div className="animate-spin" style={{ width: 40, height: 40, borderRadius: "50%", border: "4px solid rgba(255,255,255,0.25)", borderTopColor: "#ffffff" }} />
+          <span className="text-white text-sm mt-3" style={{ fontFamily: "var(--font-figtree)" }}>Behandler video...</span>
+        </div>
+      )}
+
       {/* Dark overlay + play icon */}
       {hasPlayableMedia && (
         <>
@@ -318,7 +346,8 @@ export function PlayableMediaCard({
       {hasVideoAnswer && (
         <video
           ref={fullVideoRef}
-          src={question.answerUrl!}
+          // For legacy blob answers, set src directly. For Mux, useHlsPlayer handles src.
+          src={blobVideoUrl || undefined}
           playsInline
           preload="none"
           onEnded={handleEnded}
@@ -353,7 +382,7 @@ export function PlayableMediaCard({
       {hasAudioAnswer && (
         <audio
           ref={audioRef}
-          src={question.answerUrl!}
+          src={blobVideoUrl || (isMuxReady && muxPlaybackId ? `https://stream.mux.com/${muxPlaybackId}.m3u8` : undefined)}
           preload="none"
           onEnded={handleEnded}
         />
@@ -367,7 +396,19 @@ export function PlayableMediaCard({
           className="absolute inset-0 w-full h-full object-cover"
         />
       )}
-      {/* Clip video layered on top of the poster */}
+
+      {/* Mux animated GIF for hover preview */}
+      {muxGifUrl && !thumbnailClipUrl && (
+        <img
+          ref={gifRef}
+          src={muxGifUrl}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ opacity: isHovering && !isWatching ? 1 : 0, transition: "opacity 200ms ease" }}
+        />
+      )}
+
+      {/* Legacy blob clip video layered on top of the poster */}
       {thumbnailClipUrl && (
         <video
           ref={clipRef}

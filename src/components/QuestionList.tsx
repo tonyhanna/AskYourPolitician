@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { upload } from "@vercel/blob/client";
-import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster } from "@/app/politiker/dashboard/actions";
-import { generateVideoClip } from "@/lib/clip-generator";
-import { compressVideo } from "@/lib/video-compressor";
+import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster, getMuxUploadUrl, submitMuxAnswer } from "@/app/politiker/dashboard/actions";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { SuggestionList } from "./SuggestionList";
 import { isBlobUrl, getBlobMediaType } from "@/lib/answer-utils";
@@ -78,6 +76,10 @@ type Question = {
   answerClipUrl: string | null;
   suggestedBy: string | null;
   pinned: boolean;
+  muxAssetId?: string | null;
+  muxPlaybackId?: string | null;
+  muxAssetStatus?: string | null;
+  muxMediaType?: string | null;
 };
 
 type PendingSuggestion = {
@@ -322,11 +324,10 @@ function QuestionItem({
     setShowPosterUpload(false);
   }
 
-  /** Generate clip + auto-poster, upload them, and return URLs (does NOT save to DB). */
-  async function generateAndUploadClip(videoUrl: string): Promise<{ clipUrl: string; posterUrl: string } | null> {
+  /** Legacy: Generate clip + auto-poster from blob URL, upload them, return URLs. Only for old blob-based answers. */
+  async function generateAndUploadClipLegacy(videoUrl: string, generateVideoClip: (url: string) => Promise<{ clip: File; poster: File } | null>): Promise<{ clipUrl: string; posterUrl: string } | null> {
     setClipError(null);
     try {
-      // Timeout after 2 minutes to prevent hanging if video can't be loaded (e.g. Blob bandwidth exceeded)
       const result = await Promise.race([
         generateVideoClip(videoUrl),
         new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Timeout: klip-generering tog for lang tid")), 120_000)),
@@ -365,17 +366,13 @@ function QuestionItem({
     const questionId = question.id;
     _isAudioSubmit.set(questionId, true);
     try {
-      // Upload audio + selfie photo in parallel
+      // Step 1: Upload to Mux + poster to Blob in parallel
       submitStepStore.set(questionId, "uploading");
       setUploadProgress(0);
-      // When editing: keep existing custom poster if user didn't upload a new one
       const keepExistingAudioPoster = editingAnswer && !photoFile && hasExistingCustomPoster;
-      const [audioBlob, photoBlobUrl] = await Promise.all([
-        upload(`answers/sound/${file.name}`, file, {
-          access: "public",
-          handleUploadUrl: "/api/upload",
-          onUploadProgress: ({ percentage }) => setUploadProgress(percentage),
-        }),
+
+      const [muxUpload, photoBlobUrl] = await Promise.all([
+        getMuxUploadUrl(questionId),
         photoFile
           ? upload(`answers/posters/${photoFile.name}`, photoFile, {
               access: "public",
@@ -383,9 +380,25 @@ function QuestionItem({
             }).then((b) => b.url)
           : Promise.resolve(keepExistingAudioPoster ? question.answerPhotoUrl : null),
       ]);
-      // Submit answer
+
+      // PUT raw audio file directly to Mux
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", muxUpload.uploadUrl);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`Upload failed: ${xhr.status}`));
+        };
+        xhr.onerror = () => reject(new Error("Upload failed"));
+        xhr.send(file);
+      });
+
+      // Step 2: Submit answer metadata
       submitStepStore.set(questionId, "submitting");
-      await submitAnswerUrl(questionId, audioBlob.url, photoBlobUrl ?? undefined, pendingDuration, pendingAspectRatio);
+      await submitMuxAnswer(questionId, "audio", photoBlobUrl ?? undefined, pendingDuration, pendingAspectRatio);
       setPendingFile(null);
       setPendingDuration(undefined);
       setPendingAspectRatio(undefined);
@@ -423,17 +436,24 @@ function QuestionItem({
         submitStepStore.set(questionId, "submitting");
         await updateAnswerPoster(questionId, posterBlob.url);
       } else if (removePoster) {
-        // Scenarie B: Remove poster, regenerate clip first, then submit all at once
-        submitStepStore.set(questionId, "generating");
-        const clipResult = await generateAndUploadClip(question.answerUrl!);
-
-        if (opId !== submitOpRef.current) return;
-
-        submitStepStore.set(questionId, "submitting");
-        if (clipResult) {
-          await updateAnswerPoster(questionId, null, clipResult.clipUrl, clipResult.posterUrl);
-        } else {
+        // Scenarie B: Remove poster — for Mux answers, just clear poster (Mux auto-generates thumbnails).
+        // For legacy blob answers, regenerate clip.
+        if (question.muxAssetId || question.muxPlaybackId) {
+          submitStepStore.set(questionId, "submitting");
           await updateAnswerPoster(questionId, null);
+        } else if (question.answerUrl) {
+          submitStepStore.set(questionId, "generating");
+          const { generateVideoClip } = await import("@/lib/clip-generator");
+          const clipResult = await generateAndUploadClipLegacy(question.answerUrl, generateVideoClip);
+
+          if (opId !== submitOpRef.current) return;
+
+          submitStepStore.set(questionId, "submitting");
+          if (clipResult) {
+            await updateAnswerPoster(questionId, null, clipResult.clipUrl, clipResult.posterUrl);
+          } else {
+            await updateAnswerPoster(questionId, null);
+          }
         }
       }
 
@@ -457,51 +477,24 @@ function QuestionItem({
       );
       if (!confirmed) return;
     }
-    // Capture values before any state resets — the component may remount
-    // mid-flow when the question moves from "unanswered" to "answered".
     const file = pendingFile;
     const questionId = question.id;
     const posterFile = pendingPosterFile;
     const duration = pendingDuration;
     const aspectRatio = pendingAspectRatio;
-    // When editing: keep existing custom poster if user didn't change or remove it
     const keepExistingPoster = editingAnswer && !posterFile && !removePoster && hasExistingCustomPoster;
-    const effectiveHasPoster = !!posterFile || keepExistingPoster;
 
-    // Increment op counter — any in-flight stale operation will see a mismatch and bail out
     submitOpRef.current++;
     const opId = submitOpRef.current;
 
-    // Remember if custom poster was used (survives remount)
-    if (effectiveHasPoster) _customPosterUsed.set(questionId, true);
-    else _customPosterUsed.delete(questionId);
-
     try {
-      // Step 1: Compress video
-      submitStepStore.set(questionId, "compressing");
-      setCompressProgress(0);
-      let fileToUpload = file;
-      try {
-        fileToUpload = await compressVideo(file, undefined, (p) => {
-          if (opId !== submitOpRef.current) return; // stale — don't update progress
-          setCompressProgress(p);
-        });
-      } catch (e) {
-        console.error("Video compression failed, uploading original:", e);
-      }
-
-      // Check if user cancelled or started a new submission during compression
-      if (opId !== submitOpRef.current) return;
-
-      // Step 2: Upload to blob storage (poster + video in parallel)
+      // Step 1: Upload to Mux (no compression needed — Mux handles transcoding)
       submitStepStore.set(questionId, "uploading");
       setUploadProgress(0);
-      const [videoBlob, posterBlobUrl] = await Promise.all([
-        upload(`answers/video/${fileToUpload.name}`, fileToUpload, {
-          access: "public",
-          handleUploadUrl: "/api/upload",
-          onUploadProgress: ({ percentage }) => setUploadProgress(percentage),
-        }),
+
+      // Get Mux direct upload URL + upload poster to Blob in parallel
+      const [muxUpload, posterBlobUrl] = await Promise.all([
+        getMuxUploadUrl(questionId),
         posterFile
           ? upload(`answers/posters/${posterFile.name}`, posterFile, {
               access: "public",
@@ -509,27 +502,31 @@ function QuestionItem({
             }).then((b) => b.url)
           : Promise.resolve(null),
       ]);
-      const videoUrl = videoBlob.url;
-      // Determine poster URL: new upload > keep existing > none
-      const finalPosterUrl = posterBlobUrl ?? (keepExistingPoster ? question.answerPhotoUrl : null);
 
-      // Step 3: Generate clip + auto-poster (only when no custom poster)
-      let clipUrl: string | undefined;
-      let autoPosterUrl: string | undefined;
-      if (!effectiveHasPoster) {
-        submitStepStore.set(questionId, "generating");
-        const clipResult = await generateAndUploadClip(videoUrl);
-        if (clipResult) {
-          clipUrl = clipResult.clipUrl;
-          autoPosterUrl = clipResult.posterUrl;
-        }
-      }
+      // PUT raw file directly to Mux's upload URL with progress tracking
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", muxUpload.uploadUrl);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable && opId === submitOpRef.current) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`Upload failed: ${xhr.status}`));
+        };
+        xhr.onerror = () => reject(new Error("Upload failed"));
+        xhr.send(file);
+      });
 
-      // Step 4: Submit answer with all URLs ready (triggers server action + revalidation)
+      if (opId !== submitOpRef.current) return;
+
+      // Step 2: Submit answer metadata — Mux webhook will update status to "ready"
       submitStepStore.set(questionId, "submitting");
-      const posterUrlForSubmit = finalPosterUrl ?? autoPosterUrl ?? undefined;
-      await submitAnswerUrl(questionId, videoUrl, posterUrlForSubmit, duration, aspectRatio, clipUrl);
-      // These setState calls may be no-ops if the component remounted
+      const finalPosterUrl = posterBlobUrl ?? (keepExistingPoster ? question.answerPhotoUrl : null);
+      await submitMuxAnswer(questionId, "video", finalPosterUrl ?? undefined, duration, aspectRatio);
+
       setPendingFile(null);
       setPendingDuration(undefined);
       setPendingAspectRatio(undefined);
@@ -537,7 +534,6 @@ function QuestionItem({
       setRemovePoster(false);
       setEditingAnswer(false);
 
-      // Done
       submitStepStore.set(questionId, "done");
       setTimeout(() => { submitStepStore.clear(questionId); _customPosterUsed.delete(questionId); }, 3000);
     } catch (e) {
