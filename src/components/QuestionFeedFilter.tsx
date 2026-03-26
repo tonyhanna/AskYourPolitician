@@ -892,11 +892,7 @@ function AnsweredQuestionCard({
 
       {/* Buffering spinner — ref-controlled to avoid re-renders during playback */}
       {isWatching && (
-        <div ref={(el) => {
-          (bufferingRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-          // TEST: always show spinner for 5 seconds
-          if (el) { el.style.opacity = "1"; setTimeout(() => { el.style.opacity = "0"; }, 5000); }
-        }} className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 4, opacity: 0, pointerEvents: "none", transition: "opacity 150ms" }}>
+        <div ref={bufferingRef} className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 4, opacity: 0, pointerEvents: "none", transition: "opacity 150ms" }}>
           <div style={{ position: "relative", width: 40, height: 40 }}>
             <div
               className="animate-spin"
