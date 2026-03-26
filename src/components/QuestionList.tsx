@@ -501,18 +501,23 @@ function QuestionItem({
   }
 
   /** Poll Mux processing status every 5s until ready, then refresh the page */
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   function pollMuxStatus(questionId: string, onDone?: () => void) {
-    const interval = setInterval(async () => {
+    // Don't start duplicate polling
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    pollIntervalRef.current = setInterval(async () => {
       try {
         const status = await checkMuxAnswerStatus(questionId);
         if (status === "ready") {
-          clearInterval(interval);
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
           submitStepStore.set(questionId, "done");
           setTimeout(() => { submitStepStore.clear(questionId); onDone?.(); }, 3000);
-          // Force a page refresh to show the updated answer
           window.location.reload();
         } else if (status === "errored") {
-          clearInterval(interval);
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
           submitStepStore.clear(questionId);
           onDone?.();
           alert("Der opstod en fejl under behandling af din video/lyd. Prøv venligst igen.");
@@ -522,6 +527,16 @@ function QuestionItem({
       }
     }, 5000);
   }
+
+  // Auto-start polling for questions stuck in "preparing" state (e.g. after page refresh)
+  useEffect(() => {
+    if (question.muxAssetStatus === "preparing" && !submitStep) {
+      pollMuxStatus(question.id);
+    }
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, [question.muxAssetStatus]);
 
   async function handleDelete() {
     if (!confirm("Er du sikker på at du vil slette dette spørgsmål?")) return;
