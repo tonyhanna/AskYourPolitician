@@ -271,10 +271,13 @@ function QuestionItem({
       setPendingAspectRatio(ar);
     }
     URL.revokeObjectURL(img.src);
+    // Compress non-JPEG to JPEG at 85% quality
+    const { compressImageToJpeg } = await import("@/lib/image-utils");
+    const compressed = await compressImageToJpeg(file, 0.85);
     // Revoke previous preview URL if replacing
     if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
-    setPendingPhotoFile(file);
-    setPhotoPreviewUrl(URL.createObjectURL(file));
+    setPendingPhotoFile(compressed);
+    setPhotoPreviewUrl(URL.createObjectURL(compressed));
   }
 
   function clearPendingPhoto() {
@@ -307,10 +310,13 @@ function QuestionItem({
       }
     }
     URL.revokeObjectURL(img.src);
+    // Compress non-JPEG to JPEG at 85% quality
+    const { compressImageToJpeg } = await import("@/lib/image-utils");
+    const compressed = await compressImageToJpeg(file, 0.85);
     // Revoke previous preview URL if replacing
     if (posterPreviewUrl) URL.revokeObjectURL(posterPreviewUrl);
-    setPendingPosterFile(file);
-    setPosterPreviewUrl(URL.createObjectURL(file));
+    setPendingPosterFile(compressed);
+    setPosterPreviewUrl(URL.createObjectURL(compressed));
   }
 
   function clearPendingPoster() {
