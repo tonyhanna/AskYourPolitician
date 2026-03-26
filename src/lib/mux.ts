@@ -40,7 +40,7 @@ export function getMuxThumbnailUrl(
   playbackId: string,
   opts?: { time?: number; width?: number; format?: "jpg" | "png" | "webp" }
 ) {
-  const { time = 1, width = 600, format = "jpg" } = opts ?? {};
+  const { time = 0, width = 600, format = "jpg" } = opts ?? {};
   return `https://image.mux.com/${playbackId}/thumbnail.${format}?time=${time}&width=${width}`;
 }
 

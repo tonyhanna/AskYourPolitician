@@ -843,6 +843,7 @@ function AnsweredQuestionCard({
         <video
           ref={clipRef}
           src={muxClipUrl}
+          poster={muxThumbnailUrl || undefined}
           muted
           loop
           playsInline
