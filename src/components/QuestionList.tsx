@@ -858,7 +858,7 @@ function QuestionItem({
                       <label className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
                         <input
                           type="file"
-                          accept="video/*,audio/*"
+                          accept="video/*,audio/*,.m4a,.mp3,.wav,.ogg,.aac,.flac,.webm"
                           className="hidden"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
@@ -1052,7 +1052,7 @@ function QuestionItem({
                 <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
                   <input
                     type="file"
-                    accept="video/*,audio/*"
+                    accept="video/*,audio/*,.m4a,.mp3,.wav,.ogg,.aac,.flac,.webm"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
