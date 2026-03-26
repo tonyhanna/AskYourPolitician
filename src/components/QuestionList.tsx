@@ -986,11 +986,17 @@ function QuestionItem({
                       </label>
                     </div>
                   ) : editingAnswer && hasExistingCustomPoster && !removePoster ? (
-                    <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
-                      <img src={question.answerPhotoUrl!} alt="Current poster" className="w-10 h-10 rounded-lg object-cover" />
-                      <span className="text-xs text-gray-600 flex-1">Beholder eksisterende poster</span>
-                      <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">Ændre</button>
-                      <button type="button" onClick={() => setRemovePoster(true)} className="text-xs text-red-600 hover:text-red-800 cursor-pointer">Fjern</button>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <img src={question.answerPhotoUrl!} alt="Current poster" className="w-12 h-12 rounded-lg object-cover" />
+                          <span className="text-xs text-gray-600 flex-1">Beholder eksisterende poster</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">Ændre</button>
+                          <button type="button" onClick={() => setRemovePoster(true)} className="text-xs text-red-600 hover:text-red-800 cursor-pointer">Fjern</button>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs text-gray-500 hover:text-gray-700 underline cursor-pointer">
