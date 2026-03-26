@@ -866,7 +866,7 @@ function AnsweredQuestionCard({
           style={{ zIndex: 5, bottom: 25, left: 20, right: 20, opacity: 0, transition: "opacity 150ms ease" }}
         >
           {/* Track background */}
-          <div style={{ height: 4, borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.5)", overflow: "hidden" }}>
+          <div style={{ height: 4, borderRadius: 9999, backgroundColor: "rgba(0,0,0,0.5)", overflow: "hidden" }}>
             {/* Progress fill */}
             <div
               ref={progressBarRef}
@@ -904,7 +904,7 @@ function AnsweredQuestionCard({
                 width: 40,
                 height: 40,
                 borderRadius: "50%",
-                border: "4px solid rgba(255,255,255,0.5)",
+                border: "4px solid rgba(0,0,0,0.5)",
                 borderTopColor: "#ffffff",
               }}
             />
