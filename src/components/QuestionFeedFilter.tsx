@@ -600,7 +600,7 @@ function AnsweredQuestionCard({
     }
   }, [isHovering, isWatching, muxClipUrl]);
 
-  // Mobile: autoplay clip when visible
+  // Mobile: autoplay clip when visible — fade in only after clip has loaded
   useEffect(() => {
     const card = cardRef.current;
     if (!card || !muxClipUrl) return;
@@ -612,7 +612,15 @@ function AnsweredQuestionCard({
         if (!clip) return;
         if (entry.isIntersecting && !isWatchingRef.current) {
           clip.currentTime = 0;
-          clip.style.opacity = "1";
+          // Wait for clip to be ready before showing it (prevents blink)
+          const showClip = () => {
+            clip.style.opacity = "1";
+          };
+          if (clip.readyState >= 2) {
+            showClip();
+          } else {
+            clip.addEventListener("canplay", showClip, { once: true });
+          }
           clip.play().catch(() => {});
         } else if (!entry.isIntersecting && !isWatchingRef.current) {
           clip.pause();
