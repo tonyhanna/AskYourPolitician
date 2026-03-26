@@ -15,7 +15,6 @@ export async function createDirectUpload(questionId: string, corsOrigin: string)
     cors_origin: corsOrigin,
     new_asset_settings: {
       playback_policy: ["public"],
-      mp4_support: "standard",
       passthrough: questionId,
     },
     // Upload expires after 1 hour
