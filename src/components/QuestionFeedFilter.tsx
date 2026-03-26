@@ -621,8 +621,8 @@ function AnsweredQuestionCard({
           clip.addEventListener("playing", onPlaying, { once: true });
           clip.play().catch(() => {});
         } else if (!entry.isIntersecting && !isWatchingRef.current) {
-          clip.style.transition = "none";
           clip.pause();
+          clip.currentTime = 0;
           clip.style.opacity = "0";
         }
       },
