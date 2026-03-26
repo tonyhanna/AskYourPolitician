@@ -1005,10 +1005,10 @@ function QuestionItem({
                         </div>
                       </div>
                     ) : editingAnswer && hasExistingCustomPoster ? (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex items-center gap-2">
                           <img src={question.answerPhotoUrl!} alt="Current poster" className="w-12 h-12 rounded-lg object-cover" />
-                          <span className="text-xs text-green-800 flex-1">Beholder eksisterende poster</span>
+                          <span className="text-xs text-gray-600 flex-1">Beholder eksisterende poster</span>
                           <label className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
                             Ændre
                             <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoSelect(f); }} />
