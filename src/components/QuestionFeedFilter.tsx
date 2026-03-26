@@ -865,12 +865,14 @@ function AnsweredQuestionCard({
           className="absolute"
           style={{ zIndex: 5, bottom: 25, left: 20, right: 20, opacity: 0, transition: "opacity 150ms ease" }}
         >
-          {/* Track background */}
-          <div style={{ height: 4, borderRadius: 9999, backgroundColor: "rgba(0,0,0,0.5)", overflow: "hidden" }}>
+          {/* Track */}
+          <div style={{ position: "relative", height: 4, borderRadius: 9999, overflow: "hidden" }}>
+            {/* Static background */}
+            <div style={{ position: "absolute", inset: 0, backgroundColor: "var(--system-bg0-contrast)", opacity: 0.5 }} />
             {/* Progress fill */}
             <div
               ref={progressBarRef}
-              style={{ height: "100%", width: "100%", backgroundColor: "#ffffff", transformOrigin: "left", transform: "scaleX(0)", willChange: "transform" }}
+              style={{ position: "relative", height: "100%", width: "100%", backgroundColor: "var(--system-bg0)", transformOrigin: "left", transform: "scaleX(0)", willChange: "transform" }}
             />
           </div>
         </div>
@@ -894,14 +896,17 @@ function AnsweredQuestionCard({
       {isWatching && (
         <div ref={bufferingRef} className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 4, opacity: 0, pointerEvents: "none", transition: "opacity 150ms" }}>
           <div style={{ position: "relative", width: 40, height: 40 }}>
+            {/* Static ring (bg0-contrast at 50%) */}
+            <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "4px solid var(--system-bg0-contrast)", opacity: 0.5 }} />
+            {/* Spinning indicator (bg0) */}
             <div
               className="animate-spin"
               style={{
-                width: 40,
-                height: 40,
+                position: "absolute",
+                inset: 0,
                 borderRadius: "50%",
-                border: "4px solid rgba(0,0,0,0.5)",
-                borderTopColor: "#ffffff",
+                border: "4px solid transparent",
+                borderTopColor: "var(--system-bg0)",
               }}
             />
           </div>
