@@ -195,7 +195,7 @@ function QuestionItem({
   const [showPosterUpload, setShowPosterUpload] = useState(false);
   const [removePoster, setRemovePoster] = useState(false);
   // Detect if current answer has a custom poster (vs auto-generated)
-  const hasExistingCustomPoster = !!question.answerPhotoUrl && !question.answerClipUrl && !!question.answerUrl;
+  const hasExistingCustomPoster = !!question.answerPhotoUrl && (!!question.answerUrl || !!question.muxAssetStatus);
   const isCurrentAnswerAudio = question.muxMediaType === "audio";
   const hasUpvotes = question.upvoteCount > 0;
 
@@ -762,32 +762,10 @@ function QuestionItem({
                 <div>
                   <p className="text-sm text-green-800 font-medium mb-1">Svar indsendt</p>
                   {question.muxAssetStatus ? (
-                    <div>
-                      <p className="text-sm text-green-700">
-                        {question.muxMediaType === "audio" ? "Lydfil" : "Video"} {question.muxAssetStatus === "ready" ? "klar" : "behandles..."}
-                        {question.answerPhotoUrl && " (med poster)"}
-                      </p>
-                      {question.muxAssetStatus === "ready" && (
-                        question.answerPhotoUrl ? (
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (!confirm("Er du sikker på at du vil fjerne poster-billedet?")) return;
-                              try {
-                                await updateAnswerPoster(question.id, null);
-                              } catch (e) {
-                                alert(e instanceof Error ? e.message : "Der opstod en fejl");
-                              }
-                            }}
-                            className="text-xs text-red-500 hover:text-red-700 underline cursor-pointer mt-1"
-                          >
-                            Fjern poster
-                          </button>
-                        ) : (
-                          <PosterUploadInline questionId={question.id} />
-                        )
-                      )}
-                    </div>
+                    <p className="text-sm text-green-700">
+                      {question.muxMediaType === "audio" ? "Lydfil" : "Video"} {question.muxAssetStatus === "ready" ? "klar" : "behandles..."}
+                      {question.answerPhotoUrl && " (med poster)"}
+                    </p>
                   ) : question.answerUrl ? (
                     <a
                       href={question.answerUrl}
@@ -909,7 +887,7 @@ function QuestionItem({
                       onClick={handlePosterOnlyUpdate}
                       className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium cursor-pointer"
                     >
-                      {pendingPosterFile ? "Gem poster-ændring" : "Fjern poster og generér clip"}
+                      {pendingPosterFile ? "Gem poster-ændring" : "Fjern poster"}
                     </button>
                   )}
                 </div>
