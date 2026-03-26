@@ -57,14 +57,14 @@ export async function compressVideo(
   if (!mimeType) return file;
 
   const videoUrl = URL.createObjectURL(file);
+  let audioCtx: AudioContext | undefined;
 
   try {
     const video = document.createElement("video");
     video.crossOrigin = "anonymous";
     video.preload = "auto";
-    // Use volume=0 instead of muted=true — muted can prevent audio track decoding
-    // in some browsers, which breaks Web Audio capture
-    video.volume = 0;
+    // Do NOT set volume=0 (read-only on iOS) or muted=true (breaks Web Audio capture).
+    // Audio is silenced via a zero-gain Web Audio node instead.
     video.playsInline = true;
     video.src = videoUrl;
 
@@ -111,16 +111,27 @@ export async function compressVideo(
     // Capture video from canvas
     const stream = canvas.captureStream(fps);
 
-    // Capture audio directly from the video element's stream
-    // This is more reliable than Web Audio API for preserving audio
+    // Capture audio via Web Audio API — works on iOS where captureStream() doesn't.
+    // Route: video → MediaElementSource → MediaStreamDestination (for recording)
+    //                                   → GainNode(0) → speakers (silence)
     try {
-      const videoElementStream = (video as HTMLVideoElement & { captureStream(): MediaStream }).captureStream();
-      const audioTracks = videoElementStream.getAudioTracks();
-      for (const track of audioTracks) {
+      audioCtx = new AudioContext();
+      // Resume context (required by autoplay policies)
+      if (audioCtx.state === "suspended") await audioCtx.resume();
+      const source = audioCtx.createMediaElementSource(video);
+      // Branch 1: capture audio for recording
+      const dest = audioCtx.createMediaStreamDestination();
+      source.connect(dest);
+      for (const track of dest.stream.getAudioTracks()) {
         stream.addTrack(track);
       }
+      // Branch 2: silence the speakers via a zero-gain node
+      const silence = audioCtx.createGain();
+      silence.gain.value = 0;
+      source.connect(silence);
+      silence.connect(audioCtx.destination);
     } catch {
-      // captureStream() not supported — proceed without audio
+      // Web Audio not available — proceed without audio
     }
 
     const recorder = new MediaRecorder(stream, {
@@ -144,9 +155,17 @@ export async function compressVideo(
     try {
       await video.play();
     } catch {
-      // Unmuted autoplay blocked — fall back to muted (audio will be lost)
-      video.muted = true;
-      await video.play();
+      // Unmuted autoplay blocked — try resuming AudioContext (user gesture may propagate)
+      if (audioCtx && audioCtx.state === "suspended") {
+        await audioCtx.resume().catch(() => {});
+      }
+      try {
+        await video.play();
+      } catch {
+        // Last resort: mute to allow playback (audio will be lost)
+        video.muted = true;
+        await video.play();
+      }
     }
 
     // Draw frames using requestAnimationFrame
@@ -208,6 +227,7 @@ export async function compressVideo(
     return new File([blob], `${originalName}-compressed.${ext}`, { type: mimeType });
   } finally {
     URL.revokeObjectURL(videoUrl);
+    if (audioCtx) audioCtx.close().catch(() => {});
   }
 }
 

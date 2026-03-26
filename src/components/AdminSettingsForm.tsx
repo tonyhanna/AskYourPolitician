@@ -52,6 +52,8 @@ type Props = {
   colorErrorDark: string;
   colorErrorContrast: string;
   colorErrorContrastDark: string;
+  colorOverlay: string;
+  colorOverlayDark: string;
 };
 
 function ColorPicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
@@ -203,6 +205,7 @@ export function AdminSettingsForm(initial: Props) {
             label="Alarmerende" lightValue={colors.colorError} darkValue={colors.colorErrorDark} onLightChange={set("colorError")} onDarkChange={set("colorErrorDark")}
             subLabel="Kontrastfarve" subLightValue={colors.colorErrorContrast} subDarkValue={colors.colorErrorContrastDark} onSubLightChange={set("colorErrorContrast")} onSubDarkChange={set("colorErrorContrastDark")}
           />
+          <ColorRow label="Mørkt overlag" lightValue={colors.colorOverlay} darkValue={colors.colorOverlayDark} onLightChange={set("colorOverlay")} onDarkChange={set("colorOverlayDark")} />
         </div>
       </div>
 

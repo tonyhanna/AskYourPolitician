@@ -51,6 +51,8 @@ type SystemColors = {
   colorErrorDark: string;
   colorErrorContrast: string;
   colorErrorContrastDark: string;
+  colorOverlay: string;
+  colorOverlayDark: string;
 };
 
 /** Resolved colors for the current theme (light or dark) */
@@ -79,6 +81,7 @@ export type ResolvedColors = {
   pendingContrast: string;
   error: string;
   errorContrast: string;
+  overlay: string;
 };
 
 export type ThemePreference = "system" | "light" | "dark";
@@ -117,6 +120,7 @@ const DEFAULT_COLORS: ResolvedColors = {
   pendingContrast: "#000000",
   error: "#FF4105",
   errorContrast: "#FFFFFF",
+  overlay: "#000000",
 };
 
 const ThemeContext = createContext<ThemeContextValue>({
@@ -176,6 +180,7 @@ function resolve(isDark: boolean, colors: SystemColors): ResolvedColors {
     pendingContrast: isDark ? colors.colorPendingContrastDark : colors.colorPendingContrast,
     error: isDark ? colors.colorErrorDark : colors.colorError,
     errorContrast: isDark ? colors.colorErrorContrastDark : colors.colorErrorContrast,
+    overlay: isDark ? colors.colorOverlayDark : colors.colorOverlay,
   };
 }
 
@@ -205,6 +210,7 @@ function applyCSS(resolved: ResolvedColors) {
   root.style.setProperty("--system-pending-contrast", resolved.pendingContrast);
   root.style.setProperty("--system-error", resolved.error);
   root.style.setProperty("--system-error-contrast", resolved.errorContrast);
+  root.style.setProperty("--system-overlay", resolved.overlay);
 }
 
 function isDarkForPreference(pref: ThemePreference): boolean {

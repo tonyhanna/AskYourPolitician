@@ -287,29 +287,22 @@ export function QuestionFeedFilter({
         </p>
       )}
 
-      {/* Pinned questions — max-width capped at 3 cards so thumbnail centers between card 3 & 4 */}
+      {/* Pinned questions — full width */}
       {pinnedQuestions.length > 0 && (
-        <div
-          className="mx-auto w-full"
-          style={{
-            maxWidth: answeredQuestions.length >= 3 ? 3 * 337 + 2 * 16 : undefined,
-          }}
-        >
-          <div className="space-y-6">
-            {pinnedQuestions.map((question) => (
-              <PinnedQuestionCard
-                key={question.id}
-                question={question}
-                basePath={basePath}
-                appUrl={appUrl}
-                partyColor={partyColor}
-                partyColorDark={partyColorDark}
-                partyColorLight={partyColorLight}
-                playingId={playingId}
-                setPlayingId={setPlayingId}
-              />
-            ))}
-          </div>
+        <div className="space-y-6">
+          {pinnedQuestions.map((question) => (
+            <PinnedQuestionCard
+              key={question.id}
+              question={question}
+              basePath={basePath}
+              appUrl={appUrl}
+              partyColor={partyColor}
+              partyColorDark={partyColorDark}
+              partyColorLight={partyColorLight}
+              playingId={playingId}
+              setPlayingId={setPlayingId}
+            />
+          ))}
         </div>
       )}
 

@@ -311,6 +311,7 @@ export async function updateAppSettings(formData: FormData) {
     "colorSuccess", "colorSuccessDark", "colorSuccessContrast", "colorSuccessContrastDark",
     "colorPending", "colorPendingDark", "colorPendingContrast", "colorPendingContrastDark",
     "colorError", "colorErrorDark", "colorErrorContrast", "colorErrorContrastDark",
+    "colorOverlay", "colorOverlayDark",
   ];
 
   const entries = keys

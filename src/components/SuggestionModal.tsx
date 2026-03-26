@@ -154,7 +154,7 @@ export function SuggestionModal({
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-[60]"
-        style={{ backgroundColor: "#000000", opacity: 0.7 }}
+        style={{ backgroundColor: "var(--system-overlay, #000000)", opacity: 0.7 }}
         onClick={onClose}
       />
 

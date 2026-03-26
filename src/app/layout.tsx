@@ -45,6 +45,7 @@ export default async function RootLayout({
       "--system-success": settings.colorSuccess, "--system-success-contrast": settings.colorSuccessContrast,
       "--system-pending": settings.colorPending, "--system-pending-contrast": settings.colorPendingContrast,
       "--system-error": settings.colorError, "--system-error-contrast": settings.colorErrorContrast,
+      "--system-overlay": settings.colorOverlay,
       "--system-background": settings.colorBg0,
     },
     dark: {
@@ -59,6 +60,7 @@ export default async function RootLayout({
       "--system-success": settings.colorSuccessDark, "--system-success-contrast": settings.colorSuccessContrastDark,
       "--system-pending": settings.colorPendingDark, "--system-pending-contrast": settings.colorPendingContrastDark,
       "--system-error": settings.colorErrorDark, "--system-error-contrast": settings.colorErrorContrastDark,
+      "--system-overlay": settings.colorOverlayDark,
       "--system-background": settings.colorBg0Dark,
     },
   });
@@ -120,6 +122,8 @@ export default async function RootLayout({
           colorErrorDark={settings.colorErrorDark}
           colorErrorContrast={settings.colorErrorContrast}
           colorErrorContrastDark={settings.colorErrorContrastDark}
+          colorOverlay={settings.colorOverlay}
+          colorOverlayDark={settings.colorOverlayDark}
         >
           {children}
         </SystemColorProvider>

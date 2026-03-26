@@ -50,6 +50,8 @@ const DEFAULTS: Record<string, string> = {
   colorErrorDark: "#FF4105",
   colorErrorContrast: "#FFFFFF",
   colorErrorContrastDark: "#000000",
+  colorOverlay: "#000000",
+  colorOverlayDark: "#000000",
 };
 
 export type AppSettings = {
@@ -101,6 +103,8 @@ export type AppSettings = {
   colorErrorDark: string;
   colorErrorContrast: string;
   colorErrorContrastDark: string;
+  colorOverlay: string;
+  colorOverlayDark: string;
 };
 
 export async function getAppSettings(): Promise<AppSettings> {
@@ -156,5 +160,7 @@ export async function getAppSettings(): Promise<AppSettings> {
     colorErrorDark: map.get("colorErrorDark") || DEFAULTS.colorErrorDark,
     colorErrorContrast: map.get("colorErrorContrast") || DEFAULTS.colorErrorContrast,
     colorErrorContrastDark: map.get("colorErrorContrastDark") || DEFAULTS.colorErrorContrastDark,
+    colorOverlay: map.get("colorOverlay") || DEFAULTS.colorOverlay,
+    colorOverlayDark: map.get("colorOverlayDark") || DEFAULTS.colorOverlayDark,
   };
 }
