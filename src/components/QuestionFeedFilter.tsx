@@ -843,11 +843,10 @@ function AnsweredQuestionCard({
         <video
           ref={clipRef}
           src={muxClipUrl}
-          poster={muxThumbnailUrl || undefined}
           muted
           loop
           playsInline
-          preload="none"
+          preload="metadata"
           className="absolute inset-0 w-full h-full object-cover"
           style={{ opacity: 0 }}
         />
