@@ -577,7 +577,7 @@ function AnsweredQuestionCard({
   // Track whether HLS has been initialized (stays true after first play for resume)
   const hlsInitialized = useRef(false);
   if (isWatching && isReady && hasVideoAnswer) hlsInitialized.current = true;
-  useHlsPlayer(fullVideoRef, hlsInitialized.current && isReady && hasVideoAnswer ? muxPlaybackId : null);
+  const { play: hlsPlay } = useHlsPlayer(fullVideoRef, hlsInitialized.current && isReady && hasVideoAnswer ? muxPlaybackId : null);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const isWatchingRef = useRef(false);
   const bufferingRef = useRef<HTMLDivElement>(null);
@@ -716,13 +716,11 @@ function AnsweredQuestionCard({
       setIsWatching(false);
       setPlayingId(null);
     } else if (hasVideoAnswer) {
-      if (fullVideoRef.current) {
-        if (savedTimeRef.current > 0) {
-          fullVideoRef.current.currentTime = savedTimeRef.current;
-        }
-        fullVideoRef.current.play().catch(() => {});
-      }
       setIsWatching(true);
+      if (fullVideoRef.current && savedTimeRef.current > 0) {
+        fullVideoRef.current.currentTime = savedTimeRef.current;
+      }
+      hlsPlay();
       setPlayingId(question.id);
       // Scroll card into view accounting for sticky header + carousel arrows below
       requestAnimationFrame(() => {

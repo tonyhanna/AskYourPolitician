@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Hls from "hls.js";
 import { getMuxStreamUrl } from "@/lib/mux";
 
@@ -9,11 +9,10 @@ import { getMuxStreamUrl } from "@/lib/mux";
  *
  * - In browsers with MSE support (Chrome, Firefox, Edge): uses hls.js
  * - In Safari (native HLS support): sets video.src directly
- * - Returns a ref to the Hls instance for manual control if needed
+ * - Returns { hlsRef, isReady, play } for manual control
  *
- * Usage:
- *   const videoRef = useRef<HTMLVideoElement>(null);
- *   useHlsPlayer(videoRef, playbackId);
+ * `isReady` becomes true once HLS manifest is parsed / source is loaded.
+ * Call `play()` to start playback (auto-waits for ready if not yet).
  */
 export function useHlsPlayer(
   videoRef: React.RefObject<HTMLVideoElement | null>,
@@ -21,49 +20,69 @@ export function useHlsPlayer(
   opts?: { autoplay?: boolean }
 ) {
   const hlsRef = useRef<Hls | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  const pendingPlayRef = useRef(false);
+
+  const play = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (isReady) {
+      video.play().catch(() => {});
+    } else {
+      // HLS not ready yet — queue the play for when it's ready
+      pendingPlayRef.current = true;
+    }
+  }, [isReady, videoRef]);
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !playbackId) return;
+    if (!video || !playbackId) {
+      setIsReady(false);
+      return;
+    }
 
     const streamUrl = getMuxStreamUrl(playbackId);
 
     if (Hls.isSupported()) {
       const hls = new Hls({
-        // Start with a reasonable quality, let ABR adjust
         startLevel: -1,
-        // Reduce buffer for faster start
         maxBufferLength: 15,
       });
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
       hlsRef.current = hls;
 
-      if (opts?.autoplay) {
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        setIsReady(true);
+        if (opts?.autoplay || pendingPlayRef.current) {
+          pendingPlayRef.current = false;
           video.play().catch(() => {});
-        });
-      }
+        }
+      });
 
       return () => {
         hls.destroy();
         hlsRef.current = null;
+        setIsReady(false);
       };
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       // Safari native HLS
       video.src = streamUrl;
 
-      if (opts?.autoplay) {
-        video.addEventListener("loadedmetadata", () => {
+      video.addEventListener("loadedmetadata", () => {
+        setIsReady(true);
+        if (opts?.autoplay || pendingPlayRef.current) {
+          pendingPlayRef.current = false;
           video.play().catch(() => {});
-        }, { once: true });
-      }
+        }
+      }, { once: true });
 
       return () => {
         video.src = "";
+        setIsReady(false);
       };
     }
   }, [playbackId, opts?.autoplay]);
 
-  return hlsRef;
+  return { hlsRef, isReady, play };
 }

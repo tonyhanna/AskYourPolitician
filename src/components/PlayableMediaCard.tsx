@@ -70,7 +70,7 @@ export function PlayableMediaCard({
   // Track whether HLS has been initialized (stays true after first play for resume)
   const hlsInitialized = useRef(false);
   if (isWatching && isReady && hasVideoAnswer) hlsInitialized.current = true;
-  useHlsPlayer(fullVideoRef, hlsInitialized.current && isReady && hasVideoAnswer ? muxPlaybackId : null);
+  const { play: hlsPlay } = useHlsPlayer(fullVideoRef, hlsInitialized.current && isReady && hasVideoAnswer ? muxPlaybackId : null);
 
   // Hover clip: play forward on hover, reset on leave (desktop only)
   useEffect(() => {
@@ -173,13 +173,12 @@ export function PlayableMediaCard({
       setPlayingId?.(null);
     } else if (hasVideoAnswer) {
       if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
-      if (fullVideoRef.current) {
-        if (savedTimeRef.current > 0) {
-          fullVideoRef.current.currentTime = savedTimeRef.current;
-        }
-        fullVideoRef.current.play().catch(() => {});
-      }
       setIsWatching(true);
+      // Use hlsPlay() which auto-waits for HLS to be ready before playing
+      if (fullVideoRef.current && savedTimeRef.current > 0) {
+        fullVideoRef.current.currentTime = savedTimeRef.current;
+      }
+      hlsPlay();
       setPlayingId?.(question.id);
       scrollIntoView();
     } else if (hasAudioAnswer) {
