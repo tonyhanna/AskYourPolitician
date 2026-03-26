@@ -591,10 +591,12 @@ function AnsweredQuestionCard({
     if (window.matchMedia("(pointer: coarse)").matches) return;
     if (isHovering && !isWatching) {
       clip.currentTime = 0;
+      clip.style.opacity = "1";
       clip.play().catch(() => {});
     } else {
       clip.pause();
       clip.currentTime = 0;
+      clip.style.opacity = "0";
     }
   }, [isHovering, isWatching, muxClipUrl]);
 
@@ -610,9 +612,11 @@ function AnsweredQuestionCard({
         if (!clip) return;
         if (entry.isIntersecting && !isWatchingRef.current) {
           clip.currentTime = 0;
+          clip.style.opacity = "1";
           clip.play().catch(() => {});
         } else if (!entry.isIntersecting && !isWatchingRef.current) {
           clip.pause();
+          clip.style.opacity = "0";
         }
       },
       { threshold: 0.3 }
@@ -826,7 +830,7 @@ function AnsweredQuestionCard({
           style={{ backgroundColor: partyColor || "#7E7D7A" }}
         />
       )}
-      {/* Mux MP4 clip for hover preview */}
+      {/* Mux MP4 clip for hover preview — hidden by default, shown only during hover/autoplay */}
       {muxClipUrl && (
         <video
           ref={clipRef}
@@ -834,8 +838,9 @@ function AnsweredQuestionCard({
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="none"
           className="absolute inset-0 w-full h-full object-cover"
+          style={{ opacity: 0 }}
         />
       )}
 
