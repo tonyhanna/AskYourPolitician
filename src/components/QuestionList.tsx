@@ -335,14 +335,14 @@ function QuestionItem({
       if (!confirmed) return;
     }
     const file = pendingFile;
-    const photoFile = pendingPhotoFile;
+    const photoFile = pendingPhotoFile || pendingPosterFile;
     const questionId = question.id;
     _isAudioSubmit.set(questionId, true);
     try {
       // Step 1: Upload to Mux + poster to Blob in parallel
       submitStepStore.set(questionId, "uploading");
       setUploadProgress(0);
-      const keepExistingAudioPoster = editingAnswer && !photoFile && hasExistingCustomPoster;
+      const keepExistingAudioPoster = editingAnswer && !photoFile && !removePoster && hasExistingCustomPoster;
 
       const [muxUpload, photoBlobUrl] = await Promise.all([
         getMuxUploadUrl(questionId),
@@ -990,12 +990,12 @@ function QuestionItem({
                     </div>
                   </div>
                   <div>
-                    {photoPreviewUrl ? (
+                    {(photoPreviewUrl || posterPreviewUrl) ? (
                       <div className="flex items-center gap-2">
-                        <img src={photoPreviewUrl} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
+                        <img src={(photoPreviewUrl || posterPreviewUrl)!} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
                         <button
                           type="button"
-                          onClick={() => clearPendingPhoto()}
+                          onClick={() => { clearPendingPhoto(); clearPendingPoster(); }}
                           className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
                         >
                           Fjern poster
