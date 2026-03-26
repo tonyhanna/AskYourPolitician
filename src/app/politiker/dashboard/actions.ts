@@ -1009,23 +1009,8 @@ export async function submitMuxAnswer(
     })
     .where(eq(questions.id, questionId));
 
-  // Update or create answer_history
-  if (isUpdate) {
-    await db
-      .update(answerHistory)
-      .set({
-        answerUrl: null,
-        answerPhotoUrl: posterUrl ?? null,
-        answerClipUrl: null,
-        answerDuration: duration ?? null,
-        answerAspectRatio: aspectRatio ?? null,
-        muxAssetStatus: "preparing",
-        muxMediaType: mediaType,
-        muxPlaybackId: null,
-        muxAssetId: null,
-      })
-      .where(eq(answerHistory.questionId, questionId));
-  } else {
+  // Always insert a new answer_history entry (so we can count entries to detect updates)
+  {
     await db.insert(answerHistory).values({
       questionId,
       answerUrl: null,
