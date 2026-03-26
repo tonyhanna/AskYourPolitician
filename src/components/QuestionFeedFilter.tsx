@@ -1094,10 +1094,10 @@ function MobileCarousel({
         <div
           ref={trackRef}
           className="flex transition-transform duration-300 ease-in-out"
-          style={{ transform: `translateX(-${currentIndex * 100}%)`, willChange: "transform" }}
+          style={{ transform: `translateX(-${currentIndex * 100}%) translateZ(0)`, willChange: "transform", backfaceVisibility: "hidden" }}
         >
           {questions.map((q, i) => (
-            <div key={q.id} className="w-full flex-shrink-0" style={{ willChange: "transform", containIntrinsicSize: "auto", contentVisibility: "visible" }}>
+            <div key={q.id} className="w-full flex-shrink-0" style={{ transform: "translateZ(0)", backfaceVisibility: "hidden", contentVisibility: "visible" }}>
               <AnsweredQuestionCard
                 question={q}
                 basePath={basePath}
