@@ -67,7 +67,10 @@ export function PlayableMediaCard({
   useEffect(() => { isWatchingRef.current = isWatching; }, [isWatching]);
 
   // HLS player for Mux video
-  useHlsPlayer(fullVideoRef, isReady && hasVideoAnswer ? muxPlaybackId : null);
+  // Track whether HLS has been initialized (stays true after first play for resume)
+  const hlsInitialized = useRef(false);
+  if (isWatching && isReady && hasVideoAnswer) hlsInitialized.current = true;
+  useHlsPlayer(fullVideoRef, hlsInitialized.current && isReady && hasVideoAnswer ? muxPlaybackId : null);
 
   // Hover clip: play forward on hover, reset on leave (desktop only)
   useEffect(() => {
@@ -107,12 +110,20 @@ export function PlayableMediaCard({
     return () => observer.disconnect();
   }, [muxClipUrl]);
 
+  // Track saved playback position for resume
+  const savedTimeRef = useRef(0);
+
   // Stop if another card started playing (multi-card coordination)
   useEffect(() => {
     if (!setPlayingId) return;
     if (playingId && playingId !== question.id && isWatching) {
-      fullVideoRef.current?.pause();
-      audioRef.current?.pause();
+      // Save current position before pausing
+      const vid = fullVideoRef.current;
+      const aud = audioRef.current;
+      if (vid && vid.currentTime > 0) savedTimeRef.current = vid.currentTime;
+      if (aud && aud.currentTime > 0) savedTimeRef.current = aud.currentTime;
+      vid?.pause();
+      aud?.pause();
       setIsWatching(false);
       if (bufferingRef.current) bufferingRef.current.style.opacity = "0";
     }
@@ -153,6 +164,9 @@ export function PlayableMediaCard({
         aud?.play().catch(() => {});
         return;
       }
+      // Save position before pausing
+      if (vid && vid.currentTime > 0) savedTimeRef.current = vid.currentTime;
+      if (aud && aud.currentTime > 0) savedTimeRef.current = aud.currentTime;
       vid?.pause();
       aud?.pause();
       setIsWatching(false);
@@ -160,7 +174,9 @@ export function PlayableMediaCard({
     } else if (hasVideoAnswer) {
       if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
       if (fullVideoRef.current) {
-        fullVideoRef.current.currentTime = 0;
+        if (savedTimeRef.current > 0) {
+          fullVideoRef.current.currentTime = savedTimeRef.current;
+        }
         fullVideoRef.current.play().catch(() => {});
       }
       setIsWatching(true);
@@ -169,7 +185,9 @@ export function PlayableMediaCard({
     } else if (hasAudioAnswer) {
       if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
       if (audioRef.current) {
-        audioRef.current.currentTime = 0;
+        if (savedTimeRef.current > 0) {
+          audioRef.current.currentTime = savedTimeRef.current;
+        }
         audioRef.current.play().catch(() => {});
       }
       setIsWatching(true);
@@ -179,6 +197,7 @@ export function PlayableMediaCard({
   }, [hasPlayableMedia, hasVideoAnswer, hasAudioAnswer, isWatching, question.id, setPlayingId, scrollIntoView]);
 
   const handleEnded = useCallback(() => {
+    savedTimeRef.current = 0;
     setIsWatching(false);
     setPlayingId?.(null);
   }, [setPlayingId]);

@@ -571,7 +571,10 @@ function AnsweredQuestionCard({
   const progressBarRef = useRef<HTMLDivElement>(null);
 
   // HLS player for Mux video
-  useHlsPlayer(fullVideoRef, isReady && hasVideoAnswer ? muxPlaybackId : null);
+  // Track whether HLS has been initialized (stays true after first play for resume)
+  const hlsInitialized = useRef(false);
+  if (isWatching && isReady && hasVideoAnswer) hlsInitialized.current = true;
+  useHlsPlayer(fullVideoRef, hlsInitialized.current && isReady && hasVideoAnswer ? muxPlaybackId : null);
 
   const [isHovering, setIsHovering] = useState(false);
   const [isWatching, setIsWatching] = useState(false);
@@ -637,11 +640,18 @@ function AnsweredQuestionCard({
     }
   }, [appUrl, basePath, question.id, question.text]);
 
-  // Stop if another card started playing (full reset)
+  // Track saved playback position for resume
+  const savedTimeRef = useRef(0);
+
+  // Stop if another card started playing (save position for resume)
   useEffect(() => {
     if (playingId && playingId !== question.id && isWatching) {
-      fullVideoRef.current?.pause();
-      audioRef.current?.pause();
+      const vid = fullVideoRef.current;
+      const aud = audioRef.current;
+      if (vid && vid.currentTime > 0) savedTimeRef.current = vid.currentTime;
+      if (aud && aud.currentTime > 0) savedTimeRef.current = aud.currentTime;
+      vid?.pause();
+      aud?.pause();
       setIsWatching(false);
       if (bufferingRef.current) bufferingRef.current.style.opacity = "0";
     }
@@ -698,13 +708,18 @@ function AnsweredQuestionCard({
         aud?.play().catch(() => {});
         return;
       }
+      // Save position before pausing
+      if (vid && vid.currentTime > 0) savedTimeRef.current = vid.currentTime;
+      if (aud && aud.currentTime > 0) savedTimeRef.current = aud.currentTime;
       vid?.pause();
       aud?.pause();
       setIsWatching(false);
       setPlayingId(null);
     } else if (hasVideoAnswer) {
       if (fullVideoRef.current) {
-        fullVideoRef.current.currentTime = 0;
+        if (savedTimeRef.current > 0) {
+          fullVideoRef.current.currentTime = savedTimeRef.current;
+        }
         fullVideoRef.current.play().catch(() => {});
       }
       setIsWatching(true);
@@ -731,7 +746,9 @@ function AnsweredQuestionCard({
       });
     } else if (hasAudioAnswer) {
       if (audioRef.current) {
-        audioRef.current.currentTime = 0;
+        if (savedTimeRef.current > 0) {
+          audioRef.current.currentTime = savedTimeRef.current;
+        }
         audioRef.current.play().catch(() => {});
       }
       setIsWatching(true);
@@ -758,6 +775,7 @@ function AnsweredQuestionCard({
   }, [hasPlayableMedia, hasVideoAnswer, hasAudioAnswer, isWatching, question.id, setPlayingId]);
 
   const handleEnded = useCallback(() => {
+    savedTimeRef.current = 0;
     setIsWatching(false);
     setPlayingId(null);
   }, [setPlayingId]);
