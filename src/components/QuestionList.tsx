@@ -215,10 +215,6 @@ function QuestionItem({
   }, [question.goalReachedAt, question.answerUrl, question.deadlineMissed]);
 
   async function handleFileSelect(file: File) {
-    if (file.size > 500 * 1024 * 1024) {
-      setUploadError("Filen er for stor (maks 500 MB)");
-      return;
-    }
     if (!file.type.startsWith("video/") && !file.type.startsWith("audio/")) {
       setUploadError("Kun video- og lydfiler er tilladt");
       return;
@@ -1023,7 +1019,7 @@ function QuestionItem({
                     }}
                   />
                   <span className="text-sm text-amber-700">
-                    Upload video eller lydfil (maks 500 MB)
+                    Upload video eller lydfil
                   </span>
                 </label>
               )}
