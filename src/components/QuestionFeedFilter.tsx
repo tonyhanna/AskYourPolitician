@@ -585,15 +585,17 @@ function AnsweredQuestionCard({
   useEffect(() => { isWatchingRef.current = isWatching; }, [isWatching]);
   useEffect(() => { setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches); }, []);
 
-  // Hover clip: play on hover, reset on leave (desktop only)
+  // Hover clip: play on hover, fade in once playing (desktop only)
   useEffect(() => {
     const clip = clipRef.current;
     if (!clip || !muxClipUrl) return;
     if (window.matchMedia("(pointer: coarse)").matches) return;
     if (isHovering && !isWatching) {
       clip.currentTime = 0;
-      clip.style.opacity = "1";
+      const onPlaying = () => { clip.style.opacity = "1"; };
+      clip.addEventListener("playing", onPlaying, { once: true });
       clip.play().catch(() => {});
+      return () => clip.removeEventListener("playing", onPlaying);
     } else {
       clip.pause();
       clip.currentTime = 0;
@@ -601,7 +603,7 @@ function AnsweredQuestionCard({
     }
   }, [isHovering, isWatching, muxClipUrl]);
 
-  // Mobile: autoplay clip when visible — fade in only after clip has loaded
+  // Mobile: autoplay clip when visible — fade in once actually playing (no frame jump)
   useEffect(() => {
     const card = cardRef.current;
     if (!card || !muxClipUrl) return;
@@ -613,17 +615,13 @@ function AnsweredQuestionCard({
         if (!clip) return;
         if (entry.isIntersecting && !isWatchingRef.current) {
           clip.currentTime = 0;
-          // Wait for clip to be ready before showing it (prevents blink)
-          const showClip = () => {
-            clip.style.opacity = "1";
-          };
-          if (clip.readyState >= 2) {
-            showClip();
-          } else {
-            clip.addEventListener("canplay", showClip, { once: true });
-          }
+          // Wait until clip is actually playing before fading in — this hides the
+          // frame mismatch between Mux thumbnail and clip's first frame
+          const onPlaying = () => { clip.style.opacity = "1"; };
+          clip.addEventListener("playing", onPlaying, { once: true });
           clip.play().catch(() => {});
         } else if (!entry.isIntersecting && !isWatchingRef.current) {
+          clip.style.transition = "none";
           clip.pause();
           clip.style.opacity = "0";
         }
@@ -847,7 +845,7 @@ function AnsweredQuestionCard({
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="none"
           className="absolute inset-0 w-full h-full object-cover"
           style={{ opacity: 0 }}
         />
