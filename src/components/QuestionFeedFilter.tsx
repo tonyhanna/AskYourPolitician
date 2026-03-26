@@ -570,14 +570,14 @@ function AnsweredQuestionCard({
   const clipRef = useRef<HTMLVideoElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
 
+  const [isHovering, setIsHovering] = useState(false);
+  const [isWatching, setIsWatching] = useState(false);
+
   // HLS player for Mux video
   // Track whether HLS has been initialized (stays true after first play for resume)
   const hlsInitialized = useRef(false);
   if (isWatching && isReady && hasVideoAnswer) hlsInitialized.current = true;
   useHlsPlayer(fullVideoRef, hlsInitialized.current && isReady && hasVideoAnswer ? muxPlaybackId : null);
-
-  const [isHovering, setIsHovering] = useState(false);
-  const [isWatching, setIsWatching] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const isWatchingRef = useRef(false);
   const bufferingRef = useRef<HTMLDivElement>(null);
