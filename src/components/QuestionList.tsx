@@ -744,7 +744,7 @@ function QuestionItem({
                     const labels: Record<string, [string, string]> = {
                       uploading: [uploadLabel, uploadDoneLabel],
                       submitting: [isPosterOnly ? "Opdaterer poster..." : "Indsender svar...", isPosterOnly ? "Poster opdateret" : "Svar indsendt"],
-                      processing: ["Behandler video...", "Video klar"],
+                      processing: [isAudio ? "Behandler lyd..." : "Behandler video...", isAudio ? "Lyd klar" : "Video klar"],
                     };
                     const [activeLabel, doneLabel] = labels[step];
                     return (
@@ -771,7 +771,7 @@ function QuestionItem({
                   {submitStep === "processing" ? (
                     <div className="bg-amber-100 border border-amber-300 rounded-md px-3 py-2 flex items-center gap-2">
                       <svg className="w-4 h-4 text-amber-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 3a9 9 0 110 18 9 9 0 010-18z" /></svg>
-                      <p className="text-sm text-amber-800 font-medium">Din video behandles — du kan lukke browseren. Svaret offentliggøres automatisk.</p>
+                      <p className="text-sm text-amber-800 font-medium">Din {_isAudioSubmit.get(question.id) ? "lyd" : "video"} behandles — du kan lukke browseren. Svaret offentliggøres automatisk.</p>
                     </div>
                   ) : (
                     <div className="bg-amber-100 border border-amber-300 rounded-md px-3 py-2 flex items-center gap-2">
