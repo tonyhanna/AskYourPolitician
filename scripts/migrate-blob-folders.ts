@@ -151,7 +151,7 @@ async function main() {
     .select({ id: answerHistory.id, answerUrl: answerHistory.answerUrl, answerPhotoUrl: answerHistory.answerPhotoUrl })
     .from(answerHistory);
   for (const h of allHistory) {
-    if (isBlobUrl(h.answerUrl)) {
+    if (h.answerUrl && isBlobUrl(h.answerUrl)) {
       const mediaType = getBlobMediaType(h.answerUrl);
       const folder = mediaType === "audio" ? "answers/sound" : "answers/video";
       if (!alreadyInFolder(h.answerUrl, folder)) {
