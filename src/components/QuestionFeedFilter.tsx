@@ -562,6 +562,7 @@ function AnsweredQuestionCard({
   const hasCustomPoster = !!question.answerPhotoUrl;
   // Only show clip when there's no custom poster
   const muxClipUrl = muxPlaybackId && isReady && hasVideoAnswer && !hasCustomPoster ? getMuxMp4Url(muxPlaybackId) : null;
+  // Mux thumbnail as fallback behind clip (visible while clip loads)
   const muxThumbnailUrl = muxPlaybackId && isReady ? getMuxThumbnailUrl(muxPlaybackId) : null;
   const photoUrl = question.answerPhotoUrl || muxThumbnailUrl;
   const cardRef = useRef<HTMLDivElement>(null);
