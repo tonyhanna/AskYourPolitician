@@ -718,7 +718,7 @@ function QuestionItem({
                     const labels: Record<string, [string, string]> = {
                       uploading: [uploadLabel, uploadDoneLabel],
                       submitting: [isPosterOnly ? "Opdaterer poster..." : "Indsender svar...", isPosterOnly ? "Poster opdateret" : "Svar indsendt"],
-                      processing: ["Behandler video hos Mux...", "Video klar"],
+                      processing: ["Behandler video...", "Video klar"],
                     };
                     const [activeLabel, doneLabel] = labels[step];
                     return (
