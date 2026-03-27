@@ -71,6 +71,32 @@ export function QuestionFeedFilter({
   const systemColors = useSystemColors();
   const { pending: colorPending, error: colorError } = systemColors;
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<"pinned" | "answered" | "unanswered" | null>(null);
+
+  // Track which section is in view
+  useEffect(() => {
+    const ids = ["section-pinned", "section-answered", "section-unanswered"] as const;
+    const sectionMap: Record<string, "pinned" | "answered" | "unanswered"> = {
+      "section-pinned": "pinned",
+      "section-answered": "answered",
+      "section-unanswered": "unanswered",
+    };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveSection(sectionMap[entry.target.id] || null);
+          }
+        }
+      },
+      { rootMargin: "-130px 0px -60% 0px", threshold: 0 }
+    );
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, []);
   const [moreOpen, setMoreOpen] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [upvoteModalQuestionId, setUpvoteModalQuestionId] = useState<string | null>(null);
@@ -152,11 +178,11 @@ export function QuestionFeedFilter({
               className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
               style={{
                 fontFamily: "var(--font-figtree)", fontWeight: 500,
-                backgroundColor: "var(--system-bg1)",
-                color: "var(--system-text0)",
+                backgroundColor: activeSection === "pinned" ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                color: activeSection === "pinned" ? "var(--system-text0-contrast)" : "var(--system-text0)",
               }}
               onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-text0)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = activeSection === "pinned" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
             >
               Fokus
             </button>
@@ -167,11 +193,11 @@ export function QuestionFeedFilter({
               className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
               style={{
                 fontFamily: "var(--font-figtree)", fontWeight: 500,
-                backgroundColor: "var(--system-bg1)",
-                color: "var(--system-text0)",
+                backgroundColor: activeSection === "answered" ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                color: activeSection === "answered" ? "var(--system-text0-contrast)" : "var(--system-text0)",
               }}
               onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-text0)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = activeSection === "answered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
             >
               Svar
             </button>
@@ -182,11 +208,11 @@ export function QuestionFeedFilter({
               className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
               style={{
                 fontFamily: "var(--font-figtree)", fontWeight: 500,
-                backgroundColor: "var(--system-bg1)",
-                color: "var(--system-text0)",
+                backgroundColor: activeSection === "unanswered" ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                color: activeSection === "unanswered" ? "var(--system-text0-contrast)" : "var(--system-text0)",
               }}
               onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-text0)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = activeSection === "unanswered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
             >
               Upvote
             </button>
