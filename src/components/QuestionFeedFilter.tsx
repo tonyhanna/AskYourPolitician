@@ -142,44 +142,98 @@ export function QuestionFeedFilter({
 
   return (
     <div className="flex flex-col flex-1">
-      {/* Filtre — toggle button or expanded filters */}
-      {!filtersOpen ? (
-        <div className="mb-[25px]">
+      {/* Sticky section nav + filter button */}
+      <div className="sticky top-[70px] z-10 flex items-center justify-between mb-[25px]" style={{ paddingTop: 8, paddingBottom: 8 }}>
+        {/* Section navigation — left side */}
+        <div className="flex items-center gap-2">
+          {pinnedQuestions.length > 0 && (
+            <button
+              onClick={() => document.getElementById("section-pinned")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
+              style={{
+                fontFamily: "var(--font-figtree)", fontWeight: 500,
+                backgroundColor: "var(--system-bg1)",
+                color: "var(--system-text0)",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-text0)"; }}
+            >
+              Fokus
+            </button>
+          )}
+          {answeredQuestions.length > 0 && (
+            <button
+              onClick={() => document.getElementById("section-answered")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
+              style={{
+                fontFamily: "var(--font-figtree)", fontWeight: 500,
+                backgroundColor: "var(--system-bg1)",
+                color: "var(--system-text0)",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-text0)"; }}
+            >
+              Svar
+            </button>
+          )}
+          {filteredQuestions.length > 0 && (
+            <button
+              onClick={() => document.getElementById("section-unanswered")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
+              style={{
+                fontFamily: "var(--font-figtree)", fontWeight: 500,
+                backgroundColor: "var(--system-bg1)",
+                color: "var(--system-text0)",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-text0)"; }}
+            >
+              Upvote
+            </button>
+          )}
+        </div>
+
+        {/* Filter button — right side, circular icon only */}
+        {!filtersOpen ? (
           <button
             onClick={() => setFiltersOpen(true)}
-            className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-colors duration-150"
+            className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
             style={{
-              fontFamily: "var(--font-figtree)", fontWeight: 500,
+              width: 34,
+              height: 34,
               backgroundColor: "var(--system-bg1)",
               color: "var(--system-icon1)",
             }}
             onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-icon0)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-icon1)"; }}
+            aria-label="Filtre"
           >
             <FontAwesomeIcon icon={faFilter} className="text-xs" />
-            Filtre
           </button>
-        </div>
-      ) : (
+        ) : (
+          <button
+            onClick={() => setFiltersOpen(false)}
+            className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
+            style={{
+              width: 34,
+              height: 34,
+              backgroundColor: "var(--system-bg1)",
+              color: "var(--system-icon1)",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-icon0)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-icon1)"; }}
+            aria-label="Luk filtre"
+          >
+            <FontAwesomeIcon icon={faXmark} style={{ fontSize: 14 }} />
+          </button>
+        )}
+      </div>
+
+      {/* Expanded filter content — below sticky bar */}
+      {filtersOpen && (
         <div className="mb-[25px] space-y-4">
-          {/* Vis */}
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => setFiltersOpen(false)}
-                className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
-                style={{
-                  width: 34,
-                  height: 34,
-                  backgroundColor: "var(--system-bg1)",
-                  color: "var(--system-icon1)",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-icon0)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-icon1)"; }}
-                aria-label="Luk filtre"
-              >
-                <FontAwesomeIcon icon={faXmark} style={{ fontSize: 14 }} />
-              </button>
               {([
                 ["all", "Alle"],
                 ["own", "Politiker"],
@@ -295,7 +349,7 @@ export function QuestionFeedFilter({
 
       {/* Pinned questions — full width */}
       {pinnedQuestions.length > 0 && (
-        <div className="space-y-6">
+        <div id="section-pinned" className="space-y-6" style={{ scrollMarginTop: 120 }}>
           {pinnedQuestions.map((question) => (
             <PinnedQuestionCard
               key={question.id}
@@ -322,6 +376,9 @@ export function QuestionFeedFilter({
 
       {/* Answered questions carousel */}
       {answeredQuestions.length > 0 && (
+        <div id="section-answered" style={{ scrollMarginTop: 120 }} />
+      )}
+      {answeredQuestions.length > 0 && (
         <AnsweredQuestionsCarousel
           questions={answeredQuestions}
           basePath={basePath}
@@ -343,6 +400,9 @@ export function QuestionFeedFilter({
       )}
 
       {/* Unanswered questions */}
+      {filteredQuestions.length > 0 && (
+        <div id="section-unanswered" style={{ scrollMarginTop: 120 }} />
+      )}
       {filteredQuestions.length > 0 ? (
         <UnansweredQuestionsGrid
           questions={filteredQuestions}
