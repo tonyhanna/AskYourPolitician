@@ -347,7 +347,7 @@ export function CircularUpvoteButton({
       {armed > 0 && (
         <div
           className="fixed inset-0 z-10"
-          onClick={(e) => { e.stopPropagation(); setArmed(0); setDesktopConfirmed(false); }}
+          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setArmed(0); setDesktopConfirmed(false); }}
         />
       )}
       <div ref={wrapperRef} className="relative" style={{ zIndex: armed > 0 || desktopConfirmed ? 20 : undefined }}>
