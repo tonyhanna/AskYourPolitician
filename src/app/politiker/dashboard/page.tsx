@@ -253,9 +253,10 @@ export default async function Dashboard() {
         />
       )}
     <main className="flex-1 w-full" style={{ backgroundColor: "var(--system-bg0)" }}>
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
       {impersonatingId && politician && (
-        <ImpersonationBanner politicianName={politician.name} />
+        <div className="max-w-4xl mx-auto px-6 pt-6">
+          <ImpersonationBanner politicianName={politician.name} />
+        </div>
       )}
 
       {politician ? (
@@ -348,16 +349,17 @@ export default async function Dashboard() {
           }
         />
       ) : (
-        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <SettingsForm
-            politician={null}
-            allParties={allParties}
-            googleEmail={session.user.email!}
-            googleName={session.user.name ?? ""}
-          />
-        </section>
+        <div className="max-w-4xl mx-auto px-6 space-y-6">
+          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <SettingsForm
+              politician={null}
+              allParties={allParties}
+              googleEmail={session.user.email!}
+              googleName={session.user.name ?? ""}
+            />
+          </section>
+        </div>
       )}
-      </div>
     </main>
       </div>
     </>

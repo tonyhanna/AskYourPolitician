@@ -23,13 +23,19 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab }: Props) {
   const content = activeTab === "questions" ? questionsTab : activeTab === "causes" ? causesTab : settingsTab;
 
   return (
-    <div>
-      <StickyPillNav
-        items={tabs}
-        activeId={activeTab}
-        onSelect={(id) => setActiveTab(id as Tab)}
-      />
-      {content}
-    </div>
+    <>
+      {/* Nav sits at full width with left padding matching citizen page */}
+      <div className="px-[15px]">
+        <StickyPillNav
+          items={tabs}
+          activeId={activeTab}
+          onSelect={(id) => setActiveTab(id as Tab)}
+        />
+      </div>
+      {/* Content is constrained by parent's max-width */}
+      <div className="max-w-4xl mx-auto px-6 space-y-6">
+        {content}
+      </div>
+    </>
   );
 }
