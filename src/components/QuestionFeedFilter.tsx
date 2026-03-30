@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faVideo, faMicrophone, faXmark, faChevronLeft, faChevronRight, faChevronDown, faPlay, faCopy } from "@fortawesome/free-solid-svg-icons";
-import { faShare, faFilter, faUpRightAndDownLeftFromCenter } from "@fortawesome/pro-duotone-svg-icons";
+import { faVideo, faMicrophone, faXmark, faPlay, faCopy } from "@fortawesome/free-solid-svg-icons";
+import { faShare, faFire, faUpRightAndDownLeftFromCenter } from "@fortawesome/pro-duotone-svg-icons";
 import { PlayableMediaCard } from "./PlayableMediaCard";
 import { getAnswerMediaInfo } from "@/lib/answer-utils";
 import { getMuxThumbnailUrl, getMuxMp4Url } from "@/lib/mux";
@@ -36,8 +36,6 @@ type FeedQuestion = {
   muxMediaType?: string | null;
 };
 
-type SortOption = "newest" | "oldest" | "most_upvoted" | "least_upvoted";
-type GroupOption = "all" | "own" | "citizen" | "upvoted";
 
 export function QuestionFeedFilter({
   questions,
@@ -72,43 +70,70 @@ export function QuestionFeedFilter({
   const { pending: colorPending, error: colorError } = systemColors;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<"pinned" | "answered" | "unanswered" | null>(null);
-
-  // Track which section is in view
-  useEffect(() => {
-    const ids = ["section-pinned", "section-answered", "section-unanswered"] as const;
-    const sectionMap: Record<string, "pinned" | "answered" | "unanswered"> = {
-      "section-pinned": "pinned",
-      "section-answered": "answered",
-      "section-unanswered": "unanswered",
-    };
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveSection(sectionMap[entry.target.id] || null);
-          }
-        }
-      },
-      { rootMargin: "-130px 0px -60% 0px", threshold: 0 }
-    );
-    for (const id of ids) {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    }
-    return () => observer.disconnect();
-  }, []);
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [isAtTop, setIsAtTop] = useState(true);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [upvoteModalQuestionId, setUpvoteModalQuestionId] = useState<string | null>(null);
-  const [sort, setSort] = useState<SortOption>("newest");
-  const [group, setGroup] = useState<GroupOption>("all");
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
 
-  const isFiltered = sort !== "newest" || group !== "all" || selectedTags.size > 0;
+  const isFiltered = selectedTags.size > 0;
+
+  // Track which section is in view via scroll position
+  useEffect(() => {
+    function updateActiveSection() {
+      const threshold = 250; // px from top of viewport — accounts for sticky nav + tags
+      const sections: { id: string; key: "pinned" | "answered" | "unanswered" }[] = [
+        { id: "section-pinned", key: "pinned" },
+        { id: "section-answered", key: "answered" },
+        { id: "section-unanswered", key: "unanswered" },
+      ];
+
+      // Find the last section whose top is above the threshold
+      let active: "pinned" | "answered" | "unanswered" | null = null;
+      for (const s of sections) {
+        const el = document.getElementById(s.id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= threshold) {
+            active = s.key;
+          }
+        }
+      }
+
+      // If nothing is active yet, select the first existing section
+      if (!active) {
+        for (const s of sections) {
+          if (document.getElementById(s.id)) {
+            active = s.key;
+            break;
+          }
+        }
+      }
+
+      // If at bottom of page, select the last visible section
+      const atBottom = (window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 50);
+      if (atBottom) {
+        for (let i = sections.length - 1; i >= 0; i--) {
+          if (document.getElementById(sections[i].id)) {
+            active = sections[i].key;
+            break;
+          }
+        }
+      }
+
+      setActiveSection(active);
+      setIsAtTop(window.scrollY < 10);
+    }
+
+    updateActiveSection();
+    const timer = setTimeout(updateActiveSection, 100);
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("scroll", updateActiveSection);
+    };
+  }, [selectedTags.size, questions.length]);
 
   function reset() {
-    setSort("newest");
-    setGroup("all");
     setSelectedTags(new Set());
   }
 
@@ -124,15 +149,6 @@ export function QuestionFeedFilter({
   const { pinnedQuestions, answeredQuestions, filteredQuestions } = useMemo(() => {
     let result = [...questions];
 
-    // Group filter
-    if (group === "own") {
-      result = result.filter((q) => !q.suggestedBy);
-    } else if (group === "citizen") {
-      result = result.filter((q) => !!q.suggestedBy);
-    } else if (group === "upvoted") {
-      result = result.filter((q) => q.isUpvoted);
-    }
-
     // Tag filter (OR logic)
     if (selectedTags.size > 0) {
       result = result.filter((q) =>
@@ -140,23 +156,12 @@ export function QuestionFeedFilter({
       );
     }
 
-    // Sort
-    result.sort((a, b) => {
-      switch (sort) {
-        case "newest":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case "oldest":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case "most_upvoted":
-          return b.upvoteCount - a.upvoteCount;
-        case "least_upvoted":
-          return a.upvoteCount - b.upvoteCount;
-      }
-    });
+    // Sort by newest
+    result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     // Split pinned from regular — only show pinned if answer is ready
-    const pinned = group === "all" ? result.filter((q) => q.pinned && q.muxAssetStatus === "ready") : [];
-    const nonPinned = group === "all" ? result.filter((q) => !q.pinned) : result;
+    const pinned = result.filter((q) => q.pinned && q.muxAssetStatus === "ready");
+    const nonPinned = result.filter((q) => !q.pinned);
 
     // Split answered from unanswered — only show answers that are ready (Mux transcoding complete)
     const isAnswered = (q: FeedQuestion) => q.muxAssetStatus === "ready";
@@ -164,12 +169,17 @@ export function QuestionFeedFilter({
     const unanswered = nonPinned.filter((q) => !isAnswered(q));
 
     return { pinnedQuestions: pinned, answeredQuestions: answered, filteredQuestions: unanswered };
-  }, [questions, group, selectedTags, sort]);
+  }, [questions, selectedTags]);
 
   return (
     <div className="flex flex-col flex-1">
-      {/* Sticky section nav + filter button */}
-      <div className="sticky top-[70px] z-10 flex items-center justify-between mb-[25px]" style={{ paddingTop: 8, paddingBottom: 8 }}>
+      {/* Sticky section nav + filter + tags */}
+      <div className="sticky top-[94px] z-30 mb-[25px]" style={{ position: "sticky" }}>
+        {/* Blur background — only when filters are open, extends to topbar edge */}
+        {filtersOpen && (
+          <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: 0, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", backgroundColor: "color-mix(in srgb, var(--system-bg0) 70%, transparent)", zIndex: -1 }} />
+        )}
+        <div className="flex items-center justify-between">
         {/* Section navigation — left side */}
         <div className="flex items-center gap-2">
           {pinnedQuestions.length > 0 && (
@@ -178,7 +188,9 @@ export function QuestionFeedFilter({
               className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
               style={{
                 fontFamily: "var(--font-figtree)", fontWeight: 500,
-                backgroundColor: activeSection === "pinned" ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
+                backgroundColor: activeSection === "pinned" ? ((isAtTop || filtersOpen) ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : ((isAtTop || filtersOpen) ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
+                transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                 color: activeSection === "pinned" ? "var(--system-text0-contrast)" : "var(--system-text0)",
               }}
               onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
@@ -193,7 +205,9 @@ export function QuestionFeedFilter({
               className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
               style={{
                 fontFamily: "var(--font-figtree)", fontWeight: 500,
-                backgroundColor: activeSection === "answered" ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
+                backgroundColor: activeSection === "answered" ? ((isAtTop || filtersOpen) ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : ((isAtTop || filtersOpen) ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
+                transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                 color: activeSection === "answered" ? "var(--system-text0-contrast)" : "var(--system-text0)",
               }}
               onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
@@ -208,7 +222,9 @@ export function QuestionFeedFilter({
               className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
               style={{
                 fontFamily: "var(--font-figtree)", fontWeight: 500,
-                backgroundColor: activeSection === "unanswered" ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
+                backgroundColor: activeSection === "unanswered" ? ((isAtTop || filtersOpen) ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : ((isAtTop || filtersOpen) ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
+                transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                 color: activeSection === "unanswered" ? "var(--system-text0-contrast)" : "var(--system-text0)",
               }}
               onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
@@ -219,153 +235,83 @@ export function QuestionFeedFilter({
           )}
         </div>
 
-        {/* Filter button — right side, circular icon only */}
-        {!filtersOpen ? (
-          <button
-            onClick={() => setFiltersOpen(true)}
-            className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
-            style={{
-              width: 34,
-              height: 34,
-              backgroundColor: "var(--system-bg1)",
-              color: "var(--system-icon1)",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-icon0)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-icon1)"; }}
-            aria-label="Filtre"
-          >
-            <FontAwesomeIcon icon={faFilter} className="text-xs" />
-          </button>
-        ) : (
-          <button
-            onClick={() => setFiltersOpen(false)}
-            className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
-            style={{
-              width: 34,
-              height: 34,
-              backgroundColor: "var(--system-bg1)",
-              color: "var(--system-icon1)",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-icon0)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-icon1)"; }}
-            aria-label="Luk filtre"
-          >
-            <FontAwesomeIcon icon={faXmark} style={{ fontSize: 14 }} />
-          </button>
+        {/* Filter button — right side */}
+        <div className="flex items-center gap-2">
+          {filtersOpen && selectedTags.size > 0 && (
+            <button
+              onClick={reset}
+              className="text-sm cursor-pointer"
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: colorError }}
+            >
+              Nulstil
+            </button>
+          )}
+          {!filtersOpen ? (
+            <button
+              onClick={() => setFiltersOpen(true)}
+              className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
+              style={{
+                width: 34,
+                height: 34,
+                backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
+                backgroundColor: isFiltered ? ((isAtTop || filtersOpen) ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : ((isAtTop || filtersOpen) ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
+                transition: "background-color 200ms ease, backdrop-filter 200ms ease",
+              }}
+              aria-label="Filtre"
+              onMouseEnter={(e) => { const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-error)"; }}
+              onMouseLeave={(e) => { const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-pending)"; }}
+            >
+              <FontAwesomeIcon icon={faFire} swapOpacity style={{ color: "var(--system-pending)", transition: "color 150ms", fontSize: 15 }} />
+            </button>
+          ) : (
+            <button
+              onClick={() => setFiltersOpen(false)}
+              className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
+              style={{
+                width: 34,
+                height: 34,
+                backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
+                backgroundColor: isAtTop ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)",
+                transition: "background-color 200ms ease, backdrop-filter 200ms ease",
+                color: "var(--system-icon1)",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-icon0)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-icon1)"; }}
+              aria-label="Luk filtre"
+            >
+              <FontAwesomeIcon icon={faXmark} style={{ fontSize: 14 }} />
+            </button>
+          )}
+        </div>
+        </div>
+
+        {/* Expanded tag filter — same sticky container */}
+        {filtersOpen && allTags.length > 0 && (
+          <div style={{ paddingTop: 10 }}>
+            <div className="flex flex-wrap gap-2">
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
+                style={{
+                  fontFamily: "var(--font-figtree)", fontWeight: 500,
+                  backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
+                  backgroundColor: selectedTags.has(tag) ? ((isAtTop || filtersOpen) ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : ((isAtTop || filtersOpen) ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
+                  transition: "background-color 200ms ease, backdrop-filter 200ms ease",
+                  color: selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+              >
+                {tag}
+              </button>
+            ))}
+            </div>
+            <hr className="border-0 mt-4" style={{ borderTop: "1px solid var(--system-bg2)", opacity: isAtTop ? 1 : 0, transition: "opacity 300ms ease", position: "relative", zIndex: 1 }} />
+          </div>
         )}
       </div>
-
-      {/* Expanded filter content — below sticky bar */}
-      {filtersOpen && (
-        <div className="mb-[25px] space-y-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              {([
-                ["all", "Alle"],
-                ["own", "Politiker"],
-                ["citizen", "Borgere"],
-                ...(hasSession && questions.some((q) => q.isUpvoted) ? [["upvoted", "Upvotede"] as [GroupOption, string]] : []),
-              ] as [GroupOption, string][]).map(([value, label]) => (
-                <button
-                  key={value}
-                  onClick={() => setGroup(value)}
-                  className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
-                  style={{
-                    fontFamily: "var(--font-figtree)", fontWeight: 500,
-                    backgroundColor: group === value ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
-                    color: group === value ? "var(--system-text0-contrast)" : "var(--system-text0)",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = group === value ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
-                >
-                  {label}
-                </button>
-              ))}
-              <button
-                onClick={() => setMoreOpen((v) => !v)}
-                className="inline-flex items-center gap-1 text-sm cursor-pointer"
-                style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text1)" }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text0)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-text1)"; }}
-              >
-                Flere filtre
-                <FontAwesomeIcon
-                  icon={faChevronDown}
-                  className="text-[10px]"
-                  style={{ transition: "transform 200ms ease", transform: moreOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-                />
-              </button>
-              {isFiltered && (
-                <button
-                  onClick={reset}
-                  className="text-sm cursor-pointer"
-                  style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: colorError }}
-                >
-                  Nulstil
-                </button>
-              )}
-            </div>
-          </div>
-
-          {moreOpen && (
-            <>
-              {/* Sortering */}
-              <div>
-                <p className="text-sm mb-2" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text1)" }}>Sortering</p>
-                <div className="flex flex-wrap gap-2">
-                  {([
-                    ["newest", "Nyeste først"],
-                    ["oldest", "Ældste først"],
-                    ["most_upvoted", "Mest upvoted"],
-                    ["least_upvoted", "Mindst upvoted"],
-                  ] as [SortOption, string][]).map(([value, label]) => (
-                    <button
-                      key={value}
-                      onClick={() => setSort(value)}
-                      className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
-                      style={{
-                        fontFamily: "var(--font-figtree)", fontWeight: 500,
-                        backgroundColor: sort === value ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
-                        color: sort === value ? "var(--system-text0-contrast)" : "var(--system-text0)",
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = sort === value ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Mærkesager */}
-              {allTags.length > 0 && (
-                <div>
-                  <p className="text-sm mb-2" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text1)" }}>Mærkesager</p>
-                  <div className="flex flex-wrap gap-2">
-                    {allTags.map((tag) => (
-                      <button
-                        key={tag}
-                        onClick={() => toggleTag(tag)}
-                        className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
-                        style={{
-                          fontFamily: "var(--font-figtree)", fontWeight: 500,
-                          backgroundColor: selectedTags.has(tag) ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
-                          color: selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)",
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-          {moreOpen && <hr className="border-0 mt-2" style={{ borderTop: "1px solid var(--system-bg2)" }} />}
-        </div>
-      )}
 
       {questions.length === 0 && (
         <p className="max-w-2xl mx-auto text-gray-500 text-center py-8">
@@ -373,7 +319,7 @@ export function QuestionFeedFilter({
         </p>
       )}
 
-      {/* Pinned questions — full width */}
+      {/* Pinned questions — full width, negative margin on mobile to match carousel */}
       {pinnedQuestions.length > 0 && (
         <div id="section-pinned" className="space-y-6" style={{ scrollMarginTop: 120 }}>
           {pinnedQuestions.map((question) => (
@@ -400,12 +346,12 @@ export function QuestionFeedFilter({
         />
       )}
 
-      {/* Answered questions carousel */}
+      {/* Answered questions grid */}
       {answeredQuestions.length > 0 && (
         <div id="section-answered" style={{ scrollMarginTop: 120 }} />
       )}
       {answeredQuestions.length > 0 && (
-        <AnsweredQuestionsCarousel
+        <AnsweredQuestionsGrid
           questions={answeredQuestions}
           basePath={basePath}
           appUrl={appUrl}
@@ -527,14 +473,14 @@ function PinnedQuestionCard({
   return (
     <div className="flex flex-col lg:flex-row lg:items-start">
       {/* Left: question text + meta */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden pt-[20px] lg:pt-[50px]" style={{ paddingLeft: 15, paddingRight: 50 }}>
+      <div className="flex-1 min-w-0 flex flex-col pt-[20px] lg:pt-[50px] pl-[15px] pr-[25px] lg:pr-[50px]">
         <a
           href={`${basePath}/q/${question.id}`}
           className="hover:opacity-80 transition-opacity"
         >
           <span
             style={{
-              fontSize: "40px",
+              fontSize: "clamp(28px, 8vw, 40px)",
               lineHeight: 1.3,
               color: "#0E412E",
               fontFamily: "var(--font-figtree)",
@@ -609,7 +555,7 @@ function PinnedQuestionCard({
           bufferingColor={partyColorLight}
           playingId={playingId}
           setPlayingId={setPlayingId}
-          className="w-[90vw] self-center lg:self-auto lg:w-[337px] lg:mr-[9px]"
+          className="w-full lg:w-[337px] lg:mr-[9px]"
         />
       )}
     </div>
@@ -626,7 +572,6 @@ function AnsweredQuestionCard({
   partyColorLight,
   playingId,
   setPlayingId,
-  isVisible = true,
 }: {
   question: FeedQuestion;
   basePath: string;
@@ -636,7 +581,6 @@ function AnsweredQuestionCard({
   partyColorLight?: string | null;
   playingId: string | null;
   setPlayingId: (id: string | null) => void;
-  isVisible?: boolean;
 }) {
   const mediaInfo = getAnswerMediaInfo(question);
   const isReady = mediaInfo?.status === "ready";
@@ -689,27 +633,33 @@ function AnsweredQuestionCard({
     }
   }, [isHovering, isWatching, muxClipUrl]);
 
-  // Mobile: autoplay clip when visible — fade in once actually playing (no frame jump)
-  // Mobile: autoplay clip when card is current, reset when not
+  // Mobile: autoplay clip when card is >50% visible via IntersectionObserver
   useEffect(() => {
     if (!muxClipUrl) return;
     const isTouch = window.matchMedia("(pointer: coarse)").matches;
     if (!isTouch) return;
+    const card = cardRef.current;
     const clip = clipRef.current;
-    if (!clip) return;
+    if (!card || !clip) return;
 
-    if (isVisible && !isWatchingRef.current) {
-      clip.currentTime = 0;
-      const onPlaying = () => { clip.style.opacity = "1"; };
-      clip.addEventListener("playing", onPlaying, { once: true });
-      clip.play().catch(() => {});
-      return () => clip.removeEventListener("playing", onPlaying);
-    } else if (!isVisible) {
-      clip.pause();
-      clip.currentTime = 0;
-      clip.style.opacity = "0";
-    }
-  }, [isVisible, muxClipUrl]);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isWatchingRef.current) {
+          clip.currentTime = 0;
+          const onPlaying = () => { clip.style.opacity = "1"; };
+          clip.addEventListener("playing", onPlaying, { once: true });
+          clip.play().catch(() => {});
+        } else if (!entry.isIntersecting) {
+          clip.pause();
+          clip.currentTime = 0;
+          clip.style.opacity = "0";
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [muxClipUrl]);
 
   // Share/copy state — blink copy icon twice then return to share
   const [copied, setCopied] = useState(false);
@@ -746,18 +696,6 @@ function AnsweredQuestionCard({
       if (bufferingRef.current) bufferingRef.current.style.opacity = "0";
     }
   }, [playingId, question.id, isWatching]);
-
-  // Pause/resume when scrolled out of / back into view in mobile carousel
-  useEffect(() => {
-    if (!isWatching || playingId !== question.id) return;
-    if (!isVisible) {
-      fullVideoRef.current?.pause();
-      audioRef.current?.pause();
-    } else {
-      fullVideoRef.current?.play().catch(() => {});
-      audioRef.current?.play().catch(() => {});
-    }
-  }, [isVisible, isWatching, playingId, question.id]);
 
   // Mobile: pause playback when scrolled away, resume when visible
   useEffect(() => {
@@ -817,7 +755,7 @@ function AnsweredQuestionCard({
         if (!cardRef.current) return;
         const rect = cardRef.current.getBoundingClientRect();
         const headerH = 170;
-        const arrowsH = 80;
+        const arrowsH = 0;
         const cardTotalH = (rect.bottom - rect.top) + arrowsH;
         const availableH = window.innerHeight - headerH;
         if (cardTotalH > availableH) {
@@ -845,7 +783,7 @@ function AnsweredQuestionCard({
         if (!cardRef.current) return;
         const rect = cardRef.current.getBoundingClientRect();
         const headerH = 170;
-        const arrowsH = 80;
+        const arrowsH = 0;
         const cardTotalH = (rect.bottom - rect.top) + arrowsH;
         const availableH = window.innerHeight - headerH;
         if (cardTotalH > availableH) {
@@ -1117,133 +1055,8 @@ function AnsweredQuestionCard({
   );
 }
 
-/** Mobile carousel with touch swipe support and no hover states */
-function MobileCarousel({
-  questions,
-  basePath,
-  appUrl,
-  partyColor,
-  partyColorDark,
-  partyColorLight,
-  playingId,
-  setPlayingId,
-  currentIndex,
-  setCurrentIndex,
-}: {
-  questions: FeedQuestion[];
-  basePath: string;
-  appUrl: string;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
-  partyColorLight?: string | null;
-  playingId: string | null;
-  setPlayingId: (id: string | null) => void;
-  currentIndex: number;
-  setCurrentIndex: (fn: (i: number) => number) => void;
-}) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef(0);
-  const touchDeltaX = useRef(0);
-  const isSwiping = useRef(false);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchDeltaX.current = 0;
-    isSwiping.current = true;
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isSwiping.current) return;
-    touchDeltaX.current = e.touches[0].clientX - touchStartX.current;
-  }, []);
-
-  const handleTouchEnd = useCallback(() => {
-    if (!isSwiping.current) return;
-    isSwiping.current = false;
-    const threshold = 50;
-    if (touchDeltaX.current < -threshold) {
-      // Swiped left → next
-      setCurrentIndex((i) => Math.min(questions.length - 1, i + 1));
-    } else if (touchDeltaX.current > threshold) {
-      // Swiped right → previous
-      setCurrentIndex((i) => Math.max(0, i - 1));
-    }
-    touchDeltaX.current = 0;
-  }, [questions.length, setCurrentIndex]);
-
-  return (
-    <div className="lg:hidden">
-      <div
-        className="overflow-hidden"
-        style={{ borderRadius: 20 }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        <div
-          ref={trackRef}
-          className="flex transition-transform duration-300 ease-in-out"
-          style={{ transform: `translateX(-${currentIndex * 100}%) translateZ(0)`, willChange: "transform", backfaceVisibility: "hidden" }}
-        >
-          {questions.map((q, i) => (
-            <div key={q.id} className="w-full flex-shrink-0" style={{ transform: "translateZ(0)", backfaceVisibility: "hidden", contentVisibility: "visible" }}>
-              <AnsweredQuestionCard
-                question={q}
-                basePath={basePath}
-                appUrl={appUrl}
-                partyColor={partyColor}
-                partyColorDark={partyColorDark}
-                partyColorLight={partyColorLight}
-                playingId={playingId}
-                setPlayingId={setPlayingId}
-                isVisible={i === currentIndex}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-      {questions.length > 1 && (
-        <div className="flex justify-center gap-3 mt-3">
-          <button
-            onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-            disabled={currentIndex === 0}
-            className="rounded-full flex items-center justify-center cursor-pointer disabled:opacity-30"
-            style={{
-              width: 40,
-              height: 40,
-              backgroundColor: partyColor || "#00D564",
-            }}
-            aria-label="Forrige"
-          >
-            <FontAwesomeIcon
-              icon={faChevronLeft}
-              style={{ color: partyColorDark || "#0E412E", fontSize: 18 }}
-            />
-          </button>
-          <button
-            onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
-            disabled={currentIndex === questions.length - 1}
-            className="rounded-full flex items-center justify-center cursor-pointer disabled:opacity-30"
-            style={{
-              width: 40,
-              height: 40,
-              backgroundColor: partyColor || "#00D564",
-            }}
-            aria-label="Næste"
-          >
-            <FontAwesomeIcon
-              icon={faChevronRight}
-              style={{ color: partyColorDark || "#0E412E", fontSize: 18 }}
-            />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Carousel for answered questions — grid on desktop, swipeable on mobile */
-function AnsweredQuestionsCarousel({
+/** Responsive grid for answered questions with progressive loading */
+function AnsweredQuestionsGrid({
   questions,
   basePath,
   appUrl,
@@ -1262,16 +1075,20 @@ function AnsweredQuestionsCarousel({
   playingId: string | null;
   setPlayingId: (id: string | null) => void;
 }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [hoverArrow, setHoverArrow] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(4);
+  const visibleQuestions = questions.slice(0, visibleCount);
+  const remaining = questions.length - visibleCount;
+  const showLoadMore = remaining > 0;
 
-  // Desktop: measure available width to determine how many cards fit
-  const desktopRef = useRef<HTMLDivElement>(null);
+  // Reset progressive loading when questions change (e.g. tag filter)
+  useEffect(() => { setVisibleCount(4); }, [questions]);
+
+  // Responsive grid — same pattern as UnansweredQuestionsGrid
+  const gridRef = useRef<HTMLDivElement>(null);
   const [availableWidth, setAvailableWidth] = useState(0);
-  const [desktopIndex, setDesktopIndex] = useState(0);
 
   useEffect(() => {
-    const el = desktopRef.current;
+    const el = gridRef.current;
     if (!el) return;
     const observer = new ResizeObserver((entries) => {
       setAvailableWidth(entries[0].contentRect.width);
@@ -1282,106 +1099,59 @@ function AnsweredQuestionsCarousel({
 
   const cardW = 337;
   const gapW = 16;
-  const maxVisible = availableWidth > 0 ? Math.max(1, Math.floor((availableWidth + gapW) / (cardW + gapW))) : questions.length;
-  const visibleCount = Math.min(maxVisible, questions.length);
-  const needsDesktopArrows = questions.length > visibleCount;
-  const desktopMaxIndex = questions.length - visibleCount;
-
-  // Clamp desktopIndex when visible count changes
-  useEffect(() => {
-    if (desktopIndex > desktopMaxIndex) setDesktopIndex(Math.max(0, desktopMaxIndex));
-  }, [desktopIndex, desktopMaxIndex]);
+  const rawCols = availableWidth > 0
+    ? Math.max(1, Math.floor((availableWidth + gapW) / (cardW + gapW)))
+    : 3;
+  const maxCols = availableWidth > 0 ? Math.min(4, Math.max(1, rawCols)) : 3;
+  const cols = Math.min(maxCols, visibleQuestions.length || 1);
+  const isFullWidth = maxCols <= 1;
+  const gridWidth = cols * cardW + (cols - 1) * gapW;
 
   return (
-    <div>
-      {/* Desktop: sliding carousel with arrows when not all cards fit */}
-      <div className="hidden lg:block" ref={desktopRef}>
+    <div ref={gridRef}>
+      <div
+        className="mx-auto"
+        style={isFullWidth ? { width: "100%" } : { width: gridWidth }}
+      >
         <div
-          className="overflow-hidden mx-auto"
-          style={{ width: visibleCount * cardW + (visibleCount - 1) * gapW }}
+          style={{
+            display: "grid",
+            gridTemplateColumns: isFullWidth ? "1fr" : `repeat(${cols}, ${cardW}px)`,
+            gap: gapW,
+          }}
         >
-          <div
-            className="flex gap-4 transition-transform duration-300 ease-in-out"
-            style={{ transform: `translateX(-${desktopIndex * (cardW + gapW)}px)` }}
-          >
-            {questions.map((q, i) => (
-              <div key={q.id} className="flex-shrink-0" style={{ width: cardW }}>
-                <AnsweredQuestionCard
-                  question={q}
-                  basePath={basePath}
-                  appUrl={appUrl}
-                  partyColor={partyColor}
-                  partyColorDark={partyColorDark}
-                  partyColorLight={partyColorLight}
-                  playingId={playingId}
-                  setPlayingId={setPlayingId}
-                  isVisible={i >= desktopIndex && i < desktopIndex + visibleCount}
-                />
-              </div>
-            ))}
-          </div>
+          {visibleQuestions.map((q) => (
+            <AnsweredQuestionCard
+              key={q.id}
+              question={q}
+              basePath={basePath}
+              appUrl={appUrl}
+              partyColor={partyColor}
+              partyColorDark={partyColorDark}
+              partyColorLight={partyColorLight}
+              playingId={playingId}
+              setPlayingId={setPlayingId}
+            />
+          ))}
         </div>
-        {needsDesktopArrows && (
-          <div className="flex justify-center gap-3 mt-3">
+        {showLoadMore && (
+          <div className="flex justify-center mt-6">
             <button
-              onClick={() => setDesktopIndex((i) => Math.max(0, i - 1))}
-              disabled={desktopIndex === 0}
-              className="rounded-full flex items-center justify-center cursor-pointer disabled:opacity-30"
+              onClick={() => setVisibleCount((c) => remaining <= 4 ? questions.length : c + 4)}
+              className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
               style={{
-                width: 40,
-                height: 40,
-                backgroundColor: hoverArrow === "desktop-left" ? (partyColorDark || "#0E412E") : (partyColor || "#00D564"),
+                fontFamily: "var(--font-figtree)", fontWeight: 500,
+                backgroundColor: "var(--system-bg0-contrast)",
+                color: "var(--system-text0-contrast)",
               }}
-              onMouseEnter={() => setHoverArrow("desktop-left")}
-              onMouseLeave={() => setHoverArrow(null)}
-              aria-label="Forrige"
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-text0-contrast)"; }}
             >
-              <FontAwesomeIcon
-                icon={faChevronLeft}
-                style={{
-                  color: hoverArrow === "desktop-left" ? (partyColor || "#00D564") : (partyColorDark || "#0E412E"),
-                  fontSize: 18,
-                }}
-              />
-            </button>
-            <button
-              onClick={() => setDesktopIndex((i) => Math.min(desktopMaxIndex, i + 1))}
-              disabled={desktopIndex === desktopMaxIndex}
-              className="rounded-full flex items-center justify-center cursor-pointer disabled:opacity-30"
-              style={{
-                width: 40,
-                height: 40,
-                backgroundColor: hoverArrow === "desktop-right" ? (partyColorDark || "#0E412E") : (partyColor || "#00D564"),
-              }}
-              onMouseEnter={() => setHoverArrow("desktop-right")}
-              onMouseLeave={() => setHoverArrow(null)}
-              aria-label="Næste"
-            >
-              <FontAwesomeIcon
-                icon={faChevronRight}
-                style={{
-                  color: hoverArrow === "desktop-right" ? (partyColor || "#00D564") : (partyColorDark || "#0E412E"),
-                  fontSize: 18,
-                }}
-              />
+              Vis flere
             </button>
           </div>
         )}
       </div>
-
-      {/* Mobile: single card carousel with swipe support */}
-      <MobileCarousel
-        questions={questions}
-        basePath={basePath}
-        appUrl={appUrl}
-        partyColor={partyColor}
-        partyColorDark={partyColorDark}
-        partyColorLight={partyColorLight}
-        playingId={playingId}
-        setPlayingId={setPlayingId}
-        currentIndex={currentIndex}
-        setCurrentIndex={setCurrentIndex}
-      />
     </div>
   );
 }

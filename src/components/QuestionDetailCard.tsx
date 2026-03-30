@@ -88,8 +88,7 @@ export function QuestionDetailCard({
       <div className={`flex flex-col ${hasThumbnail && hasAnswer ? "lg:flex-row lg:items-start" : ""}`}>
         {/* Left: question text + meta */}
         <div
-          className={`flex-1 min-w-0 flex flex-col overflow-hidden pt-[20px] ${hasThumbnail && hasAnswer ? "lg:pt-[50px]" : ""}`}
-          style={{ paddingLeft: 15, paddingRight: hasThumbnail && hasAnswer ? 50 : 15 }}
+          className={`flex-1 min-w-0 flex flex-col pt-[20px] ${hasThumbnail && hasAnswer ? "lg:pt-[50px]" : ""} pl-[15px] ${hasThumbnail && hasAnswer ? "pr-[25px] lg:pr-[50px]" : "pr-[15px]"}`}
         >
           {/* Unanswered: text + upvote side by side */}
           {!hasAnswer ? (
@@ -98,7 +97,7 @@ export function QuestionDetailCard({
                 <div>
                   <span
                     style={{
-                      fontSize: "40px",
+                      fontSize: "clamp(28px, 8vw, 40px)",
                       lineHeight: 1.3,
                       color: "var(--system-text0)",
                       fontFamily: "var(--font-figtree)",
@@ -153,7 +152,7 @@ export function QuestionDetailCard({
               <div>
                 <span
                   style={{
-                    fontSize: "40px",
+                    fontSize: "clamp(28px, 8vw, 40px)",
                     lineHeight: 1.3,
                     color: "#0E412E",
                     fontFamily: "var(--font-figtree)",
@@ -227,7 +226,7 @@ export function QuestionDetailCard({
             partyColor={partyColor}
             partyColorDark={partyColorDark}
             bufferingColor={partyColorLight}
-            className="w-[90vw] self-center lg:self-auto lg:w-[337px] lg:mr-[9px]"
+            className="w-full lg:w-[337px] lg:mr-[9px]"
           />
         )}
       </div>

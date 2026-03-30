@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { faCommentPlus } from "@fortawesome/pro-solid-svg-icons";
-import { faInfo } from "@fortawesome/pro-duotone-svg-icons";
+import { faInfo, faMailbox, faMailboxFlagUp } from "@fortawesome/pro-duotone-svg-icons";
 import { directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { useSystemColors } from "./SystemColorProvider";
 import { SuccessBanner } from "./SuccessBanner";
@@ -55,6 +55,11 @@ export function PoliticianTopBar({
   const [text, setText] = useState("");
   const [pending, setPending] = useState(false);
   const [success, setSuccess] = useState(false);
+  // Simple mailbox confirmation: "mailbox" → "flagUp" → null
+  const [mailboxPhase, setMailboxPhase] = useState<"mailbox" | "flagUp" | "fadeIn" | null>(null);
+  const pillBtnRef = useRef<HTMLButtonElement>(null);
+  const pillSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const [namesRevealed, setNamesRevealed] = useState<false | "fading" | true>(false);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const introStorageKey = `intro-dismissed:${politicianSlug}`;
@@ -115,6 +120,7 @@ export function PoliticianTopBar({
     setModalOpen(false);
   }
 
+  // Imperative mailbox animation — runs entirely outside React via DOM manipulation
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!text.trim()) return;
@@ -126,6 +132,10 @@ export function PoliticianTopBar({
     }
 
     // Logged-in users: submit directly from topbar
+    // Capture pill size BEFORE pending changes text to "Sender..."
+    if (pillBtnRef.current) {
+      pillSizeRef.current = { width: pillBtnRef.current.offsetWidth, height: pillBtnRef.current.offsetHeight };
+    }
     setPending(true);
     setError(null);
 
@@ -139,8 +149,21 @@ export function PoliticianTopBar({
     try {
       await directSuggestion(formData);
       setSuccess(true);
-      setText("");
-      setFormActive(false);
+      // Start mailbox confirmation sequence — keep formActive true on desktop so pill stays
+      if (hasSession) {
+        if (pillBtnRef.current) {
+          pillSizeRef.current = { width: pillBtnRef.current.offsetWidth, height: pillBtnRef.current.offsetHeight };
+        }
+        setMailboxPhase("mailbox");
+        // After input fades out (150ms), reveal names container (opacity 0), then fade in
+        setTimeout(() => { setText(""); setNamesRevealed("fading"); }, 200);
+        setTimeout(() => setNamesRevealed(true), 250);
+        setTimeout(() => setMailboxPhase("flagUp"), 1000);
+        setTimeout(() => { setMailboxPhase("fadeIn"); setFormActive(false); pillSizeRef.current = null; setNamesRevealed(false); }, 2700);
+        setTimeout(() => { setMailboxPhase(null); setSuccess(false); }, 2750);
+      } else {
+        setFormActive(false);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Der opstod en fejl");
     } finally {
@@ -148,13 +171,13 @@ export function PoliticianTopBar({
     }
   }
 
-  // Success message — show briefly then reset
+  // Logged-out success: modal handles it, just reset after timeout
   useEffect(() => {
-    if (success) {
+    if (success && !hasSession) {
       const timer = setTimeout(() => setSuccess(false), 5000);
       return () => clearTimeout(timer);
     }
-  }, [success]);
+  }, [success, hasSession]);
 
   return (
     <div
@@ -178,7 +201,7 @@ export function PoliticianTopBar({
         .topbar-age::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .topbar-age { -moz-appearance: textfield; }
       `}</style>
-      <form onSubmit={handleSubmit} noValidate>
+      <form onSubmit={handleSubmit} noValidate style={{ cursor: "default" }}>
         {/* ── Top row: logos + names + desktop form/button ── */}
         <div className="px-[15px] h-[75px] flex items-center gap-3">
           {/* Left: back button (optional) + party logo + profile photo (always visible) */}
@@ -217,7 +240,7 @@ export function PoliticianTopBar({
           </div>
 
           {/* Names (always visible on mobile; hidden on desktop when form is active) */}
-          <div className={`min-w-0 ml-[3px] ${formActive ? "sm:hidden" : ""}`}>
+          <div className={`min-w-0 ml-[3px] ${formActive && !namesRevealed ? "sm:hidden" : ""}`} style={namesRevealed === "fading" ? { opacity: 0 } : namesRevealed === true ? { opacity: 1, transition: "opacity 300ms ease-out" } : undefined}>
             <p
               className="text-base leading-tight truncate"
               style={{ color: nameColor }}
@@ -251,31 +274,34 @@ export function PoliticianTopBar({
                 />
               </button>
             )}
-            {/* Suggest button (comment-lines) / Close button (xmark) */}
-            {!success && (
+            {/* Suggest button / mailbox confirmation / nothing */}
+            {mailboxPhase && mailboxPhase !== "fadeIn" ? (
+              <div
+                className="rounded-full flex items-center justify-center"
+                style={{ width: 40, height: 40, backgroundColor: partyColorDark || "#1E3A5F" }}
+              >
+                <FontAwesomeIcon
+                  icon={mailboxPhase === "flagUp" ? faMailboxFlagUp : faMailbox}
+                  style={{ color: partyColorLight || "#DBEAFE", fontSize: 20 }}
+                />
+              </div>
+            ) : !success ? (
               <button
                 type="button"
                 onClick={() => setModalOpen(true)}
                 className="cursor-pointer transition-opacity rounded-full flex items-center justify-center"
-                style={{
-                  width: 40,
-                  height: 40,
-                  backgroundColor: "#ffffff",
-                }}
+                style={{ width: 40, height: 40, backgroundColor: "#ffffff" }}
                 aria-label="Foreslå et spørgsmål"
               >
-                <FontAwesomeIcon
-                  icon={faCommentPlus}
-                  style={{ color: nameColor, fontSize: 20 }}
-                />
+                <FontAwesomeIcon icon={faCommentPlus} style={{ color: nameColor, fontSize: 20 }} />
               </button>
-            )}
+            ) : null}
           </div>
 
           {/* Desktop-only: expanded form input (replaces names on desktop) */}
           {formActive && (
             <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
-              <div className="relative flex-1 min-w-0">
+              <div className="relative flex-1 min-w-0" style={{ opacity: mailboxPhase ? 0 : 1, transition: "opacity 150ms ease-out", pointerEvents: mailboxPhase ? "none" : "auto" }}>
                 <input
                   ref={inputRef}
                   name="text"
@@ -299,17 +325,33 @@ export function PoliticianTopBar({
                   </button>
                 )}
               </div>
-              {text.trim().length > 0 && (
+              {/* Send forslag button / mailbox confirmation */}
+              {(text.trim().length > 0 || mailboxPhase) && (
                 <button
+                  ref={pillBtnRef}
                   type="submit"
-                  disabled={pending}
-                  className="topbar-btn text-base px-5 py-2 rounded-full whitespace-nowrap cursor-pointer disabled:opacity-50 shrink-0 transition-opacity"
-                  style={hasSession
-                    ? { backgroundColor: nameColor, color: "#ffffff" }
-                    : { backgroundColor: partyTextColor, color: nameColor }
-                  }
+                  disabled={pending || !!mailboxPhase}
+                  className="group rounded-full whitespace-nowrap shrink-0 flex items-center justify-center cursor-pointer disabled:cursor-default text-base border-none"
+                  style={{
+                    ...(mailboxPhase
+                      ? { backgroundColor: partyColorDark || "#1E3A5F" }
+                      : { ...(hasSession ? { backgroundColor: nameColor, color: "#ffffff" } : { backgroundColor: partyTextColor, color: nameColor }) }),
+                    ...(pillSizeRef.current
+                      ? { width: pillSizeRef.current.width, height: pillSizeRef.current.height }
+                      : { paddingLeft: 20, paddingRight: 20, paddingTop: 8, paddingBottom: 8 }),
+                    fontFamily: "inherit",
+                  }}
                 >
-                  {pending ? "Sender..." : hasSession ? "Send forslag" : "Næste"}
+                  {mailboxPhase ? (
+                    <FontAwesomeIcon
+                      icon={mailboxPhase === "flagUp" ? faMailboxFlagUp : faMailbox}
+                      style={{ color: partyColorLight || "#DBEAFE", fontSize: 20 }}
+                    />
+                  ) : (
+                    <span className={`transition-opacity ${pending ? "opacity-50" : "group-hover:opacity-50"}`}>
+                      {pending ? "Sender..." : hasSession ? "Send forslag" : "Næste"}
+                    </span>
+                  )}
                 </button>
               )}
             </div>
@@ -317,7 +359,7 @@ export function PoliticianTopBar({
 
           {/* Desktop-only: constituency + trigger button (normal mode) */}
           {!formActive && (
-            <div className="ml-auto hidden sm:flex items-center gap-3 shrink-0">
+            <div className="ml-auto hidden sm:flex items-center gap-3 shrink-0" style={{ opacity: mailboxPhase === "fadeIn" ? 0 : 1, transition: mailboxPhase === null ? "opacity 300ms ease-out" : "none" }}>
               {constituency && (
                 <span
                   className="text-base"
@@ -343,38 +385,17 @@ export function PoliticianTopBar({
                   />
                 </button>
               )}
-              {success && hasSession ? (
-                <span
-                  className="text-base px-5 py-2 rounded-full whitespace-nowrap"
-                  style={{ backgroundColor: nameColor, color: "var(--system-text0-contrast)" }}
-                >
-                  Tak! Dit forslag er sendt
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setFormActive(true)}
-                  className="bg-white text-base px-5 py-2 rounded-full whitespace-nowrap cursor-pointer"
-                  style={{ color: nameColor }}
-                >
-                  Foreslå et spørgsmål...
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setFormActive(true)}
+                className="bg-white text-base px-5 py-2 rounded-full whitespace-nowrap cursor-pointer"
+                style={{ color: nameColor, opacity: mailboxPhase === "fadeIn" ? 0 : 1, transition: mailboxPhase === null ? "opacity 300ms ease-out" : "none" }}
+              >
+                Foreslå et spørgsmål...
+              </button>
             </div>
           )}
         </div>
-
-        {/* ── Mobile-only: success message (logged-in only, logged-out uses modal) ── */}
-        {!formActive && success && hasSession && (
-          <div className="px-[15px] pb-3 sm:hidden">
-            <span
-              className="block text-base px-5 py-2 rounded-full text-center"
-              style={{ backgroundColor: nameColor, color: "var(--system-text0-contrast)" }}
-            >
-              Tak! Dit forslag er sendt
-            </span>
-          </div>
-        )}
 
         {/* Error when logged in (desktop topbar submit) */}
         {formActive && error && hasSession && (
@@ -402,6 +423,11 @@ export function PoliticianTopBar({
           setText("");
           setFormActive(false);
           setModalOpen(false);
+          if (hasSession) {
+            setMailboxPhase("mailbox");
+            setTimeout(() => setMailboxPhase("flagUp"), 1000);
+            setTimeout(() => { setMailboxPhase(null); setSuccess(false); }, 2700);
+          }
         }}
       />
     </div>

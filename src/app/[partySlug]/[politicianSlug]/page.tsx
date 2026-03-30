@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { db } from "@/db";
-import { politicians, parties, questions, questionTags, upvotes, citizens } from "@/db/schema";
+import { politicians, parties, questions, questionTags, upvotes, citizens, causes } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getCitizenFromSession } from "@/lib/citizen-session";
@@ -124,8 +124,15 @@ export default async function BorgerFeed({
 
   // Prepare data for filter component
   const politicianFirstName = politician.name.split(" ")[0];
+
+  // Collect all tags: from questions AND from politician's defined causes
   const allTagsSet = new Set<string>();
   tagsByQuestion.forEach((tags) => tags.forEach((t) => allTagsSet.add(t)));
+  const politicianCauses = await db
+    .select({ tagId: causes.tagId })
+    .from(causes)
+    .where(eq(causes.politicianId, politician.id));
+  for (const c of politicianCauses) allTagsSet.add(c.tagId);
 
   const feedQuestions = allQuestions
     .filter((q) => !(q.deadlineMissed && !q.answerUrl && !q.muxAssetStatus)) // Hide missed unanswered questions from citizens

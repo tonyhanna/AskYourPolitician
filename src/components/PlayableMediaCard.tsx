@@ -230,7 +230,7 @@ export function PlayableMediaCard({
     <div
       ref={thumbnailWrapRef}
       className={`flex-shrink-0 relative ${hasPlayableMedia ? "cursor-pointer" : ""} ${className}`}
-      style={{ borderRadius: 20, overflow: "hidden", aspectRatio: "3/4", scrollMarginTop: 170, ...style }}
+      style={{ borderRadius: 20, overflow: "hidden", aspectRatio: "3/4", scrollMarginTop: 170, WebkitMaskImage: "radial-gradient(white, white)", isolation: "isolate" as const, ...style }}
       onClick={hasPlayableMedia ? handleThumbnailClick : undefined}
       onMouseEnter={() => { if (hasPlayableMedia && !window.matchMedia("(pointer: coarse)").matches) setIsHovering(true); }}
       onMouseLeave={() => { if (!window.matchMedia("(pointer: coarse)").matches) setIsHovering(false); }}
