@@ -325,7 +325,7 @@ export function CircularUpvoteButton({
           width = 260;
           content = (
             <>
-              <span className="text-sm block" style={{ color: "#ffffff" }}>{deadlineText}.</span>
+              <span className="text-sm block" style={{ color: partyColorDark || "#0E412E", opacity: 0.5 }}>{deadlineText}.</span>
               <span className="text-sm block mt-1" style={{ color: partyColorDark || "#0E412E" }}>
                 Dette spørgsmål har nået sit upvote-mål. Sæt din egen upvote for at blive notificeret, når {politicianFirstName} svarer.
               </span>
@@ -336,7 +336,7 @@ export function CircularUpvoteButton({
           width = 260;
           content = (
             <>
-              <span className="text-sm block" style={{ color: "#ffffff" }}>{deadlineText}.</span>
+              <span className="text-sm block" style={{ color: partyColorDark || "#0E412E", opacity: 0.5 }}>{deadlineText}.</span>
               <span className="text-sm block mt-1" style={{ color: partyColorDark || "#0E412E" }}>
                 Dette spørgsmål har nået sit upvote-mål. Sæt din egen upvote for at blive notificeret, når {politicianFirstName} svarer.
               </span>
@@ -375,7 +375,7 @@ export function CircularUpvoteButton({
         break;
       }
       case "submitted": {
-        content = <span className="text-sm" style={{ color: "#ffffff" }}>Tjek din e-mail</span>;
+        content = <span className="text-sm" style={{ color: partyColorDark || "#0E412E" }}>Tjek din e-mail</span>;
         break;
       }
       default:
