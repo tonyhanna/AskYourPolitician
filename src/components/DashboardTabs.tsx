@@ -27,7 +27,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab }: Props) {
       <StickyPillNav
         items={tabs}
         activeId={activeTab}
-        onSelect={(id) => setActiveTab(id as Tab)}
+        onSelect={(id) => { setActiveTab(id as Tab); window.scrollTo({ top: 0 }); }}
       />
       <div className="max-w-4xl mx-auto px-6 space-y-6">
         {content}
