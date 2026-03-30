@@ -10,7 +10,6 @@ import { QuestionList } from "@/components/QuestionList";
 import { CauseForm } from "@/components/CauseForm";
 import { CauseList } from "@/components/CauseList";
 import { getActivePolitician, getImpersonatingPoliticianId } from "@/lib/admin";
-import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { DashboardTabs } from "@/components/DashboardTabs";
 import { PoliticianTopBar } from "@/components/PoliticianTopBar";
 import { ThemeColorSetter } from "@/components/ThemeColorSetter";
@@ -250,14 +249,10 @@ export default async function Dashboard() {
           politicianSlug={politician.slug}
           hasSession={true}
           citizenPageUrl={uniqueUrl}
+          isImpersonating={!!impersonatingId}
         />
       )}
     <main className="flex-1 w-full" style={{ backgroundColor: "var(--system-bg0)" }}>
-      {impersonatingId && politician && (
-        <div className="max-w-4xl mx-auto px-6 pt-6">
-          <ImpersonationBanner politicianName={politician.name} />
-        </div>
-      )}
 
       {politician ? (
         <DashboardTabs

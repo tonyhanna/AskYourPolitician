@@ -4,9 +4,11 @@ import { Suspense } from "react";
 import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark, faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { faUserHatTie } from "@fortawesome/pro-duotone-svg-icons";
 import { faCommentPlus } from "@fortawesome/pro-solid-svg-icons";
 import { faInfo, faMailbox, faMailboxFlagUp } from "@fortawesome/pro-duotone-svg-icons";
 import { directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
+import { stopImpersonation } from "@/app/admin/actions";
 import { useSystemColors } from "./SystemColorProvider";
 import { SuccessBanner } from "./SuccessBanner";
 import { SuggestionModal } from "./SuggestionModal";
@@ -28,6 +30,7 @@ type PoliticianTopBarProps = {
   redirectPath?: string | null;
   mode?: "citizen" | "dashboard";
   citizenPageUrl?: string | null;
+  isImpersonating?: boolean;
 };
 
 export function PoliticianTopBar({
@@ -47,11 +50,31 @@ export function PoliticianTopBar({
   redirectPath,
   mode = "citizen",
   citizenPageUrl,
+  isImpersonating,
 }: PoliticianTopBarProps) {
   const isDashboard = mode === "dashboard";
   const canHover = useRef(false);
+  const isTouchRef = useRef(false);
+  const [impersonateArmed, setImpersonateArmed] = useState(false);
+  const [impersonateHover, setImpersonateHover] = useState(false);
   useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
-  const { error: colorError } = useSystemColors();
+  const impersonateBtnRef = useRef<HTMLButtonElement>(null);
+  // Dismiss impersonate armed state on tap outside
+  useEffect(() => {
+    if (!impersonateArmed) return;
+    const handler = (e: TouchEvent | MouseEvent) => {
+      if (impersonateBtnRef.current && !impersonateBtnRef.current.contains(e.target as Node)) {
+        setImpersonateArmed(false);
+      }
+    };
+    document.addEventListener("touchstart", handler, { capture: true });
+    document.addEventListener("mousedown", handler, { capture: true });
+    return () => {
+      document.removeEventListener("touchstart", handler, { capture: true });
+      document.removeEventListener("mousedown", handler, { capture: true });
+    };
+  }, [impersonateArmed]);
+  const { error: colorError, errorContrast } = useSystemColors();
   const bgColor = partyColor ?? "#3B82F6";
   const nameColor = partyColorDark ?? "#1E3A5F";
   const partyTextColor = partyColorLight ?? "#93C5FD";
@@ -276,12 +299,42 @@ export function PoliticianTopBar({
             </p>
           </div>
 
-          {/* Dashboard mode: "Borgere" label + arrow link on right */}
+          {/* Dashboard mode: impersonation button + citizen page link on right */}
           {isDashboard && (
             <div className="ml-auto flex items-center gap-3 shrink-0">
-              <span className="text-base" style={{ color: constituencyColor, opacity: 0.5 }}>
-                Borgere
-              </span>
+              {/* Impersonation button: user-hat-tie idle → xmark on hover/tap1 → stop on click/tap2 */}
+              {isImpersonating && (() => {
+                const showXmark = impersonateArmed || impersonateHover;
+                return (
+                  <button
+                    ref={impersonateBtnRef}
+                    type="button"
+                    onPointerDown={(e) => { isTouchRef.current = e.pointerType === "touch"; }}
+                    onClick={async () => {
+                      if (isTouchRef.current && !impersonateArmed) {
+                        setImpersonateArmed(true);
+                        return;
+                      }
+                      await stopImpersonation();
+                      window.location.href = "/admin";
+                    }}
+                    className="rounded-full flex items-center justify-center cursor-pointer"
+                    style={{
+                      width: 40, height: 40,
+                      backgroundColor: showXmark ? `${colorError}80` : nameColor,
+                      transition: "background-color 150ms ease",
+                    }}
+                    aria-label={impersonateArmed ? "Stop impersonering" : "Admin"}
+                    onPointerEnter={() => { if (canHover.current) setImpersonateHover(true); }}
+                    onPointerLeave={() => { if (canHover.current) setImpersonateHover(false); }}
+                  >
+                    <FontAwesomeIcon
+                      icon={showXmark ? faXmark : faUserHatTie}
+                      style={{ color: showXmark ? errorContrast : partyTextColor, fontSize: 18 }}
+                    />
+                  </button>
+                );
+              })()}
               {citizenPageUrl && (
                 <a
                   href={citizenPageUrl}
