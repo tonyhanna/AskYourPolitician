@@ -13,6 +13,7 @@ import { getActivePolitician, getImpersonatingPoliticianId } from "@/lib/admin";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { DashboardTabs } from "@/components/DashboardTabs";
 import { PoliticianTopBar } from "@/components/PoliticianTopBar";
+import { ThemeColorSetter } from "@/components/ThemeColorSetter";
 
 export async function generateMetadata(): Promise<Metadata> {
   const politician = await getActivePolitician();
@@ -220,8 +221,19 @@ export default async function Dashboard() {
   const uniqueUrl = politician ? `${appUrl}/${politician.partySlug}/${politician.slug}` : null;
   const politicianParty = politician ? allParties.find((p) => p.id === politician.partyId) : null;
 
+  const partyColor = politicianParty?.color ?? null;
+
   return (
     <>
+      {/* SSR theme-color meta tag for Safari/Chrome mobile toolbar */}
+      {partyColor && <meta name="theme-color" content={partyColor} />}
+      {/* SSR style: paint body bg to party color for overscroll rubber-band */}
+      {partyColor && politician && (
+        <style precedence="theme" href={`theme-dashboard-${politician.partySlug}`}>{`html body{background-color:${partyColor}}`}</style>
+      )}
+      {/* Client-side: toggle body bg based on scroll (party color at top, system bg when scrolled) */}
+      {partyColor && <ThemeColorSetter color={partyColor} />}
+      <div className="min-h-dvh flex flex-col">
       {politician && politicianParty && (
         <PoliticianTopBar
           mode="dashboard"
@@ -230,7 +242,7 @@ export default async function Dashboard() {
           profilePhotoUrl={politician.profilePhotoUrl}
           partyLogoUrl={politicianParty.logoUrl ?? null}
           constituency={politician.constituency}
-          partyColor={politicianParty.color ?? null}
+          partyColor={partyColor}
           partyColorDark={politicianParty.colorDark ?? null}
           partyColorLight={politicianParty.colorLight ?? null}
           politicianId={politician.id}
@@ -345,6 +357,7 @@ export default async function Dashboard() {
         </section>
       )}
     </main>
+      </div>
     </>
   );
 }
