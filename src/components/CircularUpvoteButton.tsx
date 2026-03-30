@@ -24,7 +24,7 @@ import { useSystemColors, useTheme } from "./SystemColorProvider";
  *   idle (arrow-up) → hover (+1) → click/tap → directUpvote
  *
  * LOGGED IN — goal NOT reached, upvoted:
- *   idle (xmark on red) → hover/tap1 ("Er du sikker på at du vil fjerne din tidligere upvote?" + thumbs-up) → click/tap2 → cancelUpvote
+ *   idle (check on party color 50%) → hover/tap1 (xmark on red + "Vil du fjerne?") → click/tap2 (thumbs-up on red + "Er du sikker?") → click/tap3 → cancelUpvote
  *
  * LOGGED IN — goal reached, NOT upvoted:
  *   idle (hourglass 50%) → hover/tap1 (tooltip + arrow-up) → click/tap2 → directUpvote
@@ -246,11 +246,21 @@ export function CircularUpvoteButton({
         break;
       }
       case "upvoted": {
-        // LOGGED IN — goal not reached, upvoted → 2-tap cancel
-        if (isTouch && armed === 0) {
-          setArmed(1);
+        // LOGGED IN — goal not reached, upvoted → 3-tap mobile / 2-click desktop
+        if (isTouch) {
+          if (armed === 0) {
+            setArmed(1); // tap 1: show xmark + "Vil du fjerne din tidligere upvote?"
+          } else if (armed === 1) {
+            setArmed(2); // tap 2: show thumbs-up + "Er du sikker?"
+          } else {
+            doCancel(); // tap 3: execute cancel
+          }
         } else {
-          doCancel();
+          if (!desktopConfirmed) {
+            setDesktopConfirmed(true); // click 1: show thumbs-up + "Er du sikker?"
+          } else {
+            doCancel(); // click 2: execute cancel
+          }
         }
         break;
       }
@@ -351,8 +361,13 @@ export function CircularUpvoteButton({
       }
       case "upvoted": {
         bgColor = colorError;
-        width = 240;
-        content = <span className="text-sm" style={{ color: errorContrast }}>Er du sikker på at du vil fjerne din tidligere upvote?</span>;
+        const showConfirm = desktopConfirmed || armed === 2;
+        if (showConfirm) {
+          content = <span className="text-sm" style={{ color: errorContrast }}>Er du sikker?</span>;
+        } else {
+          width = 240;
+          content = <span className="text-sm" style={{ color: errorContrast }}>Vil du fjerne din tidligere upvote?</span>;
+        }
         break;
       }
       case "submitted": {
@@ -422,8 +437,9 @@ export function CircularUpvoteButton({
         };
 
       case "upvoted":
-        if (active) {
-          // "Er du sikker på at du vil fjerne din tidligere upvote?" — thumbs-up on red
+        // Desktop: hover = xmark on red, desktopConfirmed = thumbs-up on red
+        // Mobile: idle = check, armed=1 = xmark on red, armed=2 = thumbs-up on red
+        if (desktopConfirmed || armed === 2) {
           return {
             icon: faThumbsUp,
             iconColor: errorContrast,
@@ -431,12 +447,20 @@ export function CircularUpvoteButton({
             label: "Bekræft fjern upvote",
           };
         }
-        // Idle: xmark on red
+        if ((isHovering && !isTouchRef.current) || armed === 1) {
+          return {
+            icon: faXmark,
+            iconColor: errorContrast,
+            bgColor: `${colorError}${alphaHex}`,
+            label: "Fjern upvote",
+          };
+        }
+        // Idle: check on party color with opacity (same as "submitted" / "Tjek din e-mail" state)
         return {
-          icon: faXmark,
-          iconColor: pendingContrast,
-          bgColor: `${colorError}${alphaHex}`,
-          label: "Fjern upvote",
+          icon: faCheck,
+          iconColor: partyColorDark || "#0E412E",
+          bgColor: `${partyColor || "#00D564"}${alphaHex}`,
+          label: "Du har upvoted",
         };
 
       case "goalReachedNotUpvoted":
