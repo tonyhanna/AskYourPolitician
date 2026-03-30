@@ -252,7 +252,7 @@ export default async function Dashboard() {
           isImpersonating={!!impersonatingId}
         />
       )}
-    <main className="flex-1 w-full" style={{ backgroundColor: "var(--system-bg0)" }}>
+    <main className="flex-1 w-full px-[15px] pt-[15px]" style={{ backgroundColor: "var(--system-bg0)" }}>
 
       {politician ? (
         <DashboardTabs
