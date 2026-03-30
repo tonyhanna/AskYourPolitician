@@ -128,7 +128,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
           <div ref={createWrapRef} style={{ position: "sticky", top: 94, zIndex: 41, marginTop: 25, marginBottom: 25, width: "fit-content" }}>
             <button
               ref={createBtnRef}
-              onClick={() => window.dispatchEvent(new CustomEvent("dashboard-create-open", { detail: { tab: activeTab } }))}
+              onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); window.dispatchEvent(new CustomEvent("dashboard-create-open", { detail: { tab: activeTab } })); }}
               className="text-sm rounded-full cursor-pointer whitespace-nowrap overflow-hidden relative"
               style={{
                 fontFamily: "var(--font-figtree)",
