@@ -252,7 +252,8 @@ export default async function Dashboard() {
           citizenPageUrl={uniqueUrl}
         />
       )}
-    <main className="max-w-4xl mx-auto p-6 space-y-6 flex-1" style={{ backgroundColor: "var(--system-bg0)" }}>
+    <main className="flex-1 w-full" style={{ backgroundColor: "var(--system-bg0)" }}>
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
       {impersonatingId && politician && (
         <ImpersonationBanner politicianName={politician.name} />
       )}
@@ -356,6 +357,7 @@ export default async function Dashboard() {
           />
         </section>
       )}
+      </div>
     </main>
       </div>
     </>
