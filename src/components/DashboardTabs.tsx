@@ -153,7 +153,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
                 const svg = e.currentTarget.querySelector("svg");
                 const span = e.currentTarget.querySelector("span");
                 if (svg) svg.style.opacity = "1";
-                if (span) span.style.opacity = "1";
+                if (span) span.style.opacity = String(textOpacity);
                 if (formOpen) {
                   setFormOpen(false);
                   window.dispatchEvent(new CustomEvent("dashboard-create-close"));
