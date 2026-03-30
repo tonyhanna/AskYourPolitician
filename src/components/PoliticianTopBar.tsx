@@ -49,6 +49,8 @@ export function PoliticianTopBar({
   citizenPageUrl,
 }: PoliticianTopBarProps) {
   const isDashboard = mode === "dashboard";
+  const canHover = useRef(false);
+  useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
   const { error: colorError } = useSystemColors();
   const bgColor = partyColor ?? "#3B82F6";
   const nameColor = partyColorDark ?? "#1E3A5F";
@@ -259,35 +261,37 @@ export function PoliticianTopBar({
           </div>
 
           {/* Names (always visible on mobile; hidden on desktop when form is active) */}
-          <div className={`min-w-0 ml-[3px] ${formActive && !namesRevealed ? "sm:hidden" : ""}`} style={namesRevealed === "fading" ? { opacity: 0 } : namesRevealed === true ? { opacity: 1, transition: "opacity 300ms ease-out" } : undefined}>
+          <div className={`min-w-0 ml-[3px] ${!isDashboard && formActive && !namesRevealed ? "sm:hidden" : ""}`} style={namesRevealed === "fading" ? { opacity: 0 } : namesRevealed === true ? { opacity: 1, transition: "opacity 300ms ease-out" } : undefined}>
             <p
               className="text-base leading-tight truncate"
               style={{ color: nameColor }}
             >
-              {politicianName}
+              {isDashboard ? "Dashboard" : politicianName}
             </p>
             <p
               className="text-base leading-tight truncate"
               style={{ color: partyTextColor }}
             >
-              {partyName}
+              {isDashboard ? politicianName : partyName}
             </p>
           </div>
 
-          {/* Dashboard mode: "Dashboard" label + "Se borgerside" button on right */}
+          {/* Dashboard mode: "Borgere" label + arrow link on right */}
           {isDashboard && (
             <div className="ml-auto flex items-center gap-3 shrink-0">
-              <span className="text-base hidden sm:inline" style={{ color: constituencyColor, opacity: 0.5 }}>
-                Dashboard
+              <span className="text-base" style={{ color: constituencyColor, opacity: 0.5 }}>
+                Borgere
               </span>
               {citizenPageUrl && (
                 <a
                   href={citizenPageUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-full flex items-center justify-center"
+                  className="rounded-full flex items-center justify-center transition-opacity"
                   style={{ width: 40, height: 40, backgroundColor: partyTextColor }}
                   aria-label="Se borgerside"
+                  onPointerEnter={(e) => { if (canHover.current) e.currentTarget.style.opacity = "0.5"; }}
+                  onPointerLeave={(e) => { if (canHover.current) e.currentTarget.style.opacity = "1"; }}
                 >
                   <FontAwesomeIcon icon={faArrowRight} style={{ color: nameColor, fontSize: 18 }} />
                 </a>
