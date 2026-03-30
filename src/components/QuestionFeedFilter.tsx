@@ -200,8 +200,8 @@ export function QuestionFeedFilter({
                   transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                   color: selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)",
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+                onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text2)"; }}
+                onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
               >
                 {tag}
               </button>
@@ -220,8 +220,8 @@ export function QuestionFeedFilter({
                 transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                 color: activeSection === "pinned" ? "var(--system-text0-contrast)" : "var(--system-text0)",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = activeSection === "pinned" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+              onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text2)"; }}
+              onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = activeSection === "pinned" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
             >
               Udvalgt
             </button>
@@ -237,8 +237,8 @@ export function QuestionFeedFilter({
                 transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                 color: activeSection === "answered" ? "var(--system-text0-contrast)" : "var(--system-text0)",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = activeSection === "answered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+              onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text2)"; }}
+              onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = activeSection === "answered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
             >
               Besvaret
             </button>
@@ -254,8 +254,8 @@ export function QuestionFeedFilter({
                 transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                 color: activeSection === "unanswered" ? "var(--system-text0-contrast)" : "var(--system-text0)",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = activeSection === "unanswered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+              onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text2)"; }}
+              onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = activeSection === "unanswered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
             >
               Ubesvaret
             </button>
@@ -285,8 +285,8 @@ export function QuestionFeedFilter({
                 transition: "background-color 200ms ease, backdrop-filter 200ms ease",
               }}
               aria-label="Filtre"
-              onMouseEnter={(e) => { const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-error)"; }}
-              onMouseLeave={(e) => { const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-pending)"; }}
+              onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-error)"; }}
+              onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-pending)"; }}
             >
               <FontAwesomeIcon icon={faFire} swapOpacity style={{ color: "var(--system-pending)", transition: "color 150ms", fontSize: 15 }} />
             </button>
@@ -302,8 +302,8 @@ export function QuestionFeedFilter({
                 transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                 color: "var(--system-icon1)",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-icon0)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-icon1)"; }}
+              onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-icon0)"; }}
+              onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-icon1)"; }}
               aria-label="Luk filtre"
             >
               <FontAwesomeIcon icon={faXmark} style={{ fontSize: 14 }} />
@@ -328,8 +328,8 @@ export function QuestionFeedFilter({
                   transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                   color: selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)",
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+                onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text2)"; }}
+                onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
               >
                 {tag}
               </button>
@@ -647,8 +647,8 @@ function AnsweredQuestionsGrid({
                 backgroundColor: "var(--system-bg0-contrast)",
                 color: "var(--system-text0-contrast)",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-text0-contrast)"; }}
+              onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text2)"; }}
+              onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text0-contrast)"; }}
             >
               Vis flere
             </button>
