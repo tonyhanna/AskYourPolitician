@@ -25,7 +25,7 @@ export function QuestionForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
 
-  // Listen for docked nav button click
+  // Listen for nav button open/close
   useEffect(() => {
     const openHandler = (e: Event) => {
       if ((e as CustomEvent).detail?.tab === "questions") setOpen(true);
@@ -137,13 +137,6 @@ export function QuestionForm({
           className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {pending ? "Opretter..." : "Opret spørgsmål"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="text-sm text-gray-600 hover:text-gray-800 px-3 py-2 cursor-pointer"
-        >
-          Annullér
         </button>
       </div>
       {disabled && (

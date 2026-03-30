@@ -15,8 +15,8 @@ const tabs = [
 ];
 
 const createLabels: Partial<Record<Tab, string>> = {
-  questions: "+ Tilføj",
-  causes: "+ Tilføj",
+  questions: "+ Opret",
+  causes: "+ Opret",
 };
 
 type Props = {
@@ -34,7 +34,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
   const { isAtTop, canHover } = useStickyNavState();
   const [formOpen, setFormOpen] = useState(false);
 
-  // Listen for form close events from QuestionForm/CauseForm
+  // Listen for form close from components (e.g. after successful submit)
   useEffect(() => {
     const handler = () => setFormOpen(false);
     window.addEventListener("dashboard-create-close", handler);
@@ -48,18 +48,24 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
   const [stuck, setStuck] = useState(false);
   const createWrapRef = useRef<HTMLDivElement>(null);
   const createBtnRef = useRef<HTMLButtonElement>(null);
-  const [createBtnWidth, setCreateBtnWidth] = useState(0);
+  const [addBtnWidth, setAddBtnWidth] = useState(0);
+  const [cancelBtnWidth, setCancelBtnWidth] = useState(0);
+  const measureRef = useRef<HTMLSpanElement>(null);
 
-  // Measure button's natural (unshrunk) width once via the text span
+  // Measure both button widths via hidden measure span
   const measuredRef = useRef(false);
   useEffect(() => {
-    if (createBtnRef.current && !measuredRef.current) {
-      const span = createBtnRef.current.querySelector("span");
-      if (span) {
-        const textWidth = span.offsetWidth;
-        setCreateBtnWidth(28 + textWidth + 17); // icon area (28) + text + right padding (17)
-        measuredRef.current = true;
-      }
+    if (measureRef.current && !measuredRef.current && createLabel) {
+      const el = measureRef.current;
+      // Measure "Tilføj"
+      el.textContent = createLabel.replace("+ ", "");
+      const addW = 28 + el.offsetWidth + 17;
+      setAddBtnWidth(addW);
+      // Measure "Annuller"
+      el.textContent = "Annuller";
+      const cancelW = 28 + el.offsetWidth + 17;
+      setCancelBtnWidth(cancelW);
+      measuredRef.current = true;
     }
   });
   // Re-measure on tab change
@@ -129,17 +135,25 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
           </div>
         }
       />
+      {/* Hidden span for measuring text widths */}
+      <span ref={measureRef} className="text-sm" style={{ position: "absolute", visibility: "hidden", fontFamily: "var(--font-figtree)", fontWeight: 500, whiteSpace: "nowrap" }} />
       {/* Create button — scrolls with content, sticks at nav level, shrinks to circle as it docks */}
       {createLabel && (() => {
         const circleSize = 32;
         const shrinkProgress = Math.max(0, Math.min(1, dockProgress));
-        const currentWidth = createBtnWidth > 0 ? createBtnWidth - (createBtnWidth - circleSize) * shrinkProgress : undefined;
+        const baseWidth = formOpen ? cancelBtnWidth : addBtnWidth;
+        const currentWidth = baseWidth > 0 ? baseWidth - (baseWidth - circleSize) * shrinkProgress : undefined;
         const textOpacity = 1 - shrinkProgress;
         return (
           <div ref={createWrapRef} style={{ position: "sticky", top: 94, zIndex: 41, marginTop: 25, marginBottom: 25, width: "fit-content" }}>
             <button
               ref={createBtnRef}
-              onClick={() => {
+              onClick={(e) => {
+                // Reset hover opacity before state change
+                const svg = e.currentTarget.querySelector("svg");
+                const span = e.currentTarget.querySelector("span");
+                if (svg) svg.style.opacity = "1";
+                if (span) span.style.opacity = "1";
                 if (formOpen) {
                   setFormOpen(false);
                   window.dispatchEvent(new CustomEvent("dashboard-create-close"));
@@ -153,14 +167,15 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
               style={{
                 fontFamily: "var(--font-figtree)",
                 fontWeight: 500,
-                backgroundColor: partyColor || "#00D564",
-                opacity: formOpen ? 0.2 : 1,
+                backgroundColor: formOpen
+                  ? `color-mix(in srgb, ${partyColor || "#00D564"} 20%, transparent)`
+                  : (partyColor || "#00D564"),
                 color: partyColorDark || "#1E3A5F",
-                width: formOpen ? undefined : currentWidth,
+                width: currentWidth,
                 height: circleSize,
               }}
-              onPointerEnter={(e) => { if (!canHover.current || formOpen) return; const svg = e.currentTarget.querySelector("svg"); const span = e.currentTarget.querySelector("span"); if (svg) svg.style.opacity = "0.5"; if (span) span.style.opacity = String(textOpacity * 0.5); }}
-              onPointerLeave={(e) => { if (!canHover.current || formOpen) return; const svg = e.currentTarget.querySelector("svg"); const span = e.currentTarget.querySelector("span"); if (svg) svg.style.opacity = "1"; if (span) span.style.opacity = String(textOpacity); }}
+              onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); const span = e.currentTarget.querySelector("span"); if (svg) svg.style.opacity = "0.5"; if (span) span.style.opacity = String(textOpacity * 0.5); }}
+              onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); const span = e.currentTarget.querySelector("span"); if (svg) svg.style.opacity = "1"; if (span) span.style.opacity = String(textOpacity); }}
             >
               {formOpen ? (
                 <>
