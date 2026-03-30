@@ -287,13 +287,13 @@ export function PoliticianTopBar({
                   href={citizenPageUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-full flex items-center justify-center transition-opacity"
+                  className="rounded-full flex items-center justify-center"
                   style={{ width: 40, height: 40, backgroundColor: partyTextColor }}
                   aria-label="Se borgerside"
-                  onPointerEnter={(e) => { if (canHover.current) e.currentTarget.style.opacity = "0.5"; }}
-                  onPointerLeave={(e) => { if (canHover.current) e.currentTarget.style.opacity = "1"; }}
+                  onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.opacity = "0.5"; }}
+                  onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.opacity = "1"; }}
                 >
-                  <FontAwesomeIcon icon={faArrowRight} style={{ color: nameColor, fontSize: 18 }} />
+                  <FontAwesomeIcon icon={faArrowRight} className="transition-opacity" style={{ color: nameColor, fontSize: 18 }} />
                 </a>
               )}
             </div>
