@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { StickyPillNav } from "./StickyPillNav";
 
 type Tab = "questions" | "causes" | "settings";
@@ -19,6 +19,18 @@ type Props = {
 
 export function DashboardTabs({ questionsTab, causesTab, settingsTab }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("questions");
+  const scrollPositions = useRef<Record<Tab, number>>({ questions: 0, causes: 0, settings: 0 });
+
+  const switchTab = useCallback((id: string) => {
+    // Save current scroll position for the tab we're leaving
+    scrollPositions.current[activeTab] = window.scrollY;
+    const nextTab = id as Tab;
+    setActiveTab(nextTab);
+    // Restore scroll position for the tab we're entering
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollPositions.current[nextTab] });
+    });
+  }, [activeTab]);
 
   const content = activeTab === "questions" ? questionsTab : activeTab === "causes" ? causesTab : settingsTab;
 
@@ -27,7 +39,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab }: Props) {
       <StickyPillNav
         items={tabs}
         activeId={activeTab}
-        onSelect={(id) => { setActiveTab(id as Tab); window.scrollTo({ top: 0 }); }}
+        onSelect={switchTab}
       />
       <div className="max-w-4xl mx-auto px-6 space-y-6">
         {content}
