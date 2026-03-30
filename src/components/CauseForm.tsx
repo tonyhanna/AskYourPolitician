@@ -12,11 +12,16 @@ export function CauseForm({ politicianId, partyColor, partyColorDark, partyColor
 
   // Listen for docked nav button click
   useEffect(() => {
-    const handler = (e: Event) => {
+    const openHandler = (e: Event) => {
       if ((e as CustomEvent).detail?.tab === "causes") setOpen(true);
     };
-    window.addEventListener("dashboard-create-open", handler);
-    return () => window.removeEventListener("dashboard-create-open", handler);
+    const closeHandler = () => setOpen(false);
+    window.addEventListener("dashboard-create-open", openHandler);
+    window.addEventListener("dashboard-create-close", closeHandler);
+    return () => {
+      window.removeEventListener("dashboard-create-open", openHandler);
+      window.removeEventListener("dashboard-create-close", closeHandler);
+    };
   }, []);
 
   const [saving, setSaving] = useState(false);

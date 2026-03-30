@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRightFromBracket, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRightFromBracket, faPlus, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { StickyPillNav, useStickyNavState } from "./StickyPillNav";
 import { ThemeToggleButton } from "./ThemeToggleButton";
 
@@ -32,6 +32,17 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
   const [activeTab, setActiveTab] = useState<Tab>("questions");
   const scrollPositions = useRef<Record<Tab, number>>({ questions: 0, causes: 0, settings: 0 });
   const { isAtTop, canHover } = useStickyNavState();
+  const [formOpen, setFormOpen] = useState(false);
+
+  // Listen for form close events from QuestionForm/CauseForm
+  useEffect(() => {
+    const handler = () => setFormOpen(false);
+    window.addEventListener("dashboard-create-close", handler);
+    return () => window.removeEventListener("dashboard-create-close", handler);
+  }, []);
+
+  // Reset formOpen on tab switch
+  useEffect(() => { setFormOpen(false); }, [activeTab]);
 
   // Detect when the create button is about to stick (reach the nav)
   const [stuck, setStuck] = useState(false);
@@ -128,25 +139,44 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
           <div ref={createWrapRef} style={{ position: "sticky", top: 94, zIndex: 41, marginTop: 25, marginBottom: 25, width: "fit-content" }}>
             <button
               ref={createBtnRef}
-              onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); window.dispatchEvent(new CustomEvent("dashboard-create-open", { detail: { tab: activeTab } })); }}
+              onClick={() => {
+                if (formOpen) {
+                  setFormOpen(false);
+                  window.dispatchEvent(new CustomEvent("dashboard-create-close"));
+                } else {
+                  setFormOpen(true);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                  window.dispatchEvent(new CustomEvent("dashboard-create-open", { detail: { tab: activeTab } }));
+                }
+              }}
               className="text-sm rounded-full cursor-pointer whitespace-nowrap overflow-hidden relative"
               style={{
                 fontFamily: "var(--font-figtree)",
                 fontWeight: 500,
                 backgroundColor: partyColor || "#00D564",
+                opacity: formOpen ? 0.2 : 1,
                 color: partyColorDark || "#1E3A5F",
-                width: currentWidth,
+                width: formOpen ? undefined : currentWidth,
                 height: circleSize,
               }}
-              onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); const span = e.currentTarget.querySelector("span"); if (svg) svg.style.opacity = "0.5"; if (span) span.style.opacity = String(textOpacity * 0.5); }}
-              onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); const span = e.currentTarget.querySelector("span"); if (svg) svg.style.opacity = "1"; if (span) span.style.opacity = String(textOpacity); }}
+              onPointerEnter={(e) => { if (!canHover.current || formOpen) return; const svg = e.currentTarget.querySelector("svg"); const span = e.currentTarget.querySelector("span"); if (svg) svg.style.opacity = "0.5"; if (span) span.style.opacity = String(textOpacity * 0.5); }}
+              onPointerLeave={(e) => { if (!canHover.current || formOpen) return; const svg = e.currentTarget.querySelector("svg"); const span = e.currentTarget.querySelector("span"); if (svg) svg.style.opacity = "1"; if (span) span.style.opacity = String(textOpacity); }}
             >
-              {/* Plus icon — always centered in the leftmost 32px circle */}
-              <FontAwesomeIcon icon={faPlus} style={{ fontSize: 10, position: "absolute", left: circleSize / 2, top: "50%", transform: "translate(-50%, -50%)" }} />
-              {/* Text label — fixed position, fades/clips during shrink */}
-              <span style={{ opacity: textOpacity, position: "absolute", left: circleSize - 4, top: "50%", transform: "translateY(-50%)", whiteSpace: "nowrap" }}>
-                {createLabel?.replace("+ ", "")}
-              </span>
+              {formOpen ? (
+                <>
+                  <FontAwesomeIcon icon={faXmark} style={{ fontSize: 12, position: "absolute", left: circleSize / 2, top: "50%", transform: "translate(-50%, -50%)" }} />
+                  <span style={{ opacity: textOpacity, position: "absolute", left: circleSize - 4, top: "50%", transform: "translateY(-50%)", whiteSpace: "nowrap" }}>
+                    Annuller
+                  </span>
+                </>
+              ) : (
+                <>
+                  <FontAwesomeIcon icon={faPlus} style={{ fontSize: 10, position: "absolute", left: circleSize / 2, top: "50%", transform: "translate(-50%, -50%)" }} />
+                  <span style={{ opacity: textOpacity, position: "absolute", left: circleSize - 4, top: "50%", transform: "translateY(-50%)", whiteSpace: "nowrap" }}>
+                    {createLabel?.replace("+ ", "")}
+                  </span>
+                </>
+              )}
             </button>
           </div>
         );
