@@ -178,7 +178,7 @@ export function QuestionFeedFilter({
   return (
     <div className="flex flex-col flex-1">
       {/* Sticky section nav + filter + tags */}
-      <div className="sticky top-[94px] z-30 mb-[25px]" style={{ position: "sticky" }}>
+      <div className="sticky top-[94px] z-40 mb-[25px]" style={{ position: "sticky" }}>
         {/* Blur background — only when filters are open, extends to topbar edge */}
         {filtersOpen && (
           <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: 0, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", backgroundColor: "color-mix(in srgb, var(--system-bg0) 70%, transparent)", zIndex: -1 }} />
