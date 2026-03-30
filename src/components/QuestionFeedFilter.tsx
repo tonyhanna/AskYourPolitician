@@ -171,6 +171,10 @@ export function QuestionFeedFilter({
     return { pinnedQuestions: pinned, answeredQuestions: answered, filteredQuestions: unanswered };
   }, [questions, selectedTags]);
 
+  // Only show section nav when there are 2+ sections with content
+  const visibleSectionCount = (pinnedQuestions.length > 0 ? 1 : 0) + (answeredQuestions.length > 0 ? 1 : 0) + (filteredQuestions.length > 0 ? 1 : 0);
+  const showSectionNav = visibleSectionCount >= 2;
+
   return (
     <div className="flex flex-col flex-1">
       {/* Sticky section nav + filter + tags */}
@@ -180,8 +184,31 @@ export function QuestionFeedFilter({
           <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: 0, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", backgroundColor: "color-mix(in srgb, var(--system-bg0) 70%, transparent)", zIndex: -1 }} />
         )}
         <div className="flex items-center justify-between">
-        {/* Section navigation — left side */}
-        <div className="flex items-center gap-2">
+        {/* Section navigation — left side (hidden when only 1 section exists) */}
+        {/* When no section nav and filters open, tags go inline on the left */}
+        {!showSectionNav && filtersOpen && allTags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
+                style={{
+                  fontFamily: "var(--font-figtree)", fontWeight: 500,
+                  backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
+                  backgroundColor: selectedTags.has(tag) ? ((isAtTop || filtersOpen) ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : ((isAtTop || filtersOpen) ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
+                  transition: "background-color 200ms ease, backdrop-filter 200ms ease",
+                  color: selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
+        {showSectionNav && <div className="flex items-center gap-2">
           {pinnedQuestions.length > 0 && (
             <button
               onClick={() => document.getElementById("section-pinned")?.scrollIntoView({ behavior: "smooth", block: "start" })}
@@ -196,7 +223,7 @@ export function QuestionFeedFilter({
               onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = activeSection === "pinned" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
             >
-              Fokus
+              Udvalgt
             </button>
           )}
           {answeredQuestions.length > 0 && (
@@ -213,7 +240,7 @@ export function QuestionFeedFilter({
               onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = activeSection === "answered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
             >
-              Svar
+              Besvaret
             </button>
           )}
           {filteredQuestions.length > 0 && (
@@ -230,13 +257,13 @@ export function QuestionFeedFilter({
               onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-text2)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = activeSection === "unanswered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
             >
-              Upvote
+              Ubesvaret
             </button>
           )}
-        </div>
+        </div>}
 
         {/* Filter button — right side */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-auto">
           {filtersOpen && selectedTags.size > 0 && (
             <button
               onClick={reset}
@@ -285,9 +312,9 @@ export function QuestionFeedFilter({
         </div>
         </div>
 
-        {/* Expanded tag filter — same sticky container */}
-        {filtersOpen && allTags.length > 0 && (
-          <div style={{ paddingTop: 10 }}>
+        {/* Expanded tag filter — below nav (only when section nav is shown; otherwise tags are inline above) */}
+        {filtersOpen && allTags.length > 0 && showSectionNav && (
+          <div style={showSectionNav ? { paddingTop: 10 } : undefined}>
             <div className="flex flex-wrap gap-2">
             {allTags.map((tag) => (
               <button
@@ -348,7 +375,9 @@ export function QuestionFeedFilter({
 
       {/* Answered questions grid */}
       {answeredQuestions.length > 0 && (
-        <div id="section-answered" style={{ scrollMarginTop: 120 }} />
+        <div id="section-answered" style={{ scrollMarginTop: 120 }}>
+          <h1 style={{ fontSize: "clamp(33px, 5vw, 41px)", fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text3)", marginBottom: 16 }}>Besvaret</h1>
+        </div>
       )}
       {answeredQuestions.length > 0 && (
         <AnsweredQuestionsGrid
@@ -373,7 +402,9 @@ export function QuestionFeedFilter({
 
       {/* Unanswered questions */}
       {filteredQuestions.length > 0 && (
-        <div id="section-unanswered" style={{ scrollMarginTop: 120 }} />
+        <div id="section-unanswered" style={{ scrollMarginTop: 120 }}>
+          <h1 style={{ fontSize: "clamp(33px, 5vw, 41px)", fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text3)", marginBottom: 16 }}>Ubesvaret: Til upvote</h1>
+        </div>
       )}
       {filteredQuestions.length > 0 ? (
         <UnansweredQuestionsGrid
