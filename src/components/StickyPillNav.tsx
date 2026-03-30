@@ -62,7 +62,7 @@ export function StickyPillNav({
   const solid = isAtTop || !!forceOpaque;
 
   return (
-    <div className="sticky top-[94px] z-40" style={{ position: "sticky" }}>
+    <div className="sticky top-[94px] z-40 mb-[25px]" style={{ position: "sticky" }}>
       {/* Full-width blur background (e.g. when filters are open on citizen page) */}
       {blurBackground && (
         <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: 0, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", backgroundColor: "color-mix(in srgb, var(--system-bg0) 70%, transparent)", zIndex: -1 }} />

@@ -24,13 +24,11 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab }: Props) {
 
   return (
     <div>
-      <div className="mb-[25px]">
-        <StickyPillNav
-          items={tabs}
-          activeId={activeTab}
-          onSelect={(id) => setActiveTab(id as Tab)}
-        />
-      </div>
+      <StickyPillNav
+        items={tabs}
+        activeId={activeTab}
+        onSelect={(id) => setActiveTab(id as Tab)}
+      />
       {content}
     </div>
   );

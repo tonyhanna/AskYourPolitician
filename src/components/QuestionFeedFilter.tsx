@@ -190,7 +190,6 @@ export function QuestionFeedFilter({
   return (
     <div className="flex flex-col flex-1">
       {/* Sticky section nav + filter + tags */}
-      <div className="mb-[25px]">
       <StickyPillNav
         items={showSectionNav ? sectionNavItems : []}
         activeId={activeSection || ""}
@@ -290,7 +289,6 @@ export function QuestionFeedFilter({
           </div>
         ) : undefined}
       />
-      </div>
 
       {questions.length === 0 && (
         <p className="max-w-2xl mx-auto text-gray-500 text-center py-8">
