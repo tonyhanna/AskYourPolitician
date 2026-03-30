@@ -366,6 +366,8 @@ export function CircularUpvoteButton({
       {armed > 0 && (
         <div
           className="fixed inset-0 z-10"
+          style={{ background: "rgba(0,0,0,0.001)", WebkitTapHighlightColor: "transparent", cursor: "pointer" }}
+          onTouchStart={(e) => { e.preventDefault(); setArmed(0); setDesktopConfirmed(false); }}
           onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setArmed(0); setDesktopConfirmed(false); }}
         />
       )}
