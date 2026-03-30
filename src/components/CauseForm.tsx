@@ -9,6 +9,16 @@ export function CauseForm({ politicianId, partyColor, partyColorDark, partyColor
   const canHover = useRef(false);
   useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
   const [open, setOpen] = useState(false);
+
+  // Listen for docked nav button click
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if ((e as CustomEvent).detail?.tab === "causes") setOpen(true);
+    };
+    window.addEventListener("dashboard-create-open", handler);
+    return () => window.removeEventListener("dashboard-create-open", handler);
+  }, []);
+
   const [saving, setSaving] = useState(false);
   const [showLongDesc, setShowLongDesc] = useState(false);
   const [tagIdValue, setTagIdValue] = useState("");

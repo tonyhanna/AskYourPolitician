@@ -24,6 +24,16 @@ export function QuestionForm({
   useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
   const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
+
+  // Listen for docked nav button click
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if ((e as CustomEvent).detail?.tab === "questions") setOpen(true);
+    };
+    window.addEventListener("dashboard-create-open", handler);
+    return () => window.removeEventListener("dashboard-create-open", handler);
+  }, []);
+
   const [charCount, setCharCount] = useState(0);
   const [pending, setPending] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());

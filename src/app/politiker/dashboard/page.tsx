@@ -257,6 +257,8 @@ export default async function Dashboard() {
       {politician ? (
         <DashboardTabs
           logoutAction={async () => { "use server"; await signOut({ redirectTo: "/politiker" }); }}
+          partyColor={partyColor}
+          partyColorDark={politicianParty?.colorDark ?? null}
           questionsTab={
             <div key="questions" className="space-y-6">
               <QuestionForm

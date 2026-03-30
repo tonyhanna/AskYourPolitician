@@ -23,6 +23,8 @@ type StickyPillNavProps = {
   blurBackground?: boolean;
   /** Content rendered in place of pills when items is empty (e.g. inline tags) */
   leftOverride?: React.ReactNode;
+  /** Content docked before the pill buttons (e.g. create button that scrolls up into nav) */
+  dockedContent?: React.ReactNode;
 };
 
 /**
@@ -47,6 +49,7 @@ export function StickyPillNav({
   forceOpaque,
   blurBackground,
   leftOverride,
+  dockedContent,
 }: StickyPillNavProps) {
   const [isAtTop, setIsAtTop] = useState(true);
   const canHover = useRef(false);
@@ -68,9 +71,10 @@ export function StickyPillNav({
         <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: 0, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", backgroundColor: "color-mix(in srgb, var(--system-bg0) 70%, transparent)", zIndex: -1 }} />
       )}
       <div className="flex items-start justify-between">
-        {/* Left side: pills or override content */}
+        {/* Left side: docked content + pills or override content */}
         {leftOverride || (
           <div className="flex items-center gap-2">
+            {dockedContent}
             {items.map((item) => {
               const isActive = item.id === activeId;
               return (
