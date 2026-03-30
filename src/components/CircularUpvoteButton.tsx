@@ -95,9 +95,12 @@ export function CircularUpvoteButton({
   const [armed, setArmed] = useState(0); // Mobile multi-tap: 0=idle, 1=first, 2=confirmed
   const [desktopConfirmed, setDesktopConfirmed] = useState(false);
   const isTouchRef = useRef(false);
+  const canHoverRef = useRef(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const flipTooltipRef = useRef(false);
   const alignRightRef = useRef(false);
+
+  useEffect(() => { canHoverRef.current = window.matchMedia("(hover: hover)").matches; }, []);
 
   // Sync state when server props change
   useEffect(() => {
@@ -163,11 +166,11 @@ export function CircularUpvoteButton({
 
   // ── Pointer handlers ────────────────────────────────────────────────
   const handlePointerEnter = useCallback((e: React.PointerEvent) => {
-    if (e.pointerType === "mouse") { checkFlip(); setIsHovering(true); }
+    if (e.pointerType === "mouse" && canHoverRef.current) { checkFlip(); setIsHovering(true); }
   }, [checkFlip]);
 
   const handlePointerLeave = useCallback((e: React.PointerEvent) => {
-    if (e.pointerType === "mouse") resetInteraction();
+    if (e.pointerType === "mouse" && canHoverRef.current) resetInteraction();
   }, []);
 
   // ── Server actions ──────────────────────────────────────────────────

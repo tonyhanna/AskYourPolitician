@@ -68,6 +68,8 @@ export function QuestionFeedFilter({
 }) {
   const systemColors = useSystemColors();
   const { pending: colorPending, error: colorError } = systemColors;
+  const canHover = useRef(false);
+  useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<"pinned" | "answered" | "unanswered" | null>(null);
   const [isAtTop, setIsAtTop] = useState(true);
@@ -200,8 +202,8 @@ export function QuestionFeedFilter({
                   transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                   color: selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)",
                 }}
-                onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text2)"; }}
-                onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+                onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
+                onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
               >
                 {tag}
               </button>
@@ -220,8 +222,8 @@ export function QuestionFeedFilter({
                 transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                 color: activeSection === "pinned" ? "var(--system-text0-contrast)" : "var(--system-text0)",
               }}
-              onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text2)"; }}
-              onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = activeSection === "pinned" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+              onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
+              onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = activeSection === "pinned" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
             >
               Udvalgt
             </button>
@@ -237,8 +239,8 @@ export function QuestionFeedFilter({
                 transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                 color: activeSection === "answered" ? "var(--system-text0-contrast)" : "var(--system-text0)",
               }}
-              onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text2)"; }}
-              onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = activeSection === "answered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+              onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
+              onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = activeSection === "answered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
             >
               Besvaret
             </button>
@@ -254,8 +256,8 @@ export function QuestionFeedFilter({
                 transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                 color: activeSection === "unanswered" ? "var(--system-text0-contrast)" : "var(--system-text0)",
               }}
-              onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text2)"; }}
-              onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = activeSection === "unanswered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+              onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
+              onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = activeSection === "unanswered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
             >
               Ubesvaret
             </button>
@@ -285,8 +287,8 @@ export function QuestionFeedFilter({
                 transition: "background-color 200ms ease, backdrop-filter 200ms ease",
               }}
               aria-label="Filtre"
-              onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-error)"; }}
-              onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-pending)"; }}
+              onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-error)"; }}
+              onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-pending)"; }}
             >
               <FontAwesomeIcon icon={faFire} swapOpacity style={{ color: "var(--system-pending)", transition: "color 150ms", fontSize: 15 }} />
             </button>
@@ -302,8 +304,8 @@ export function QuestionFeedFilter({
                 transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                 color: "var(--system-icon1)",
               }}
-              onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-icon0)"; }}
-              onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-icon1)"; }}
+              onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon0)"; }}
+              onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon1)"; }}
               aria-label="Luk filtre"
             >
               <FontAwesomeIcon icon={faXmark} style={{ fontSize: 14 }} />
@@ -328,8 +330,8 @@ export function QuestionFeedFilter({
                   transition: "background-color 200ms ease, backdrop-filter 200ms ease",
                   color: selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)",
                 }}
-                onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text2)"; }}
-                onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+                onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
+                onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
               >
                 {tag}
               </button>
@@ -602,6 +604,8 @@ function AnsweredQuestionsGrid({
   setPlayingId: (id: string | null) => void;
 }) {
   const [visibleCount, setVisibleCount] = useState(4);
+  const canHover = useRef(false);
+  useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
   const visibleQuestions = questions.slice(0, visibleCount);
   const remaining = questions.length - visibleCount;
   const showLoadMore = remaining > 0;
@@ -647,8 +651,8 @@ function AnsweredQuestionsGrid({
                 backgroundColor: "var(--system-bg0-contrast)",
                 color: "var(--system-text0-contrast)",
               }}
-              onPointerEnter={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text2)"; }}
-              onPointerLeave={(e) => { if (e.pointerType !== "mouse") return; e.currentTarget.style.color = "var(--system-text0-contrast)"; }}
+              onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
+              onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text0-contrast)"; }}
             >
               Vis flere
             </button>
@@ -684,6 +688,8 @@ function UnansweredQuestionsGrid({
   onLoginUpvote?: (questionId: string) => void;
 }) {
   const { gridRef, cols, isFullWidth, gridWidth, cardW, gapW } = useResponsiveGrid(questions.length);
+  const canHover = useRef(false);
+  useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
 
   return (
     <div ref={gridRef}>
