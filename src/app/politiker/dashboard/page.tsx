@@ -12,6 +12,7 @@ import { CauseList } from "@/components/CauseList";
 import { getActivePolitician, getImpersonatingPoliticianId } from "@/lib/admin";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { DashboardTabs } from "@/components/DashboardTabs";
+import { PoliticianTopBar } from "@/components/PoliticianTopBar";
 
 export async function generateMetadata(): Promise<Metadata> {
   const politician = await getActivePolitician();
@@ -50,7 +51,7 @@ export default async function Dashboard() {
 
   // Fetch all parties for dropdown
   const allParties = await db
-    .select({ id: parties.id, name: parties.name, color: parties.color, colorLight: parties.colorLight, colorDark: parties.colorDark })
+    .select({ id: parties.id, name: parties.name, color: parties.color, colorLight: parties.colorLight, colorDark: parties.colorDark, logoUrl: parties.logoUrl })
     .from(parties)
     .orderBy(parties.name);
 
@@ -217,32 +218,32 @@ export default async function Dashboard() {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   const uniqueUrl = politician ? `${appUrl}/${politician.partySlug}/${politician.slug}` : null;
+  const politicianParty = politician ? allParties.find((p) => p.id === politician.partyId) : null;
 
   return (
+    <>
+      {politician && politicianParty && (
+        <PoliticianTopBar
+          mode="dashboard"
+          politicianName={politician.name}
+          partyName={politician.party}
+          profilePhotoUrl={politician.profilePhotoUrl}
+          partyLogoUrl={politicianParty.logoUrl ?? null}
+          constituency={politician.constituency}
+          partyColor={politicianParty.color ?? null}
+          partyColorDark={politicianParty.colorDark ?? null}
+          partyColorLight={politicianParty.colorLight ?? null}
+          politicianId={politician.id}
+          partySlug={politician.partySlug}
+          politicianSlug={politician.slug}
+          hasSession={true}
+          citizenPageUrl={uniqueUrl}
+        />
+      )}
     <main className="max-w-4xl mx-auto p-6 space-y-6">
       {impersonatingId && politician && (
         <ImpersonationBanner politicianName={politician.name} />
       )}
-
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-3xl font-bold">
-          {politician ? (
-            <>
-              <span className="text-[#AAAAAA]">Dashboard:</span> {politician.party} / {politician.name}
-            </>
-          ) : "Dashboard"}
-        </h1>
-        {uniqueUrl && (
-          <a
-            href={uniqueUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-blue-600 hover:text-blue-800 transition"
-          >
-            Se Borgerside &rarr;
-          </a>
-        )}
-      </div>
 
       {politician ? (
         <DashboardTabs
@@ -344,5 +345,6 @@ export default async function Dashboard() {
         </section>
       )}
     </main>
+    </>
   );
 }

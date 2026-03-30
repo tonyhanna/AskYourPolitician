@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { faCommentPlus } from "@fortawesome/pro-solid-svg-icons";
 import { faInfo, faMailbox, faMailboxFlagUp } from "@fortawesome/pro-duotone-svg-icons";
 import { directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
@@ -26,6 +26,8 @@ type PoliticianTopBarProps = {
   hasSession: boolean;
   backHref?: string | null;
   redirectPath?: string | null;
+  mode?: "citizen" | "dashboard";
+  citizenPageUrl?: string | null;
 };
 
 export function PoliticianTopBar({
@@ -43,7 +45,10 @@ export function PoliticianTopBar({
   hasSession,
   backHref,
   redirectPath,
+  mode = "citizen",
+  citizenPageUrl,
 }: PoliticianTopBarProps) {
+  const isDashboard = mode === "dashboard";
   const { error: colorError } = useSystemColors();
   const bgColor = partyColor ?? "#3B82F6";
   const nameColor = partyColorDark ?? "#1E3A5F";
@@ -269,7 +274,29 @@ export function PoliticianTopBar({
             </p>
           </div>
 
-          {/* Mobile-only: info button + suggest/close button */}
+          {/* Dashboard mode: "Dashboard" label + "Se borgerside" button on right */}
+          {isDashboard && (
+            <div className="ml-auto flex items-center gap-3 shrink-0">
+              <span className="text-base hidden sm:inline" style={{ color: constituencyColor, opacity: 0.5 }}>
+                Dashboard
+              </span>
+              {citizenPageUrl && (
+                <a
+                  href={citizenPageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full flex items-center justify-center"
+                  style={{ width: 40, height: 40, backgroundColor: partyTextColor }}
+                  aria-label="Se borgerside"
+                >
+                  <FontAwesomeIcon icon={faArrowRight} style={{ color: nameColor, fontSize: 18 }} />
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Mobile-only: info button + suggest/close button (citizen mode only) */}
+          {!isDashboard && (
           <div className="sm:hidden ml-auto flex items-center gap-3 shrink-0">
             {!backHref && introDismissed && !formActive && (
               <button
@@ -311,9 +338,10 @@ export function PoliticianTopBar({
               </button>
             ) : null}
           </div>
+          )}
 
-          {/* Desktop-only: expanded form input (replaces names on desktop) */}
-          {formActive && (
+          {/* Desktop-only: expanded form input (replaces names on desktop) — citizen mode only */}
+          {!isDashboard && formActive && (
             <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
               <div className="relative flex-1 min-w-0" style={{ opacity: mailboxPhase ? 0 : 1, transition: "opacity 150ms ease-out", pointerEvents: mailboxPhase ? "none" : "auto" }}>
                 <input
@@ -371,8 +399,8 @@ export function PoliticianTopBar({
             </div>
           )}
 
-          {/* Desktop-only: constituency + trigger button (normal mode) */}
-          {!formActive && (
+          {/* Desktop-only: constituency + trigger button (normal mode) — citizen mode only */}
+          {!isDashboard && !formActive && (
             <div className="ml-auto hidden sm:flex items-center gap-3 shrink-0" style={{ opacity: mailboxPhase === "fadeIn" ? 0 : 1, transition: mailboxPhase === null ? "opacity 300ms ease-out" : "none" }}>
               {constituency && (
                 <span
@@ -411,16 +439,16 @@ export function PoliticianTopBar({
           )}
         </div>
 
-        {/* Error when logged in (desktop topbar submit) */}
-        {formActive && error && hasSession && (
+        {/* Error when logged in (desktop topbar submit) — citizen mode only */}
+        {!isDashboard && formActive && error && hasSession && (
           <div className="px-[15px] pb-2">
             <p className="text-sm text-red-200">{error}</p>
           </div>
         )}
       </form>
 
-      {/* Suggestion modal (mobile: all users, desktop: logged-out only) */}
-      <SuggestionModal
+      {/* Suggestion modal (mobile: all users, desktop: logged-out only) — citizen mode only */}
+      {!isDashboard && <SuggestionModal
         isOpen={modalOpen}
         onClose={() => { setModalOpen(false); }}
         initialText={text}
@@ -438,7 +466,7 @@ export function PoliticianTopBar({
           setModalOpen(false);
           startMailboxAnimation(false);
         }}
-      />
+      />}
     </div>
   );
 }
