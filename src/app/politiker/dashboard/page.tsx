@@ -269,14 +269,12 @@ export default async function Dashboard() {
                 partyColorLight={politicianParty?.colorLight ?? null}
               />
               {(politicianQuestions.length > 0 || pendingSuggestions.length > 0) && (
-                <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                   <QuestionList
                     questions={politicianQuestions}
                     availableTags={availableTags}
                     basePath={uniqueUrl!}
                     pendingSuggestions={pendingSuggestions}
                   />
-                </section>
               )}
             </div>
           }
@@ -284,9 +282,7 @@ export default async function Dashboard() {
             <div key="causes" className="space-y-6">
               <CauseForm politicianId={politician.id} partyColor={partyColor} partyColorDark={politicianParty?.colorDark ?? null} partyColorLight={politicianParty?.colorLight ?? null} />
               {politicianCauses.length > 0 && (
-                <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                   <CauseList causes={politicianCauses} />
-                </section>
               )}
             </div>
           }
@@ -306,43 +302,39 @@ export default async function Dashboard() {
                   </p>
                 </div>
               )}
-              <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <SettingsForm
-                  politician={{
-                    name: politician.name,
-                    partyId: politician.partyId,
-                    email: politician.email,
-                    slug: politician.slug,
-                    constituency: politician.constituency,
-                    profilePhotoUrl: politician.profilePhotoUrl,
-                    bannerUrl: politician.bannerUrl,
-                    ogImageUrl: politician.ogImageUrl,
-                    bannerBgColor: politician.bannerBgColor,
-                    heroLine1: politician.heroLine1,
-                    heroLine1Color: politician.heroLine1Color,
-                    heroLine2: politician.heroLine2,
-                    heroLine2Color: politician.heroLine2Color,
-                    chatbaseId: politician.chatbaseId,
-                    defaultUpvoteGoal: politician.defaultUpvoteGoal,
-                  }}
-                  allParties={allParties}
-                  googleEmail={session.user.email!}
-                  googleName={session.user.name ?? ""}
-                />
-              </section>
+              <SettingsForm
+                politician={{
+                  name: politician.name,
+                  partyId: politician.partyId,
+                  email: politician.email,
+                  slug: politician.slug,
+                  constituency: politician.constituency,
+                  profilePhotoUrl: politician.profilePhotoUrl,
+                  bannerUrl: politician.bannerUrl,
+                  ogImageUrl: politician.ogImageUrl,
+                  bannerBgColor: politician.bannerBgColor,
+                  heroLine1: politician.heroLine1,
+                  heroLine1Color: politician.heroLine1Color,
+                  heroLine2: politician.heroLine2,
+                  heroLine2Color: politician.heroLine2Color,
+                  chatbaseId: politician.chatbaseId,
+                  defaultUpvoteGoal: politician.defaultUpvoteGoal,
+                }}
+                allParties={allParties}
+                googleEmail={session.user.email!}
+                googleName={session.user.name ?? ""}
+              />
             </div>
           }
         />
       ) : (
         <div className="max-w-4xl mx-auto px-6 space-y-6">
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <SettingsForm
               politician={null}
               allParties={allParties}
               googleEmail={session.user.email!}
               googleName={session.user.name ?? ""}
             />
-          </section>
         </div>
       )}
     </main>
