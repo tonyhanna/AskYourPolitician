@@ -116,6 +116,22 @@ export function CircularUpvoteButton({
     return () => window.removeEventListener("upvote-armed", handler);
   }, [questionId]);
 
+  // Dismiss on tap/click outside button (replaces transparent overlay)
+  useEffect(() => {
+    if (armed === 0 && !desktopConfirmed) return;
+    const handler = (e: TouchEvent | MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        resetInteraction();
+      }
+    };
+    document.addEventListener("touchstart", handler, { capture: true });
+    document.addEventListener("mousedown", handler, { capture: true });
+    return () => {
+      document.removeEventListener("touchstart", handler, { capture: true });
+      document.removeEventListener("mousedown", handler, { capture: true });
+    };
+  }, [armed, desktopConfirmed]);
+
   // ── Deadline info ───────────────────────────────────────────────────
   const deadlineHoursLeft = useMemo(() => {
     if (!goalReachedAt) return null;
@@ -362,15 +378,6 @@ export function CircularUpvoteButton({
 
   // ── Render ──────────────────────────────────────────────────────────
   return (
-    <>
-      {armed > 0 && (
-        <div
-          className="fixed inset-0 z-10"
-          style={{ background: "rgba(0,0,0,0.001)", WebkitTapHighlightColor: "transparent", cursor: "pointer" }}
-          onTouchStart={(e) => { e.preventDefault(); setArmed(0); setDesktopConfirmed(false); }}
-          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setArmed(0); setDesktopConfirmed(false); }}
-        />
-      )}
       <div ref={wrapperRef} className="relative" style={{ zIndex: armed > 0 || desktopConfirmed ? 20 : undefined }}>
         {tooltipEl}
         <button
@@ -390,7 +397,6 @@ export function CircularUpvoteButton({
           )}
         </button>
       </div>
-    </>
   );
 }
 
