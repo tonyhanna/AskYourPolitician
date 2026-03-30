@@ -322,7 +322,6 @@ export function PoliticianTopBar({
                     style={{
                       width: 40, height: 40,
                       backgroundColor: showXmark ? "var(--system-bg0)" : nameColor,
-                      transition: "background-color 150ms ease",
                     }}
                     aria-label={impersonateArmed ? "Stop impersonering" : "Admin"}
                     onPointerEnter={() => { if (canHover.current) setImpersonateHover(true); }}
