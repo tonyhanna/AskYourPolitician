@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import { StickyPillNav, useStickyNavState } from "./StickyPillNav";
+import { ThemeToggleButton } from "./ThemeToggleButton";
 
 type Tab = "questions" | "causes" | "settings";
 
@@ -71,6 +72,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
       <div className="space-y-6">
         {content}
       </div>
+      <ThemeToggleButton />
     </>
   );
 }
