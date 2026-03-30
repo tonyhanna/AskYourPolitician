@@ -139,11 +139,15 @@ export function CircularUpvoteButton({
     return `Afventer svar fra ${politicianFirstName}`;
   }, [deadlineHoursLeft, politicianFirstName]);
 
-  // Check if tooltip should flip below button (synchronous via ref)
+  // Check if tooltip should flip below button or align right (synchronous via ref)
+  const alignRightRef = useRef(false);
   const checkFlip = useCallback(() => {
     if (wrapperRef.current) {
       const rect = wrapperRef.current.getBoundingClientRect();
       flipTooltipRef.current = rect.top < 200;
+      // If button center is within 150px of viewport right edge, align tooltip to right
+      const distFromRight = window.innerWidth - rect.right;
+      alignRightRef.current = distFromRight < 150;
     }
   }, []);
 
@@ -384,6 +388,9 @@ export function CircularUpvoteButton({
     const isRedTooltip = bgColor === colorError;
 
     const flipped = flipTooltipRef.current;
+    const alignRight = alignRightRef.current;
+    // Desktop horizontal: centered unless near right edge → right-aligned
+    const desktopH = alignRight ? "sm:right-0" : "sm:right-auto sm:left-1/2 sm:-translate-x-1/2";
 
     let positionClasses: string;
     let positionStyle: React.CSSProperties = {};
@@ -391,15 +398,15 @@ export function CircularUpvoteButton({
       positionClasses = "absolute right-full mr-3 top-0";
     } else if (isRedTooltip) {
       positionClasses = flipped
-        ? "absolute right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2"
-        : "absolute bottom-full mb-2 right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2";
+        ? `absolute right-0 ${desktopH}`
+        : `absolute bottom-full mb-2 right-0 ${desktopH}`;
       if (flipped) positionStyle = { top: "100%", marginTop: 8 };
     } else if (tooltipPosition === "left") {
       positionClasses = "absolute right-full mr-3 top-0";
     } else {
       positionClasses = flipped
-        ? "absolute right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2"
-        : "absolute bottom-full mb-2 right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2";
+        ? `absolute right-0 ${desktopH}`
+        : `absolute bottom-full mb-2 right-0 ${desktopH}`;
       if (flipped) positionStyle = { top: "100%", marginTop: 8 };
     }
 
