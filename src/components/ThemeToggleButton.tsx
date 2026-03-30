@@ -71,7 +71,7 @@ export function ThemeToggleButton() {
                 onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = hover; }}
                 onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = idle; }}
               >
-                <FontAwesomeIcon icon={icon} style={{ fontSize: 12 }} />
+                <FontAwesomeIcon icon={icon} style={{ fontSize: "13.5px" }} />
               </button>
             );
           })
