@@ -5,7 +5,7 @@ import { createCause } from "@/app/politiker/dashboard/actions";
 import { generateSlug } from "@/lib/utils";
 import { PointsEditor } from "@/components/PointsEditor";
 
-export function CauseForm({ politicianId }: { politicianId: string }) {
+export function CauseForm({ politicianId, partyColor, partyColorDark }: { politicianId: string; partyColor?: string | null; partyColorDark?: string | null }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showLongDesc, setShowLongDesc] = useState(false);
@@ -37,7 +37,13 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium cursor-pointer"
+        className="text-sm px-3 py-1.5 rounded-full cursor-pointer"
+        style={{
+          fontFamily: "var(--font-figtree)",
+          fontWeight: 500,
+          backgroundColor: partyColor || "#00D564",
+          color: partyColorDark || "#1E3A5F",
+        }}
       >
         + Opret mærkesag
       </button>

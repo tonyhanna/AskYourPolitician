@@ -8,11 +8,15 @@ export function QuestionForm({
   disabled,
   availableTags,
   defaultUpvoteGoal = 1000,
+  partyColor,
+  partyColorDark,
 }: {
   politicianId?: string;
   disabled: boolean;
   availableTags: { tagId: string; title: string }[];
   defaultUpvoteGoal?: number;
+  partyColor?: string | null;
+  partyColorDark?: string | null;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
@@ -54,7 +58,13 @@ export function QuestionForm({
         type="button"
         onClick={() => setOpen(true)}
         disabled={disabled}
-        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="text-sm px-3 py-1.5 rounded-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{
+          fontFamily: "var(--font-figtree)",
+          fontWeight: 500,
+          backgroundColor: partyColor || "#00D564",
+          color: partyColorDark || "#1E3A5F",
+        }}
       >
         + Opret spørgsmål
       </button>

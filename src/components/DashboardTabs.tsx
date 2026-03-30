@@ -68,7 +68,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
           </div>
         }
       />
-      <div className="max-w-4xl mx-auto px-6 space-y-6">
+      <div className="space-y-6">
         {content}
       </div>
     </>

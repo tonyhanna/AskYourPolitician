@@ -264,6 +264,8 @@ export default async function Dashboard() {
                 disabled={false}
                 availableTags={availableTags}
                 defaultUpvoteGoal={politician.defaultUpvoteGoal}
+                partyColor={partyColor}
+                partyColorDark={politicianParty?.colorDark ?? null}
               />
               {(politicianQuestions.length > 0 || pendingSuggestions.length > 0) && (
                 <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -279,7 +281,7 @@ export default async function Dashboard() {
           }
           causesTab={
             <div key="causes" className="space-y-6">
-              <CauseForm politicianId={politician.id} />
+              <CauseForm politicianId={politician.id} partyColor={partyColor} partyColorDark={politicianParty?.colorDark ?? null} />
               {politicianCauses.length > 0 && (
                 <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                   <CauseList causes={politicianCauses} />
