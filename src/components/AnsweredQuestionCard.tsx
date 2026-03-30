@@ -264,7 +264,7 @@ export function AnsweredQuestionCard({
 
       {/* Dark hover overlay */}
       {hasPlayableMedia && !isWatching && (
-        <div className="absolute inset-0 transition-opacity duration-200" style={{ zIndex: 1, opacity: isHovering ? 0.2 : 0, backgroundColor: partyColorDark || "#1E3A5F", pointerEvents: "none", borderRadius: 20 }} />
+        <div className="absolute inset-0 transition-opacity duration-200" style={{ zIndex: 1, opacity: isHovering ? 0.2 : 0, backgroundColor: "var(--system-overlay, #000000)", pointerEvents: "none", borderRadius: 20 }} />
       )}
 
       {/* Progress bar */}
