@@ -138,8 +138,8 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
                 width: currentWidth,
                 height: circleSize,
               }}
-              onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.opacity = "0.5"; }}
-              onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.opacity = "1"; }}
+              onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); const span = e.currentTarget.querySelector("span"); if (svg) svg.style.opacity = "0.5"; if (span) span.style.opacity = String(textOpacity * 0.5); }}
+              onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); const span = e.currentTarget.querySelector("span"); if (svg) svg.style.opacity = "1"; if (span) span.style.opacity = String(textOpacity); }}
             >
               {/* Plus icon — always centered in the leftmost 32px circle */}
               <FontAwesomeIcon icon={faPlus} style={{ fontSize: 10, position: "absolute", left: circleSize / 2, top: "50%", transform: "translate(-50%, -50%)" }} />
