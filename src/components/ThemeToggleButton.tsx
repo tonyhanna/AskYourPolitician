@@ -51,7 +51,7 @@ export function ThemeToggleButton() {
           backgroundColor: "var(--system-bg1)",
           overflow: "hidden",
           transition: "width 200ms ease",
-          width: expanded ? 28 * 3 + 16 : 24,
+          width: expanded ? 24 * 3 : 24,
         }}
       >
         {expanded ? (
@@ -67,7 +67,7 @@ export function ThemeToggleButton() {
                   setExpanded(false);
                 }}
                 className="cursor-pointer flex items-center justify-center"
-                style={{ width: 28, height: 24, color: idle }}
+                style={{ width: 24, height: 24, color: idle }}
                 onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = hover; }}
                 onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = idle; }}
               >
