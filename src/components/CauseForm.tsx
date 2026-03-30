@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createCause } from "@/app/politiker/dashboard/actions";
 import { generateSlug } from "@/lib/utils";
 import { PointsEditor } from "@/components/PointsEditor";
 
-export function CauseForm({ politicianId, partyColor, partyColorDark }: { politicianId: string; partyColor?: string | null; partyColorDark?: string | null }) {
+export function CauseForm({ politicianId, partyColor, partyColorDark, partyColorLight }: { politicianId: string; partyColor?: string | null; partyColorDark?: string | null; partyColorLight?: string | null }) {
+  const canHover = useRef(false);
+  useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showLongDesc, setShowLongDesc] = useState(false);
@@ -42,10 +44,12 @@ export function CauseForm({ politicianId, partyColor, partyColorDark }: { politi
           fontFamily: "var(--font-figtree)",
           fontWeight: 500,
           backgroundColor: partyColor || "#00D564",
-          color: partyColorDark || "#1E3A5F",
+          color: partyColorLight || "#93C5FD",
         }}
+        onPointerEnter={(e) => { if (!canHover.current) return; const s = e.currentTarget.querySelector("span"); if (s) s.style.opacity = "0.5"; }}
+        onPointerLeave={(e) => { if (!canHover.current) return; const s = e.currentTarget.querySelector("span"); if (s) s.style.opacity = "1"; }}
       >
-        + Opret mærkesag
+        <span style={{ transition: "opacity 150ms" }}>+ Opret mærkesag</span>
       </button>
     );
   }

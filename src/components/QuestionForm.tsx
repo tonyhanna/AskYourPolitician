@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { createQuestion } from "@/app/politiker/dashboard/actions";
 
 export function QuestionForm({
@@ -10,6 +10,7 @@ export function QuestionForm({
   defaultUpvoteGoal = 1000,
   partyColor,
   partyColorDark,
+  partyColorLight,
 }: {
   politicianId?: string;
   disabled: boolean;
@@ -17,7 +18,10 @@ export function QuestionForm({
   defaultUpvoteGoal?: number;
   partyColor?: string | null;
   partyColorDark?: string | null;
+  partyColorLight?: string | null;
 }) {
+  const canHover = useRef(false);
+  useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
   const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
   const [charCount, setCharCount] = useState(0);
@@ -63,10 +67,12 @@ export function QuestionForm({
           fontFamily: "var(--font-figtree)",
           fontWeight: 500,
           backgroundColor: partyColor || "#00D564",
-          color: partyColorDark || "#1E3A5F",
+          color: partyColorLight || "#93C5FD",
         }}
+        onPointerEnter={(e) => { if (!canHover.current) return; const s = e.currentTarget.querySelector("span"); if (s) s.style.opacity = "0.5"; }}
+        onPointerLeave={(e) => { if (!canHover.current) return; const s = e.currentTarget.querySelector("span"); if (s) s.style.opacity = "1"; }}
       >
-        + Opret spørgsmål
+        <span style={{ transition: "opacity 150ms" }}>+ Opret spørgsmål</span>
       </button>
     );
   }
