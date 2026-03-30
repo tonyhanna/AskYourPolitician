@@ -49,21 +49,20 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
             <form action={logoutAction}>
               <button
                 type="submit"
-                className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150 flex items-center gap-1.5"
+                className="rounded-full cursor-pointer transition-colors duration-150 flex items-center justify-center"
                 style={{
-                  fontFamily: "var(--font-figtree)",
-                  fontWeight: 500,
+                  width: 34,
+                  height: 34,
                   backdropFilter: isAtTop ? "none" : "blur(12px)",
                   WebkitBackdropFilter: isAtTop ? "none" : "blur(12px)",
                   backgroundColor: isAtTop ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)",
                   transition: "background-color 200ms ease, backdrop-filter 200ms ease",
-                  color: "var(--system-text0)",
                 }}
-                onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
-                onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text0)"; }}
+                aria-label="Log ud"
+                onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-text2)"; }}
+                onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-text0)"; }}
               >
-                Log ud
-                <FontAwesomeIcon icon={faArrowRightFromBracket} style={{ fontSize: 12 }} />
+                <FontAwesomeIcon icon={faArrowRightFromBracket} style={{ color: "var(--system-text0)", transition: "color 150ms", fontSize: 15 }} />
               </button>
             </form>
           </div>
