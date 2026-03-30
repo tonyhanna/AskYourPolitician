@@ -369,7 +369,6 @@ export function CircularUpvoteButton({
         if (showConfirm) {
           content = <span className="text-sm" style={{ color: errorContrast }}>Er du sikker?</span>;
         } else {
-          width = 240;
           content = <span className="text-sm" style={{ color: errorContrast }}>Vil du fjerne din tidligere upvote?</span>;
         }
         break;
