@@ -17,21 +17,23 @@ import { useSystemColors, useTheme } from "./SystemColorProvider";
  *   After modal submit → "submitted" (check icon, "Tjek din e-mail" tooltip)
  *
  * LOGGED OUT — goal reached:
- *   idle (hourglass 50%) → hover/tap1 (tooltip + arrow-up) → click/tap2 → onLoginUpvote (modal)
+ *   idle (hourglass) → hover/tap1 (tooltip + arrow-up) → click/tap2 → onLoginUpvote (modal)
  *   After modal submit → "submitted" (check icon, "Tjek din e-mail" tooltip)
  *
  * LOGGED IN — goal NOT reached, NOT upvoted:
  *   idle (arrow-up) → hover (+1) → click/tap → directUpvote
  *
  * LOGGED IN — goal NOT reached, upvoted:
- *   idle (check on party color 50%) → hover/tap1 (xmark on red + "Vil du fjerne?") → click/tap2 (thumbs-up on red + "Er du sikker?") → click/tap3 → cancelUpvote
+ *   idle (check) → hover/tap1 (xmark + "Vil du fjerne?") → click/tap2 (thumbs-up + "Er du sikker?") → click/tap3 → cancelUpvote
  *
  * LOGGED IN — goal reached, NOT upvoted:
- *   idle (hourglass 50%) → hover/tap1 (tooltip + arrow-up) → click/tap2 → directUpvote
+ *   idle (hourglass) → hover/tap1 (tooltip + arrow-up) → click/tap2 → directUpvote
  *
  * LOGGED IN — goal reached, upvoted:
- *   idle (hourglass 50%) → hover/tap1 (tooltip + xmark red) → click/tap2 → cancelUpvote
+ *   idle (hourglass) → hover/tap1 (tooltip + xmark) → click/tap2 (thumbs-up + "Er du sikker?") → click/tap3 → cancelUpvote
  */
+
+type State = "idle" | "pending" | "upvoted" | "goalReachedNotUpvoted" | "goalReachedUpvoted" | "submitted";
 
 type CircularUpvoteButtonProps = {
   questionId: string;
@@ -46,17 +48,11 @@ type CircularUpvoteButtonProps = {
   onLoginUpvote?: () => void;
   goalReachedAt?: string | null;
   politicianFirstName?: string;
-  /** Called after a successful upvote with the new upvoted/goalReached state */
   onUpvoteSuccess?: (newGoalReached: boolean) => void;
-  /** Called after a successful cancel with the new goalReached state */
   onCancelSuccess?: (stillGoalReached: boolean) => void;
-  /** Current upvote count — used to determine if upvote triggers goal */
   upvoteCount?: number;
-  /** Goal threshold */
   upvoteGoal?: number;
-  /** Tooltip position: "left" renders to the left of button, "top" renders above */
   tooltipPosition?: "left" | "top";
-  /** Called when the upvote modal was submitted (logged-out flow) */
   onModalSubmitted?: () => void;
 };
 
@@ -86,52 +82,38 @@ export function CircularUpvoteButton({
   const iconSize = Math.round(size * 0.525);
   const plusOneSize = Math.round(size * 0.4375);
 
-  // Core state
-  const [state, setState] = useState<"idle" | "pending" | "upvoted" | "goalReachedNotUpvoted" | "goalReachedUpvoted" | "submitted">(
-    () => {
-      if (goalReached && isUpvoted) return "goalReachedUpvoted";
-      if (goalReached && !isUpvoted) return "goalReachedNotUpvoted";
-      if (isUpvoted) return "upvoted";
-      return "idle";
-    }
-  );
+  // Derived colors used across appearance + tooltip
+  const partyBg = partyColor || "#00D564";
+  const partyDark = partyColorDark || "#0E412E";
+  const redBg = `${colorError}${alphaHex}`;
+  const yellowBg = `${colorPending}${alphaHex}`;
+  const partyBgAlpha = `${partyBg}${alphaHex}`;
 
-  // Hover state (desktop only via pointer events)
+  // ── Core state ──────────────────────────────────────────────────────
+  const [state, setState] = useState<State>(() => deriveState(goalReached, isUpvoted));
   const [isHovering, setIsHovering] = useState(false);
-  // Mobile multi-tap: 0 = idle, 1 = first tap (armed), 2 = second tap (confirmed, for 3-tap flows)
-  const [armed, setArmed] = useState(0);
-  // Desktop multi-click for goalReachedUpvoted: false = hover showing xmark, true = clicked showing thumbs-up
+  const [armed, setArmed] = useState(0); // Mobile multi-tap: 0=idle, 1=first, 2=confirmed
   const [desktopConfirmed, setDesktopConfirmed] = useState(false);
   const isTouchRef = useRef(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const flipTooltipRef = useRef(false);
+  const alignRightRef = useRef(false);
 
-  // Sync state when server props change (e.g. after revalidation)
+  // Sync state when server props change
   useEffect(() => {
-    if (goalReached && isUpvoted) setState("goalReachedUpvoted");
-    else if (goalReached && !isUpvoted) setState("goalReachedNotUpvoted");
-    else if (isUpvoted) setState("upvoted");
-    else setState("idle");
-    setArmed(0);
-    setDesktopConfirmed(false);
-    setIsHovering(false);
+    setState(deriveState(goalReached, isUpvoted));
+    resetInteraction();
   }, [isUpvoted, goalReached]);
 
-  // Notify parent when modal was submitted (logged-out flow completed)
-  useEffect(() => {
-    if (state === "submitted") {
-      onModalSubmitted?.();
-    }
-  }, [state, onModalSubmitted]);
+  useEffect(() => { if (state === "submitted") onModalSubmitted?.(); }, [state, onModalSubmitted]);
 
-  // Deadline hours remaining
+  // ── Deadline info ───────────────────────────────────────────────────
   const deadlineHoursLeft = useMemo(() => {
     if (!goalReachedAt) return null;
     const deadline = new Date(goalReachedAt).getTime() + 24 * 60 * 60 * 1000;
     return Math.max(0, Math.ceil((deadline - Date.now()) / (1000 * 60 * 60)));
   }, [goalReachedAt]);
 
-  // Deadline tooltip text
   const deadlineText = useMemo(() => {
     if (deadlineHoursLeft !== null && deadlineHoursLeft > 0)
       return `${politicianFirstName} svarer inden for ${deadlineHoursLeft} timer`;
@@ -139,80 +121,56 @@ export function CircularUpvoteButton({
     return `Afventer svar fra ${politicianFirstName}`;
   }, [deadlineHoursLeft, politicianFirstName]);
 
-  // Check if tooltip should flip below button or align right (synchronous via ref)
-  const alignRightRef = useRef(false);
+  // ── Helpers ─────────────────────────────────────────────────────────
+  function resetInteraction() {
+    setArmed(0);
+    setDesktopConfirmed(false);
+    setIsHovering(false);
+  }
+
   const checkFlip = useCallback(() => {
     if (wrapperRef.current) {
       const rect = wrapperRef.current.getBoundingClientRect();
       flipTooltipRef.current = rect.top < 200;
-      // If button center is within 150px of viewport right edge, align tooltip to right
-      const distFromRight = window.innerWidth - rect.right;
-      alignRightRef.current = distFromRight < 150;
+      alignRightRef.current = (window.innerWidth - rect.right) < 150;
     }
   }, []);
 
-  // Pointer-aware hover
+  // ── Pointer handlers ────────────────────────────────────────────────
   const handlePointerEnter = useCallback((e: React.PointerEvent) => {
-    if (e.pointerType === "mouse") {
-      checkFlip();
-      setIsHovering(true);
-    }
+    if (e.pointerType === "mouse") { checkFlip(); setIsHovering(true); }
   }, [checkFlip]);
+
   const handlePointerLeave = useCallback((e: React.PointerEvent) => {
-    if (e.pointerType === "mouse") {
-      setIsHovering(false);
-      setArmed(0);
-      setDesktopConfirmed(false);
-    }
+    if (e.pointerType === "mouse") resetInteraction();
   }, []);
 
-  // Upvote action
+  // ── Server actions ──────────────────────────────────────────────────
   const doUpvote = useCallback(async () => {
-    if (!hasSession) {
-      onLoginUpvote?.();
-      return;
-    }
+    if (!hasSession) { onLoginUpvote?.(); return; }
     setState("pending");
     try {
       await directUpvote(questionId, partySlug, politicianSlug);
       const newGoalReached = upvoteCount !== undefined && upvoteGoal !== undefined
-        ? (upvoteCount + 1) >= upvoteGoal
-        : goalReached;
-      setIsHovering(false);
-      setArmed(0);
-      setDesktopConfirmed(false);
-      if (newGoalReached) {
-        setState("goalReachedUpvoted");
-      } else {
-        setState("upvoted");
-      }
+        ? (upvoteCount + 1) >= upvoteGoal : goalReached;
+      resetInteraction();
+      setState(newGoalReached ? "goalReachedUpvoted" : "upvoted");
       window.dispatchEvent(new CustomEvent("upvote-banner", { detail: { message: "Din upvote er registreret" } }));
       onUpvoteSuccess?.(newGoalReached);
     } catch {
-      // Revert to previous state
-      if (goalReached) setState("goalReachedNotUpvoted");
-      else setState("idle");
+      setState(goalReached ? "goalReachedNotUpvoted" : "idle");
     }
   }, [hasSession, questionId, partySlug, politicianSlug, upvoteCount, upvoteGoal, goalReached, onLoginUpvote, onUpvoteSuccess]);
 
-  // Cancel upvote action
   const doCancel = useCallback(async () => {
     const prevState = state;
     setState("pending");
     try {
       await cancelUpvote(questionId, partySlug, politicianSlug);
-      setIsHovering(false);
-      setArmed(0);
-      setDesktopConfirmed(false);
-      // After cancel: check if still goal-reached
+      resetInteraction();
       const stillGoalReached = upvoteCount !== undefined && upvoteGoal !== undefined
-        ? (upvoteCount - 1) >= upvoteGoal
-        : false;
-      if (stillGoalReached) {
-        setState("goalReachedNotUpvoted");
-      } else {
-        setState("idle");
-      }
+        ? (upvoteCount - 1) >= upvoteGoal : false;
+      setState(stillGoalReached ? "goalReachedNotUpvoted" : "idle");
       window.dispatchEvent(new CustomEvent("upvote-banner", { detail: { message: "Din upvote er fjernet" } }));
       onCancelSuccess?.(stillGoalReached);
     } catch {
@@ -220,329 +178,172 @@ export function CircularUpvoteButton({
     }
   }, [state, questionId, partySlug, politicianSlug, upvoteCount, upvoteGoal, onCancelSuccess]);
 
-  // Mark as submitted (called by parent after modal form submission)
-  const markSubmitted = useCallback(() => {
-    setState("submitted");
-  }, []);
-
-  // Expose markSubmitted via a ref-like pattern through window event
+  // Listen for modal submission event
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail?.questionId === questionId) {
-        markSubmitted();
-      }
+      if ((e as CustomEvent).detail?.questionId === questionId) setState("submitted");
     };
     window.addEventListener("upvote-submitted", handler);
     return () => window.removeEventListener("upvote-submitted", handler);
-  }, [questionId, markSubmitted]);
+  }, [questionId]);
 
-  // Click handler — routes to correct action based on state + touch/mouse
+  // ── Click handler (state machine router) ────────────────────────────
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     checkFlip();
     const isTouch = isTouchRef.current;
 
     switch (state) {
-      case "idle": {
-        // LOGGED IN/OUT — goal not reached, not upvoted → upvote or modal
+      case "idle":
         doUpvote();
         break;
-      }
-      case "upvoted": {
-        // LOGGED IN — goal not reached, upvoted → 3-tap mobile / 2-click desktop
+
+      case "upvoted":
+      case "goalReachedUpvoted":
+        // Both cancel flows use 3-tap mobile / 2-click desktop
         if (isTouch) {
-          if (armed === 0) {
-            setArmed(1); // tap 1: show xmark + "Vil du fjerne din tidligere upvote?"
-          } else if (armed === 1) {
-            setArmed(2); // tap 2: show thumbs-up + "Er du sikker?"
-          } else {
-            doCancel(); // tap 3: execute cancel
-          }
+          if (armed < 2) setArmed(armed + 1);
+          else doCancel();
         } else {
-          if (!desktopConfirmed) {
-            setDesktopConfirmed(true); // click 1: show thumbs-up + "Er du sikker?"
-          } else {
-            doCancel(); // click 2: execute cancel
-          }
+          if (!desktopConfirmed) setDesktopConfirmed(true);
+          else doCancel();
         }
         break;
-      }
-      case "goalReachedNotUpvoted": {
-        // Goal reached, not upvoted → 2-tap to upvote
-        if (isTouch && armed === 0) {
-          setArmed(1);
-        } else {
-          doUpvote();
-        }
+
+      case "goalReachedNotUpvoted":
+        if (isTouch && armed === 0) setArmed(1);
+        else doUpvote();
         break;
-      }
-      case "goalReachedUpvoted": {
-        // Goal reached, upvoted → 3-tap mobile / 2-click desktop
-        if (isTouch) {
-          if (armed === 0) {
-            setArmed(1); // tap 1: show xmark + "...Vil du fjerne..."
-          } else if (armed === 1) {
-            setArmed(2); // tap 2: show thumbs-up + "Er du sikker?"
-          } else {
-            doCancel(); // tap 3: execute
-          }
-        } else {
-          // Desktop: first click shows thumbs-up + "Er du sikker?", second click executes
-          if (!desktopConfirmed) {
-            setDesktopConfirmed(true);
-          } else {
-            doCancel();
-          }
-        }
+
+      case "submitted":
+        if (isTouch && armed === 0) setArmed(1);
         break;
-      }
-      case "submitted": {
-        // No action — just show tooltip
-        if (isTouch && armed === 0) {
-          setArmed(1);
-        }
-        break;
-      }
+
       case "pending":
         break;
     }
   }, [state, armed, desktopConfirmed, doUpvote, doCancel, checkFlip]);
 
-  // Tooltip content and styling
-  const renderTooltip = () => {
+  // ── Tooltip ─────────────────────────────────────────────────────────
+  const tooltip = useMemo(() => {
     const active = isHovering || armed > 0;
     if (!active) return null;
 
-    let content: React.ReactNode = null;
-    let bgColor = `${partyColor || "#7E7D7A"}${alphaHex}`;
-    let width: number | undefined = undefined;
+    const isConfirmStep = desktopConfirmed || armed === 2;
 
     switch (state) {
-      case "goalReachedNotUpvoted": {
-        if (!hasSession) {
-          // Logged out — 2-line tooltip
-          width = 260;
-          content = (
+      case "goalReachedNotUpvoted":
+        return {
+          bg: partyBgAlpha, width: 260,
+          content: (
             <>
-              <span className="text-sm block" style={{ color: partyColorDark || "#0E412E", opacity: 0.5 }}>{deadlineText}.</span>
-              <span className="text-sm block mt-1" style={{ color: partyColorDark || "#0E412E" }}>
+              <span className="text-sm block" style={{ color: partyDark, opacity: 0.5 }}>{deadlineText}.</span>
+              <span className="text-sm block mt-1" style={{ color: partyDark }}>
                 Dette spørgsmål har nået sit upvote-mål. Sæt din egen upvote for at blive notificeret, når {politicianFirstName} svarer.
               </span>
             </>
-          );
-        } else {
-          // Logged in — 2-line tooltip
-          width = 260;
-          content = (
-            <>
-              <span className="text-sm block" style={{ color: partyColorDark || "#0E412E", opacity: 0.5 }}>{deadlineText}.</span>
-              <span className="text-sm block mt-1" style={{ color: partyColorDark || "#0E412E" }}>
-                Dette spørgsmål har nået sit upvote-mål. Sæt din egen upvote for at blive notificeret, når {politicianFirstName} svarer.
+          ),
+        };
+
+      case "goalReachedUpvoted":
+        return isConfirmStep
+          ? { bg: redBg, content: <span className="text-sm" style={{ color: errorContrast }}>Er du sikker?</span> }
+          : { bg: redBg, width: 240, content: (
+              <span className="text-sm" style={{ color: errorContrast }}>
+                <span style={{ opacity: 0.5 }}>{deadlineText}.</span> Vil du fjerne din tidligere upvote?
               </span>
-            </>
-          );
-        }
-        break;
-      }
-      case "goalReachedUpvoted": {
-        bgColor = `${colorError}${alphaHex}`;
-        // Desktop: hover = first text, after click = "Er du sikker?"
-        // Mobile: tap1 (armed=1) = first text, tap2 (armed=2) = "Er du sikker?"
-        const showConfirmText = desktopConfirmed || armed === 2;
-        if (showConfirmText) {
-          content = <span className="text-sm" style={{ color: errorContrast }}>Er du sikker?</span>;
-          // Short text — no fixed width, let it follow text width
-        } else {
-          width = 240;
-          content = (
-            <span className="text-sm" style={{ color: errorContrast }}>
-              <span style={{ opacity: 0.5 }}>{deadlineText}.</span> Vil du fjerne din tidligere upvote?
-            </span>
-          );
-        }
-        break;
-      }
-      case "upvoted": {
-        bgColor = `${colorError}${alphaHex}`;
-        const showConfirm = desktopConfirmed || armed === 2;
-        if (showConfirm) {
-          content = <span className="text-sm" style={{ color: errorContrast }}>Er du sikker?</span>;
-        } else {
-          content = <span className="text-sm" style={{ color: errorContrast }}>Vil du fjerne din tidligere upvote?</span>;
-        }
-        break;
-      }
-      case "submitted": {
-        content = <span className="text-sm" style={{ color: partyColorDark || "#0E412E" }}>Tjek din e-mail</span>;
-        break;
-      }
+            )};
+
+      case "upvoted":
+        return isConfirmStep
+          ? { bg: redBg, content: <span className="text-sm" style={{ color: errorContrast }}>Er du sikker?</span> }
+          : { bg: redBg, content: <span className="text-sm" style={{ color: errorContrast }}>Vil du fjerne din tidligere upvote?</span> };
+
+      case "submitted":
+        return { bg: partyBgAlpha, content: <span className="text-sm" style={{ color: partyDark }}>Tjek din e-mail</span> };
+
       default:
         return null;
     }
+  }, [isHovering, armed, desktopConfirmed, state, partyBgAlpha, partyDark, redBg, errorContrast, deadlineText, politicianFirstName]);
 
-    if (!content) return null;
+  // ── Button appearance ───────────────────────────────────────────────
+  const appearance = useMemo(() => {
+    const active = isHovering || armed > 0;
+    const isConfirmStep = desktopConfirmed || armed === 2;
+    const isFirstStep = (isHovering && !isTouchRef.current) || armed === 1;
 
-    // Red tooltips (cancel flows) use fixed width; on mobile right-aligned, on desktop centered
-    const isRedTooltip = bgColor.startsWith(colorError);
+    switch (state) {
+      case "idle":
+        return { icon: faArrowUpDuotone, iconColor: partyDark, bgColor: active ? partyDark : partyBg, label: "Upvote" };
 
+      case "upvoted":
+        if (isConfirmStep) return { icon: faThumbsUp, iconColor: errorContrast, bgColor: redBg, label: "Bekræft fjern upvote" };
+        if (isFirstStep) return { icon: faXmark, iconColor: errorContrast, bgColor: redBg, label: "Fjern upvote" };
+        return { icon: faCheck, iconColor: partyDark, bgColor: partyBgAlpha, label: "Du har upvoted" };
+
+      case "goalReachedNotUpvoted":
+        if (active) return { icon: faArrowUpDuotone, iconColor: partyDark, bgColor: partyBg, label: "Upvote" };
+        return { icon: faHourglass, iconColor: pendingContrast, bgColor: yellowBg, label: "Afventer svar" };
+
+      case "goalReachedUpvoted":
+        if (active && isConfirmStep) return { icon: faThumbsUp, iconColor: errorContrast, bgColor: redBg, label: "Bekræft fjern upvote" };
+        if (active) return { icon: faXmark, iconColor: errorContrast, bgColor: redBg, label: "Fjern upvote" };
+        return { icon: faHourglass, iconColor: pendingContrast, bgColor: yellowBg, label: "Afventer svar" };
+
+      case "submitted":
+        return { icon: faCheck, iconColor: partyDark, bgColor: `${partyBg}80`, label: "Upvote sendt" };
+
+      case "pending":
+        return { icon: faArrowUpDuotone, iconColor: partyDark, bgColor: partyBg, label: "Behandler..." };
+    }
+  }, [state, isHovering, armed, desktopConfirmed, partyBg, partyDark, partyBgAlpha, redBg, yellowBg, colorPending, pendingContrast, errorContrast]);
+
+  const showPlusOne = state === "idle" && (isHovering || armed > 0);
+
+  // ── Tooltip position ────────────────────────────────────────────────
+  const tooltipEl = useMemo(() => {
+    if (!tooltip) return null;
+    const isRed = tooltip.bg.startsWith(colorError);
     const flipped = flipTooltipRef.current;
     const alignRight = alignRightRef.current;
-    // Desktop horizontal: centered unless near right edge → right-aligned
     const desktopH = alignRight ? "sm:right-0" : "sm:right-auto sm:left-1/2 sm:-translate-x-1/2";
 
-    let positionClasses: string;
-    let positionStyle: React.CSSProperties = {};
-    if (isRedTooltip && tooltipPosition === "left") {
-      positionClasses = "absolute right-full mr-3 top-0";
-    } else if (isRedTooltip) {
-      positionClasses = flipped
-        ? `absolute right-0 ${desktopH}`
-        : `absolute bottom-full mb-2 right-0 ${desktopH}`;
-      if (flipped) positionStyle = { top: "100%", marginTop: 8 };
-    } else if (tooltipPosition === "left") {
-      positionClasses = "absolute right-full mr-3 top-0";
+    let posClasses: string;
+    let posStyle: React.CSSProperties = {};
+    if (tooltipPosition === "left") {
+      posClasses = "absolute right-full mr-3 top-0";
+    } else if (flipped) {
+      posClasses = `absolute right-0 ${desktopH}`;
+      posStyle = { top: "100%", marginTop: 8 };
     } else {
-      positionClasses = flipped
-        ? `absolute right-0 ${desktopH}`
-        : `absolute bottom-full mb-2 right-0 ${desktopH}`;
-      if (flipped) positionStyle = { top: "100%", marginTop: 8 };
+      posClasses = `absolute bottom-full mb-2 right-0 ${desktopH}`;
     }
 
     return (
       <div
-        className={`${positionClasses} rounded-xl px-4 py-3`}
+        className={`${posClasses} rounded-xl px-4 py-3`}
         style={{
-          ...positionStyle,
-          backgroundColor: bgColor,
+          ...posStyle,
+          backgroundColor: tooltip.bg,
           backdropFilter: "blur(12px)",
           WebkitBackdropFilter: "blur(12px)",
           fontFamily: "var(--font-figtree)",
           fontWeight: 500,
-          whiteSpace: width ? "normal" : "nowrap",
-          width,
+          whiteSpace: tooltip.width ? "normal" : "nowrap",
+          width: tooltip.width,
           zIndex: 30,
           pointerEvents: "none",
         }}
       >
-        {content}
+        {tooltip.content}
       </div>
     );
-  };
+  }, [tooltip, tooltipPosition, colorError]);
 
-  // Button appearance based on state + hover/armed
-  const getButtonAppearance = (): { icon: typeof faCheck; iconColor: string; bgColor: string; label: string } => {
-    const active = isHovering || armed > 0;
-
-    switch (state) {
-      case "idle":
-        // Arrow-up on party color; hover → +1 on dark (handled separately in render)
-        return {
-          icon: faArrowUpDuotone,
-          iconColor: partyColorDark || "#0E412E",
-          bgColor: active ? (partyColorDark || "#0E412E") : (partyColor || "#00D564"),
-          label: "Upvote",
-        };
-
-      case "upvoted":
-        // Desktop: hover = xmark on red, desktopConfirmed = thumbs-up on red
-        // Mobile: idle = check, armed=1 = xmark on red, armed=2 = thumbs-up on red
-        if (desktopConfirmed || armed === 2) {
-          return {
-            icon: faThumbsUp,
-            iconColor: errorContrast,
-            bgColor: `${colorError}${alphaHex}`,
-            label: "Bekræft fjern upvote",
-          };
-        }
-        if ((isHovering && !isTouchRef.current) || armed === 1) {
-          return {
-            icon: faXmark,
-            iconColor: errorContrast,
-            bgColor: `${colorError}${alphaHex}`,
-            label: "Fjern upvote",
-          };
-        }
-        // Idle: check on party color with opacity (same as "submitted" / "Tjek din e-mail" state)
-        return {
-          icon: faCheck,
-          iconColor: partyColorDark || "#0E412E",
-          bgColor: `${partyColor || "#00D564"}${alphaHex}`,
-          label: "Du har upvoted",
-        };
-
-      case "goalReachedNotUpvoted":
-        if (active) {
-          // Arrow-up on full party color
-          return {
-            icon: faArrowUpDuotone,
-            iconColor: partyColorDark || "#0E412E",
-            bgColor: partyColor || "#00D564",
-            label: "Upvote",
-          };
-        }
-        // Hourglass on yellow
-        return {
-          icon: faHourglass,
-          iconColor: pendingContrast,
-          bgColor: `${colorPending}${alphaHex}`,
-          label: "Afventer svar",
-        };
-
-      case "goalReachedUpvoted": {
-        const showConfirm = desktopConfirmed || armed === 2;
-        if (active && showConfirm) {
-          // Thumbs-up on red (confirmation step)
-          return {
-            icon: faThumbsUp,
-            iconColor: errorContrast,
-            bgColor: `${colorError}${alphaHex}`,
-            label: "Bekræft fjern upvote",
-          };
-        }
-        if (active) {
-          // Xmark on red (first interaction)
-          return {
-            icon: faXmark,
-            iconColor: errorContrast,
-            bgColor: `${colorError}${alphaHex}`,
-            label: "Fjern upvote",
-          };
-        }
-        // Hourglass on yellow
-        return {
-          icon: faHourglass,
-          iconColor: pendingContrast,
-          bgColor: `${colorPending}${alphaHex}`,
-          label: "Afventer svar",
-        };
-      }
-
-      case "submitted":
-        // Check on 50% party color
-        return {
-          icon: faCheck,
-          iconColor: partyColorDark || "#0E412E",
-          bgColor: `${partyColor || "#00D564"}80`,
-          label: "Upvote sendt",
-        };
-
-      case "pending":
-        return {
-          icon: faArrowUpDuotone,
-          iconColor: partyColorDark || "#0E412E",
-          bgColor: partyColor || "#00D564",
-          label: "Behandler...",
-        };
-    }
-  };
-
-  const appearance = getButtonAppearance();
-  const showPlusOne = state === "idle" && (isHovering || armed > 0);
-
+  // ── Render ──────────────────────────────────────────────────────────
   return (
     <>
-      {/* Invisible backdrop to dismiss armed state on outside tap (mobile) */}
       {armed > 0 && (
         <div
           className="fixed inset-0 z-10"
@@ -550,7 +351,7 @@ export function CircularUpvoteButton({
         />
       )}
       <div ref={wrapperRef} className="relative" style={{ zIndex: armed > 0 || desktopConfirmed ? 20 : undefined }}>
-        {renderTooltip()}
+        {tooltipEl}
         <button
           onPointerDown={(e) => { isTouchRef.current = e.pointerType === "touch"; }}
           onClick={handleClick}
@@ -558,32 +359,24 @@ export function CircularUpvoteButton({
           onPointerEnter={handlePointerEnter}
           onPointerLeave={handlePointerLeave}
           className="cursor-pointer rounded-full flex items-center justify-center disabled:opacity-50 relative z-20"
-          style={{
-            width: size,
-            height: size,
-            backgroundColor: appearance.bgColor,
-          }}
+          style={{ width: size, height: size, backgroundColor: appearance.bgColor }}
           aria-label={appearance.label}
         >
           {showPlusOne ? (
-            <span
-              style={{
-                color: "#FFFFFF",
-                fontSize: plusOneSize,
-                fontFamily: "var(--font-figtree)",
-                fontWeight: 700,
-              }}
-            >
-              +1
-            </span>
+            <span style={{ color: "#FFFFFF", fontSize: plusOneSize, fontFamily: "var(--font-figtree)", fontWeight: 700 }}>+1</span>
           ) : (
-            <FontAwesomeIcon
-              icon={appearance.icon}
-              style={{ color: appearance.iconColor, fontSize: iconSize }}
-            />
+            <FontAwesomeIcon icon={appearance.icon} style={{ color: appearance.iconColor, fontSize: iconSize }} />
           )}
         </button>
       </div>
     </>
   );
+}
+
+/** Derive initial state from server props */
+function deriveState(goalReached: boolean, isUpvoted: boolean): State {
+  if (goalReached && isUpvoted) return "goalReachedUpvoted";
+  if (goalReached) return "goalReachedNotUpvoted";
+  if (isUpvoted) return "upvoted";
+  return "idle";
 }
