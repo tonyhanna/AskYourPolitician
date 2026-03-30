@@ -40,6 +40,8 @@ export function AnsweredQuestionCard({
   const muxClipUrl = muxPlaybackId && isReady && hasVideoAnswer && !hasCustomPoster ? getMuxMp4Url(muxPlaybackId) : null;
   const muxThumbnailUrl = muxPlaybackId && isReady ? getMuxThumbnailUrl(muxPlaybackId) : null;
   const photoUrl = question.answerPhotoUrl || muxThumbnailUrl;
+  const canHover = useRef(false);
+  useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
   const cardRef = useRef<HTMLDivElement>(null);
   const fullVideoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -248,8 +250,8 @@ export function AnsweredQuestionCard({
       className={`relative ${hasPlayableMedia ? "cursor-pointer" : ""}`}
       style={{ aspectRatio: "3/4", borderRadius: 20, overflow: "hidden", scrollMarginTop: 170 }}
       onClick={hasPlayableMedia ? handleClick : undefined}
-      onMouseEnter={() => { if (hasPlayableMedia && !window.matchMedia("(pointer: coarse)").matches) setIsHovering(true); }}
-      onMouseLeave={() => { if (!window.matchMedia("(pointer: coarse)").matches) setIsHovering(false); }}
+      onPointerEnter={() => { if (hasPlayableMedia && canHover.current) setIsHovering(true); }}
+      onPointerLeave={() => { if (canHover.current) setIsHovering(false); }}
     >
       {photoUrl ? (
         <img src={photoUrl} alt="" loading="eager" className="absolute inset-0 w-full h-full object-cover" />

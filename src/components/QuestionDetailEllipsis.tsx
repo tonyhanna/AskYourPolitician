@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEllipsis, faXmark, faArrowRightFromBracket, faSun, faMoon, faDesktop } from "@fortawesome/free-solid-svg-icons";
 import { citizenLogout } from "@/app/[partySlug]/[politicianSlug]/actions";
@@ -24,6 +24,8 @@ export function QuestionDetailEllipsis({
   const [menuOpen, setMenuOpen] = useState(false);
   const { preference, setPreference } = useTheme();
   const systemColors = useSystemColors();
+  const canHover = useRef(false);
+  useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
 
   // Always show the ellipsis (even logged out) so dark mode toggle is accessible
   return (
@@ -55,8 +57,8 @@ export function QuestionDetailEllipsis({
                 }}
                 className="cursor-pointer transition-colors flex items-center gap-2 text-sm"
                 style={{ color: "var(--system-icon0)", fontWeight: 550 }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-icon1)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-icon0)"; }}
+                onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon1)"; }}
+                onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon0)"; }}
               >
                 Log ud
                 <FontAwesomeIcon icon={faArrowRightFromBracket} />
@@ -82,8 +84,8 @@ export function QuestionDetailEllipsis({
                   }}
                   className="cursor-pointer flex items-center justify-center transition-colors"
                   style={{ width: 28, height: 28, color: idle }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = hover; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = idle; }}
+                  onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = hover; }}
+                  onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = idle; }}
                 >
                   <FontAwesomeIcon icon={icon} style={{ fontSize: 12 }} />
                 </button>
@@ -102,8 +104,8 @@ export function QuestionDetailEllipsis({
           backgroundColor: "var(--system-bg1)",
           color: "var(--system-icon1)",
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = "var(--system-icon0)"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = "var(--system-icon1)"; }}
+        onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon0)"; }}
+        onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon1)"; }}
         aria-label="Menu"
       >
         {menuOpen ? (

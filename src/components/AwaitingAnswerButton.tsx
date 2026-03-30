@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cancelUpvote } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -16,6 +16,8 @@ export function AwaitingAnswerButton({
   politicianSlug: string;
 }) {
   const { error: colorError } = useSystemColors();
+  const canHover = useRef(false);
+  useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
   const [hovered, setHovered] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
@@ -36,8 +38,8 @@ export function AwaitingAnswerButton({
     <button
       onClick={handleCancel}
       disabled={cancelling}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onPointerEnter={() => { if (canHover.current) setHovered(true); }}
+      onPointerLeave={() => { if (canHover.current) setHovered(false); }}
       className="inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-full cursor-pointer transition disabled:opacity-50"
       style={{
         width: 110,

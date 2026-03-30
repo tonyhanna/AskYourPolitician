@@ -52,6 +52,8 @@ export function PlayableMediaCard({
   const thumbnailPhotoUrl = question.answerPhotoUrl || muxThumbnailUrl;
 
   // Refs
+  const canHover = useRef(false);
+  useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
   const thumbnailWrapRef = useRef<HTMLDivElement>(null);
   const fullVideoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -232,8 +234,8 @@ export function PlayableMediaCard({
       className={`flex-shrink-0 relative ${hasPlayableMedia ? "cursor-pointer" : ""} ${className}`}
       style={{ borderRadius: 20, overflow: "hidden", aspectRatio: "3/4", scrollMarginTop: 170, WebkitMaskImage: "radial-gradient(white, white)", isolation: "isolate" as const, ...style }}
       onClick={hasPlayableMedia ? handleThumbnailClick : undefined}
-      onMouseEnter={() => { if (hasPlayableMedia && !window.matchMedia("(pointer: coarse)").matches) setIsHovering(true); }}
-      onMouseLeave={() => { if (!window.matchMedia("(pointer: coarse)").matches) setIsHovering(false); }}
+      onPointerEnter={() => { if (hasPlayableMedia && canHover.current) setIsHovering(true); }}
+      onPointerLeave={() => { if (canHover.current) setIsHovering(false); }}
     >
       {/* Processing overlay */}
       {isPreparing && (
