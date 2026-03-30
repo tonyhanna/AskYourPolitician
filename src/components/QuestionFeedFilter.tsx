@@ -183,7 +183,7 @@ export function QuestionFeedFilter({
         {filtersOpen && (
           <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: 0, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", backgroundColor: "color-mix(in srgb, var(--system-bg0) 70%, transparent)", zIndex: -1 }} />
         )}
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between">
         {/* Section navigation — left side (hidden when only 1 section exists) */}
         {/* When no section nav and filters open, tags go inline on the left */}
         {!showSectionNav && filtersOpen && allTags.length > 0 && (
