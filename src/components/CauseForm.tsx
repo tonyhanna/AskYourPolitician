@@ -44,25 +44,7 @@ export function CauseForm({ politicianId, partyColor, partyColorDark, partyColor
     }
   }
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="text-sm px-3 py-1.5 rounded-full cursor-pointer"
-        style={{
-          fontFamily: "var(--font-figtree)",
-          fontWeight: 500,
-          backgroundColor: partyColor || "#00D564",
-          color: partyColorDark || "#1E3A5F",
-        }}
-        onPointerEnter={(e) => { if (!canHover.current) return; const s = e.currentTarget.querySelector("span"); if (s) s.style.opacity = "0.5"; }}
-        onPointerLeave={(e) => { if (!canHover.current) return; const s = e.currentTarget.querySelector("span"); if (s) s.style.opacity = "1"; }}
-      >
-        <span>+ Opret mærkesag</span>
-      </button>
-    );
-  }
+  if (!open) return null;
 
   return (
     <form id="cause-form" action={handleSubmit} className="space-y-4">

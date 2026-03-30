@@ -25,6 +25,10 @@ type StickyPillNavProps = {
   leftOverride?: React.ReactNode;
   /** Content docked before the pill buttons (e.g. create button that scrolls up into nav) */
   dockedContent?: React.ReactNode;
+  /** Width (px) to reserve on the left for an externally sticky button overlaying the nav */
+  dockedWidth?: number;
+  /** 0→1 progress for docked background fade-in */
+  dockProgress?: number;
 };
 
 /**
@@ -50,6 +54,8 @@ export function StickyPillNav({
   blurBackground,
   leftOverride,
   dockedContent,
+  dockedWidth = 0,
+  dockProgress = 0,
 }: StickyPillNavProps) {
   const [isAtTop, setIsAtTop] = useState(true);
   const canHover = useRef(false);
@@ -70,11 +76,17 @@ export function StickyPillNav({
       {blurBackground && (
         <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: 0, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", backgroundColor: "color-mix(in srgb, var(--system-bg0) 70%, transparent)", zIndex: -1 }} />
       )}
+      {/* Docked background: fades in as create button approaches nav */}
+      {dockProgress > 0 && (
+        <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: -10, backdropFilter: `blur(${dockProgress * 12}px)`, WebkitBackdropFilter: `blur(${dockProgress * 12}px)`, backgroundColor: `color-mix(in srgb, var(--system-bg0) ${Math.round(dockProgress * 70)}%, transparent)`, zIndex: -1, opacity: dockProgress }} />
+      )}
       <div className="flex items-start justify-between">
-        {/* Left side: docked content + pills or override content */}
+        {/* Left side: pills with translateX when docked */}
         {leftOverride || (
-          <div className="flex items-center gap-2">
-            {dockedContent}
+          <div
+            className="flex items-center gap-2"
+            style={{ transform: dockedWidth > 0 ? `translateX(${dockedWidth}px)` : "translateX(0)", transition: "transform 200ms cubic-bezier(0.05, 0.7, 0.1, 1.0)", willChange: "transform" }}
+          >
             {items.map((item) => {
               const isActive = item.id === activeId;
               return (

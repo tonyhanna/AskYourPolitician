@@ -233,7 +233,7 @@ export function QuestionFeedFilter({
                 onClick={() => setFiltersOpen(true)}
                 className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
                 style={{
-                  width: 34, height: 34,
+                  width: 32, height: 32,
                   backdropFilter: isAtTop ? "none" : "blur(12px)", WebkitBackdropFilter: isAtTop ? "none" : "blur(12px)",
                   backgroundColor: isFiltered ? (isAtTop ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : (isAtTop ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
                   transition: "background-color 200ms ease, backdrop-filter 200ms ease",
@@ -249,7 +249,7 @@ export function QuestionFeedFilter({
                 onClick={() => setFiltersOpen(false)}
                 className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
                 style={{
-                  width: 34, height: 34,
+                  width: 32, height: 32,
                   backdropFilter: isAtTop ? "none" : "blur(12px)", WebkitBackdropFilter: isAtTop ? "none" : "blur(12px)",
                   backgroundColor: isAtTop ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)",
                   transition: "background-color 200ms ease, backdrop-filter 200ms ease",
