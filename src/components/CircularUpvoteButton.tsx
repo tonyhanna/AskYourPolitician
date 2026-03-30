@@ -107,6 +107,15 @@ export function CircularUpvoteButton({
 
   useEffect(() => { if (state === "submitted") onModalSubmitted?.(); }, [state, onModalSubmitted]);
 
+  // Reset when another upvote button becomes armed
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if ((e as CustomEvent).detail?.questionId !== questionId) resetInteraction();
+    };
+    window.addEventListener("upvote-armed", handler);
+    return () => window.removeEventListener("upvote-armed", handler);
+  }, [questionId]);
+
   // ── Deadline info ───────────────────────────────────────────────────
   const deadlineHoursLeft = useMemo(() => {
     if (!goalReachedAt) return null;
@@ -202,21 +211,31 @@ export function CircularUpvoteButton({
       case "goalReachedUpvoted":
         // Both cancel flows use 3-tap mobile / 2-click desktop
         if (isTouch) {
-          if (armed < 2) setArmed(armed + 1);
-          else doCancel();
+          if (armed < 2) {
+            const next = armed + 1;
+            setArmed(next);
+            window.dispatchEvent(new CustomEvent("upvote-armed", { detail: { questionId } }));
+          } else doCancel();
         } else {
-          if (!desktopConfirmed) setDesktopConfirmed(true);
-          else doCancel();
+          if (!desktopConfirmed) {
+            setDesktopConfirmed(true);
+            window.dispatchEvent(new CustomEvent("upvote-armed", { detail: { questionId } }));
+          } else doCancel();
         }
         break;
 
       case "goalReachedNotUpvoted":
-        if (isTouch && armed === 0) setArmed(1);
-        else doUpvote();
+        if (isTouch && armed === 0) {
+          setArmed(1);
+          window.dispatchEvent(new CustomEvent("upvote-armed", { detail: { questionId } }));
+        } else doUpvote();
         break;
 
       case "submitted":
-        if (isTouch && armed === 0) setArmed(1);
+        if (isTouch && armed === 0) {
+          setArmed(1);
+          window.dispatchEvent(new CustomEvent("upvote-armed", { detail: { questionId } }));
+        }
         break;
 
       case "pending":
