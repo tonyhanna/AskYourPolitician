@@ -318,18 +318,22 @@ export function PoliticianTopBar({
                       await stopImpersonation();
                       window.location.href = "/admin";
                     }}
-                    className="rounded-full flex items-center justify-center cursor-pointer"
+                    className="rounded-full flex items-center justify-center cursor-pointer relative"
                     style={{
                       width: 40, height: 40,
-                      backgroundColor: showXmark ? colorError : nameColor,
+                      backgroundColor: showXmark ? "var(--system-bg0)" : nameColor,
                       transition: "background-color 150ms ease",
                     }}
                     aria-label={impersonateArmed ? "Stop impersonering" : "Admin"}
                     onPointerEnter={() => { if (canHover.current) setImpersonateHover(true); }}
                     onPointerLeave={() => { if (canHover.current) setImpersonateHover(false); }}
                   >
+                    {showXmark && (
+                      <div className="absolute inset-0 rounded-full" style={{ backgroundColor: `${colorError}80` }} />
+                    )}
                     <FontAwesomeIcon
                       icon={showXmark ? faXmark : faUserHatTie}
+                      className="relative"
                       style={{ color: showXmark ? errorContrast : partyTextColor, fontSize: 18 }}
                     />
                   </button>
