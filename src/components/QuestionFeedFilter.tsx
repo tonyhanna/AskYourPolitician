@@ -12,6 +12,7 @@ import { UpvoteModal } from "./UpvoteModal";
 import { CircularUpvoteButton } from "./CircularUpvoteButton";
 import { QuestionDetailEllipsis } from "./QuestionDetailEllipsis";
 import { useSystemColors } from "./SystemColorProvider";
+import { StickyPillNav, type PillNavItem } from "./StickyPillNav";
 
 export type FeedQuestion = {
   id: string;
@@ -177,18 +178,26 @@ export function QuestionFeedFilter({
   const visibleSectionCount = (pinnedQuestions.length > 0 ? 1 : 0) + (answeredQuestions.length > 0 ? 1 : 0) + (filteredQuestions.length > 0 ? 1 : 0);
   const showSectionNav = visibleSectionCount >= 2;
 
+  // Build nav items dynamically based on which sections have content
+  const sectionNavItems = useMemo(() => {
+    const items: PillNavItem[] = [];
+    if (pinnedQuestions.length > 0) items.push({ id: "pinned", label: "Udvalgt" });
+    if (answeredQuestions.length > 0) items.push({ id: "answered", label: "Besvaret" });
+    if (filteredQuestions.length > 0) items.push({ id: "unanswered", label: "Ubesvaret" });
+    return items;
+  }, [pinnedQuestions.length, answeredQuestions.length, filteredQuestions.length]);
+
   return (
     <div className="flex flex-col flex-1">
       {/* Sticky section nav + filter + tags */}
-      <div className="sticky top-[94px] z-40 mb-[25px]" style={{ position: "sticky" }}>
-        {/* Blur background — only when filters are open, extends to topbar edge */}
-        {filtersOpen && (
-          <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: 0, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", backgroundColor: "color-mix(in srgb, var(--system-bg0) 70%, transparent)", zIndex: -1 }} />
-        )}
-        <div className="flex items-start justify-between">
-        {/* Section navigation — left side (hidden when only 1 section exists) */}
-        {/* When no section nav and filters open, tags go inline on the left */}
-        {!showSectionNav && filtersOpen && allTags.length > 0 && (
+      <div className="mb-[25px]">
+      <StickyPillNav
+        items={showSectionNav ? sectionNavItems : []}
+        activeId={activeSection || ""}
+        onSelect={(id) => document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+        forceOpaque={filtersOpen}
+        blurBackground={filtersOpen}
+        leftOverride={!showSectionNav && filtersOpen && allTags.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
             {allTags.map((tag) => (
               <button
@@ -197,9 +206,8 @@ export function QuestionFeedFilter({
                 className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
                 style={{
                   fontFamily: "var(--font-figtree)", fontWeight: 500,
-                  backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
-                  backgroundColor: selectedTags.has(tag) ? ((isAtTop || filtersOpen) ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : ((isAtTop || filtersOpen) ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
-                  transition: "background-color 200ms ease, backdrop-filter 200ms ease",
+                  backgroundColor: selectedTags.has(tag) ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                  transition: "background-color 200ms ease",
                   color: selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)",
                 }}
                 onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
@@ -209,114 +217,56 @@ export function QuestionFeedFilter({
               </button>
             ))}
           </div>
-        )}
-        {showSectionNav && <div className="flex items-center gap-2">
-          {pinnedQuestions.length > 0 && (
-            <button
-              onClick={() => document.getElementById("section-pinned")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
-              style={{
-                fontFamily: "var(--font-figtree)", fontWeight: 500,
-                backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
-                backgroundColor: activeSection === "pinned" ? ((isAtTop || filtersOpen) ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : ((isAtTop || filtersOpen) ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
-                transition: "background-color 200ms ease, backdrop-filter 200ms ease",
-                color: activeSection === "pinned" ? "var(--system-text0-contrast)" : "var(--system-text0)",
-              }}
-              onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
-              onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = activeSection === "pinned" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
-            >
-              Udvalgt
-            </button>
-          )}
-          {answeredQuestions.length > 0 && (
-            <button
-              onClick={() => document.getElementById("section-answered")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
-              style={{
-                fontFamily: "var(--font-figtree)", fontWeight: 500,
-                backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
-                backgroundColor: activeSection === "answered" ? ((isAtTop || filtersOpen) ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : ((isAtTop || filtersOpen) ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
-                transition: "background-color 200ms ease, backdrop-filter 200ms ease",
-                color: activeSection === "answered" ? "var(--system-text0-contrast)" : "var(--system-text0)",
-              }}
-              onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
-              onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = activeSection === "answered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
-            >
-              Besvaret
-            </button>
-          )}
-          {filteredQuestions.length > 0 && (
-            <button
-              onClick={() => document.getElementById("section-unanswered")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
-              style={{
-                fontFamily: "var(--font-figtree)", fontWeight: 500,
-                backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
-                backgroundColor: activeSection === "unanswered" ? ((isAtTop || filtersOpen) ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : ((isAtTop || filtersOpen) ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
-                transition: "background-color 200ms ease, backdrop-filter 200ms ease",
-                color: activeSection === "unanswered" ? "var(--system-text0-contrast)" : "var(--system-text0)",
-              }}
-              onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
-              onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = activeSection === "unanswered" ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
-            >
-              Ubesvaret
-            </button>
-          )}
-        </div>}
-
-        {/* Filter button — right side */}
-        <div className="flex items-center gap-2 ml-auto">
-          {filtersOpen && selectedTags.size > 0 && (
-            <button
-              onClick={reset}
-              className="text-sm cursor-pointer"
-              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: colorError }}
-            >
-              Nulstil
-            </button>
-          )}
-          {!filtersOpen ? (
-            <button
-              onClick={() => setFiltersOpen(true)}
-              className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
-              style={{
-                width: 34,
-                height: 34,
-                backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
-                backgroundColor: isFiltered ? ((isAtTop || filtersOpen) ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : ((isAtTop || filtersOpen) ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
-                transition: "background-color 200ms ease, backdrop-filter 200ms ease",
-              }}
-              aria-label="Filtre"
-              onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-error)"; }}
-              onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-pending)"; }}
-            >
-              <FontAwesomeIcon icon={faFire} swapOpacity style={{ color: "var(--system-pending)", transition: "color 150ms", fontSize: 15 }} />
-            </button>
-          ) : (
-            <button
-              onClick={() => setFiltersOpen(false)}
-              className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
-              style={{
-                width: 34,
-                height: 34,
-                backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
-                backgroundColor: isAtTop ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)",
-                transition: "background-color 200ms ease, backdrop-filter 200ms ease",
-                color: "var(--system-icon1)",
-              }}
-              onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon0)"; }}
-              onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon1)"; }}
-              aria-label="Luk filtre"
-            >
-              <FontAwesomeIcon icon={faXmark} style={{ fontSize: 14 }} />
-            </button>
-          )}
-        </div>
-        </div>
-
-        {/* Expanded tag filter — below nav (only when section nav is shown; otherwise tags are inline above) */}
-        {filtersOpen && allTags.length > 0 && showSectionNav && (
-          <div style={showSectionNav ? { paddingTop: 10 } : undefined}>
+        ) : undefined}
+        rightContent={
+          <div className="flex items-center gap-2 ml-auto">
+            {filtersOpen && selectedTags.size > 0 && (
+              <button
+                onClick={reset}
+                className="text-sm cursor-pointer"
+                style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: colorError }}
+              >
+                Nulstil
+              </button>
+            )}
+            {!filtersOpen ? (
+              <button
+                onClick={() => setFiltersOpen(true)}
+                className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
+                style={{
+                  width: 34, height: 34,
+                  backdropFilter: isAtTop ? "none" : "blur(12px)", WebkitBackdropFilter: isAtTop ? "none" : "blur(12px)",
+                  backgroundColor: isFiltered ? (isAtTop ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : (isAtTop ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
+                  transition: "background-color 200ms ease, backdrop-filter 200ms ease",
+                }}
+                aria-label="Filtre"
+                onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-error)"; }}
+                onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-pending)"; }}
+              >
+                <FontAwesomeIcon icon={faFire} swapOpacity style={{ color: "var(--system-pending)", transition: "color 150ms", fontSize: 15 }} />
+              </button>
+            ) : (
+              <button
+                onClick={() => setFiltersOpen(false)}
+                className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
+                style={{
+                  width: 34, height: 34,
+                  backdropFilter: isAtTop ? "none" : "blur(12px)", WebkitBackdropFilter: isAtTop ? "none" : "blur(12px)",
+                  backgroundColor: isAtTop ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)",
+                  transition: "background-color 200ms ease, backdrop-filter 200ms ease",
+                  color: "var(--system-icon1)",
+                }}
+                onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon0)"; }}
+                onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon1)"; }}
+                aria-label="Luk filtre"
+              >
+                <FontAwesomeIcon icon={faXmark} style={{ fontSize: 14 }} />
+              </button>
+            )}
+          </div>
+        }
+        bottomContent={filtersOpen && allTags.length > 0 && showSectionNav ? (
+          <div style={{ paddingTop: 10 }}>
             <div className="flex flex-wrap gap-2">
             {allTags.map((tag) => (
               <button
@@ -325,9 +275,8 @@ export function QuestionFeedFilter({
                 className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
                 style={{
                   fontFamily: "var(--font-figtree)", fontWeight: 500,
-                  backdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)", WebkitBackdropFilter: (isAtTop || filtersOpen) ? "none" : "blur(12px)",
-                  backgroundColor: selectedTags.has(tag) ? ((isAtTop || filtersOpen) ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : ((isAtTop || filtersOpen) ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
-                  transition: "background-color 200ms ease, backdrop-filter 200ms ease",
+                  backgroundColor: selectedTags.has(tag) ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                  transition: "background-color 200ms ease",
                   color: selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)",
                 }}
                 onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
@@ -339,7 +288,8 @@ export function QuestionFeedFilter({
             </div>
             <hr className="border-0 mt-4" style={{ borderTop: "1px solid var(--system-bg2)", opacity: isAtTop ? 1 : 0, transition: "opacity 300ms ease", position: "relative", zIndex: 1 }} />
           </div>
-        )}
+        ) : undefined}
+      />
       </div>
 
       {questions.length === 0 && (
