@@ -51,11 +51,12 @@ export function ThemeToggleButton() {
           backgroundColor: "var(--system-bg1)",
           overflow: "hidden",
           transition: "width 200ms ease",
-          width: expanded ? 24 * 3 : 24,
+          width: expanded ? 24 * 3 + 5 * 2 : 24,
         }}
       >
         {expanded ? (
-          themeOptions.map(({ pref, icon }) => {
+          <div className="flex items-center" style={{ gap: 5 }}>
+          {themeOptions.map(({ pref, icon }) => {
             const isSelected = preference === pref;
             const idle = isSelected ? "var(--system-icon0)" : "var(--system-icon3)";
             const hover = isSelected ? "var(--system-icon1)" : "var(--system-icon2)";
@@ -74,7 +75,8 @@ export function ThemeToggleButton() {
                 <FontAwesomeIcon icon={icon} style={{ fontSize: "13.5px" }} />
               </button>
             );
-          })
+          })}
+          </div>
         ) : (
           <button
             onClick={() => setExpanded(true)}
