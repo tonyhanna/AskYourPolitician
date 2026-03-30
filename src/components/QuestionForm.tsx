@@ -67,7 +67,7 @@ export function QuestionForm({
           fontFamily: "var(--font-figtree)",
           fontWeight: 500,
           backgroundColor: partyColor || "#00D564",
-          color: partyColorLight || "#93C5FD",
+          color: partyColorDark || "#1E3A5F",
         }}
         onPointerEnter={(e) => { if (!canHover.current) return; const s = e.currentTarget.querySelector("span"); if (s) s.style.opacity = "0.5"; }}
         onPointerLeave={(e) => { if (!canHover.current) return; const s = e.currentTarget.querySelector("span"); if (s) s.style.opacity = "1"; }}
