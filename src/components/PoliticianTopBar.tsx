@@ -120,18 +120,41 @@ export function PoliticianTopBar({
     setModalOpen(false);
   }
 
-  // Imperative mailbox animation — runs entirely outside React via DOM manipulation
+  /** Shared mailbox confirmation animation sequence.
+   *  Desktop: plays inside the pill button area (form stays active).
+   *  Mobile: plays inside the circular suggest button area.
+   *  Both: mailbox → flagUp → fadeIn → done */
+  const mailboxTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  function startMailboxAnimation(isDesktop: boolean) {
+    // Clear any running animation
+    mailboxTimersRef.current.forEach(clearTimeout);
+    mailboxTimersRef.current = [];
+    const t = (fn: () => void, ms: number) => { mailboxTimersRef.current.push(setTimeout(fn, ms)); };
+
+    setSuccess(true);
+    setMailboxPhase("mailbox");
+
+    if (isDesktop) {
+      // Fade out input, reveal politician names underneath
+      t(() => { setText(""); setNamesRevealed("fading"); }, 200);
+      t(() => setNamesRevealed(true), 250);
+    }
+
+    // mailbox → flagUp → fadeIn → done (shared timing)
+    t(() => setMailboxPhase("flagUp"), 1000);
+    t(() => {
+      setMailboxPhase("fadeIn");
+      if (isDesktop) { setFormActive(false); pillSizeRef.current = null; setNamesRevealed(false); }
+    }, 2700);
+    t(() => { setMailboxPhase(null); setSuccess(false); }, 2750);
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!text.trim()) return;
 
-    // Logged-out users: open modal instead of submitting directly
-    if (!hasSession) {
-      setModalOpen(true);
-      return;
-    }
+    if (!hasSession) { setModalOpen(true); return; }
 
-    // Logged-in users: submit directly from topbar
     // Capture pill size BEFORE pending changes text to "Sender..."
     if (pillBtnRef.current) {
       pillSizeRef.current = { width: pillBtnRef.current.offsetWidth, height: pillBtnRef.current.offsetHeight };
@@ -148,22 +171,10 @@ export function PoliticianTopBar({
 
     try {
       await directSuggestion(formData);
-      setSuccess(true);
-      // Start mailbox confirmation sequence — keep formActive true on desktop so pill stays
-      if (hasSession) {
-        if (pillBtnRef.current) {
-          pillSizeRef.current = { width: pillBtnRef.current.offsetWidth, height: pillBtnRef.current.offsetHeight };
-        }
-        setMailboxPhase("mailbox");
-        // After input fades out (150ms), reveal names container (opacity 0), then fade in
-        setTimeout(() => { setText(""); setNamesRevealed("fading"); }, 200);
-        setTimeout(() => setNamesRevealed(true), 250);
-        setTimeout(() => setMailboxPhase("flagUp"), 1000);
-        setTimeout(() => { setMailboxPhase("fadeIn"); setFormActive(false); pillSizeRef.current = null; setNamesRevealed(false); }, 2700);
-        setTimeout(() => { setMailboxPhase(null); setSuccess(false); }, 2750);
-      } else {
-        setFormActive(false);
+      if (pillBtnRef.current) {
+        pillSizeRef.current = { width: pillBtnRef.current.offsetWidth, height: pillBtnRef.current.offsetHeight };
       }
+      startMailboxAnimation(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Der opstod en fejl");
     } finally {
@@ -178,6 +189,9 @@ export function PoliticianTopBar({
       return () => clearTimeout(timer);
     }
   }, [success, hasSession]);
+
+  // Cleanup animation timers on unmount
+  useEffect(() => () => mailboxTimersRef.current.forEach(clearTimeout), []);
 
   return (
     <div
@@ -419,15 +433,10 @@ export function PoliticianTopBar({
         hasSession={hasSession}
         redirectPath={redirectPath}
         onSuccess={() => {
-          setSuccess(true);
           setText("");
           setFormActive(false);
           setModalOpen(false);
-          if (hasSession) {
-            setMailboxPhase("mailbox");
-            setTimeout(() => setMailboxPhase("flagUp"), 1000);
-            setTimeout(() => { setMailboxPhase(null); setSuccess(false); }, 2700);
-          }
+          startMailboxAnimation(false);
         }}
       />
     </div>
