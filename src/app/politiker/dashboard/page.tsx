@@ -256,6 +256,7 @@ export default async function Dashboard() {
 
       {politician ? (
         <DashboardTabs
+          logoutAction={async () => { "use server"; await signOut({ redirectTo: "/politiker" }); }}
           questionsTab={
             <div key="questions" className="space-y-6">
               <QuestionForm
@@ -326,20 +327,6 @@ export default async function Dashboard() {
                   googleName={session.user.name ?? ""}
                 />
               </section>
-              <form
-                action={async () => {
-                  "use server";
-                  await signOut({ redirectTo: "/politiker" });
-                }}
-                className="text-center"
-              >
-                <button
-                  type="submit"
-                  className="text-sm text-gray-500 hover:text-red-600 transition cursor-pointer"
-                >
-                  Log ud
-                </button>
-              </form>
             </div>
           }
         />
