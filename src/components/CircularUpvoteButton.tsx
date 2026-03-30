@@ -315,7 +315,7 @@ export function CircularUpvoteButton({
     if (!active) return null;
 
     let content: React.ReactNode = null;
-    let bgColor = partyColor || "#7E7D7A";
+    let bgColor = `${partyColor || "#7E7D7A"}${alphaHex}`;
     let width: number | undefined = undefined;
 
     switch (state) {
@@ -346,7 +346,7 @@ export function CircularUpvoteButton({
         break;
       }
       case "goalReachedUpvoted": {
-        bgColor = colorError;
+        bgColor = `${colorError}${alphaHex}`;
         // Desktop: hover = first text, after click = "Er du sikker?"
         // Mobile: tap1 (armed=1) = first text, tap2 (armed=2) = "Er du sikker?"
         const showConfirmText = desktopConfirmed || armed === 2;
@@ -364,7 +364,7 @@ export function CircularUpvoteButton({
         break;
       }
       case "upvoted": {
-        bgColor = colorError;
+        bgColor = `${colorError}${alphaHex}`;
         const showConfirm = desktopConfirmed || armed === 2;
         if (showConfirm) {
           content = <span className="text-sm" style={{ color: errorContrast }}>Er du sikker?</span>;
@@ -385,7 +385,7 @@ export function CircularUpvoteButton({
     if (!content) return null;
 
     // Red tooltips (cancel flows) use fixed width; on mobile right-aligned, on desktop centered
-    const isRedTooltip = bgColor === colorError;
+    const isRedTooltip = bgColor.startsWith(colorError);
 
     const flipped = flipTooltipRef.current;
     const alignRight = alignRightRef.current;
@@ -416,6 +416,8 @@ export function CircularUpvoteButton({
         style={{
           ...positionStyle,
           backgroundColor: bgColor,
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
           fontFamily: "var(--font-figtree)",
           fontWeight: 500,
           whiteSpace: width ? "normal" : "nowrap",
