@@ -72,7 +72,7 @@ export function QuestionForm({
         onPointerEnter={(e) => { if (!canHover.current) return; const s = e.currentTarget.querySelector("span"); if (s) s.style.opacity = "0.5"; }}
         onPointerLeave={(e) => { if (!canHover.current) return; const s = e.currentTarget.querySelector("span"); if (s) s.style.opacity = "1"; }}
       >
-        <span style={{ transition: "opacity 150ms" }}>+ Opret spørgsmål</span>
+        <span>+ Opret spørgsmål</span>
       </button>
     );
   }

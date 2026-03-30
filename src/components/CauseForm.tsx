@@ -49,7 +49,7 @@ export function CauseForm({ politicianId, partyColor, partyColorDark, partyColor
         onPointerEnter={(e) => { if (!canHover.current) return; const s = e.currentTarget.querySelector("span"); if (s) s.style.opacity = "0.5"; }}
         onPointerLeave={(e) => { if (!canHover.current) return; const s = e.currentTarget.querySelector("span"); if (s) s.style.opacity = "1"; }}
       >
-        <span style={{ transition: "opacity 150ms" }}>+ Opret mærkesag</span>
+        <span>+ Opret mærkesag</span>
       </button>
     );
   }
