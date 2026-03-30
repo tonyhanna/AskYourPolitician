@@ -321,7 +321,7 @@ export function PoliticianTopBar({
                     className="rounded-full flex items-center justify-center cursor-pointer"
                     style={{
                       width: 40, height: 40,
-                      backgroundColor: showXmark ? `${colorError}80` : nameColor,
+                      backgroundColor: showXmark ? colorError : nameColor,
                       transition: "background-color 150ms ease",
                     }}
                     aria-label={impersonateArmed ? "Stop impersonering" : "Admin"}
