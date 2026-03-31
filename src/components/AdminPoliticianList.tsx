@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { startImpersonation } from "@/app/admin/actions";
 import { useState } from "react";
 
@@ -22,14 +21,13 @@ type PartyGroup = {
 };
 
 export function AdminPoliticianList({ groups }: { groups: PartyGroup[] }) {
-  const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
   async function handleImpersonate(politicianId: string) {
     setLoading(politicianId);
     try {
       await startImpersonation(politicianId);
-      router.push("/politiker/dashboard");
+      window.location.href = "/politiker/dashboard";
     } catch {
       setLoading(null);
     }
