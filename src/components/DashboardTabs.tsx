@@ -145,6 +145,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
         const currentWidth = baseWidth > 0 ? baseWidth - (baseWidth - circleSize) * shrinkProgress : undefined;
         const textOpacity = 1 - shrinkProgress;
         return (
+          <>
           <div style={{ height: 25 }} />
           <div ref={createWrapRef} style={{ position: "sticky", top: 94, zIndex: 41, marginBottom: 25, width: "fit-content" }}>
             <button
@@ -195,6 +196,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
               )}
             </button>
           </div>
+          </>
         );
       })()}
       <div className="space-y-6">
