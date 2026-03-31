@@ -101,6 +101,36 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
 
   const content = activeTab === "questions" ? questionsTab : activeTab === "causes" ? causesTab : settingsTab;
   const createLabel = createLabels[activeTab];
+  const fullyDocked = stuck && dockProgress >= 1 && createLabel;
+
+  // Circle button rendered inside StickyPillNav when fully docked
+  const dockedCircle = fullyDocked ? (
+    <button
+      onClick={() => {
+        if (formOpen) {
+          setFormOpen(false);
+          window.dispatchEvent(new CustomEvent("dashboard-create-close"));
+        } else {
+          setFormOpen(true);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          window.dispatchEvent(new CustomEvent("dashboard-create-open", { detail: { tab: activeTab } }));
+        }
+      }}
+      className="rounded-full cursor-pointer flex items-center justify-center shrink-0"
+      style={{
+        width: 32,
+        height: 32,
+        backgroundColor: formOpen
+          ? `color-mix(in srgb, ${partyColor || "#00D564"} 20%, transparent)`
+          : (partyColor || "#00D564"),
+        color: partyColorDark || "#1E3A5F",
+      }}
+      onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.opacity = "0.5"; }}
+      onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.opacity = "1"; }}
+    >
+      <FontAwesomeIcon icon={formOpen ? faXmark : faPlus} style={{ fontSize: formOpen ? 12 : 10 }} />
+    </button>
+  ) : undefined;
 
   return (
     <>
@@ -108,7 +138,8 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
         items={tabs}
         activeId={activeTab}
         onSelect={switchTab}
-        dockedWidth={stuck && createLabel ? 32 + 8 : 0}
+        dockedContent={dockedCircle}
+        dockedWidth={stuck && !fullyDocked && createLabel ? 32 + 8 : 0}
         dockProgress={createLabel ? dockProgress : 0}
         forceOpaque={!!createLabel}
         rightContent={
@@ -147,7 +178,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
         return (
           <>
           <div style={{ height: 25 }} />
-          <div ref={createWrapRef} className="sticky top-[94px] z-[41]" style={{ width: "fit-content" }}>
+          <div ref={createWrapRef} className="sticky top-[94px] z-[41]" style={{ width: "fit-content", visibility: fullyDocked ? "hidden" : "visible" }}>
             <button
               ref={createBtnRef}
               onClick={(e) => {
