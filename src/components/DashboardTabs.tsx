@@ -4,14 +4,14 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRightFromBracket, faPlus, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { faCommentDots, faCommentPlus, faFire, faUserGear } from "@fortawesome/pro-duotone-svg-icons";
-import { StickyPillNav, useStickyNavState } from "./StickyPillNav";
+import { StickyPillNav, useCanHover } from "./StickyPillNav";
 import { ThemeToggleButton } from "./ThemeToggleButton";
 
 type Tab = "questions" | "causes" | "settings";
 
 const tabs = [
-  { id: "questions", label: "Spørgsmål", icon: faCommentDots },
-  { id: "causes", label: "Mærkesager", icon: faFire },
+  { id: "questions", label: "Spørgsmål", icon: faCommentDots, swapIconOpacity: true },
+  { id: "causes", label: "Mærkesager", icon: faFire, swapIconOpacity: true },
 ];
 
 type Props = {
@@ -26,7 +26,7 @@ type Props = {
 export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutAction, partyColor, partyColorDark }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("questions");
   const scrollPositions = useRef<Record<Tab, number>>({ questions: 0, causes: 0, settings: 0 });
-  const { isAtTop, canHover } = useStickyNavState();
+  const canHover = useCanHover();
   const [formOpen, setFormOpen] = useState(false);
 
   // Listen for form close
@@ -67,12 +67,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
               style={{
                 width: 32,
                 height: 32,
-                backdropFilter: isAtTop ? "none" : "blur(12px)",
-                WebkitBackdropFilter: isAtTop ? "none" : "blur(12px)",
-                backgroundColor: activeTab === "settings"
-                  ? (isAtTop ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)")
-                  : (isAtTop ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
-                transition: "background-color 200ms ease, backdrop-filter 200ms ease",
+                backgroundColor: activeTab === "settings" ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
               }}
               aria-label="Indstillinger"
               onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-icon2)"; }}
@@ -87,10 +82,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
                 style={{
                   width: 32,
                   height: 32,
-                  backdropFilter: isAtTop ? "none" : "blur(12px)",
-                  WebkitBackdropFilter: isAtTop ? "none" : "blur(12px)",
-                  backgroundColor: isAtTop ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)",
-                  transition: "background-color 200ms ease, backdrop-filter 200ms ease",
+                  backgroundColor: "var(--system-bg1)",
                 }}
                 aria-label="Log ud"
                 onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-text2)"; }}

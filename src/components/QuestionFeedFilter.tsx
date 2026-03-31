@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark, faCopy } from "@fortawesome/free-solid-svg-icons";
-import { faShare, faFire } from "@fortawesome/pro-duotone-svg-icons";
+import { faShare, faFire, faStars, faCommentDots, faCommentQuestion } from "@fortawesome/pro-duotone-svg-icons";
 import { PlayableMediaCard } from "./PlayableMediaCard";
 import { AnsweredQuestionCard } from "./AnsweredQuestionCard";
 import { useShareCopy } from "@/hooks/useShareCopy";
@@ -181,9 +181,9 @@ export function QuestionFeedFilter({
   // Build nav items dynamically based on which sections have content
   const sectionNavItems = useMemo(() => {
     const items: PillNavItem[] = [];
-    if (pinnedQuestions.length > 0) items.push({ id: "pinned", label: "Udvalgt" });
-    if (answeredQuestions.length > 0) items.push({ id: "answered", label: "Besvaret" });
-    if (filteredQuestions.length > 0) items.push({ id: "unanswered", label: "Ubesvaret" });
+    if (pinnedQuestions.length > 0) items.push({ id: "pinned", label: "Udvalgt", icon: faStars });
+    if (answeredQuestions.length > 0) items.push({ id: "answered", label: "Besvaret", icon: faCommentDots, swapIconOpacity: true });
+    if (filteredQuestions.length > 0) items.push({ id: "unanswered", label: "Ubesvaret", icon: faCommentQuestion, swapIconOpacity: true });
     return items;
   }, [pinnedQuestions.length, answeredQuestions.length, filteredQuestions.length]);
 
@@ -194,7 +194,6 @@ export function QuestionFeedFilter({
         items={showSectionNav ? sectionNavItems : []}
         activeId={activeSection || ""}
         onSelect={(id) => document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-        forceOpaque={filtersOpen}
         blurBackground={filtersOpen}
         leftOverride={!showSectionNav && filtersOpen && allTags.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
@@ -234,9 +233,7 @@ export function QuestionFeedFilter({
                 className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
                 style={{
                   width: 32, height: 32,
-                  backdropFilter: isAtTop ? "none" : "blur(12px)", WebkitBackdropFilter: isAtTop ? "none" : "blur(12px)",
-                  backgroundColor: isFiltered ? (isAtTop ? "var(--system-bg0-contrast)" : "color-mix(in srgb, var(--system-bg0-contrast) 70%, transparent)") : (isAtTop ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)"),
-                  transition: "background-color 200ms ease, backdrop-filter 200ms ease",
+                  backgroundColor: isFiltered ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
                 }}
                 aria-label="Filtre"
                 onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-error)"; }}
@@ -250,9 +247,7 @@ export function QuestionFeedFilter({
                 className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
                 style={{
                   width: 32, height: 32,
-                  backdropFilter: isAtTop ? "none" : "blur(12px)", WebkitBackdropFilter: isAtTop ? "none" : "blur(12px)",
-                  backgroundColor: isAtTop ? "var(--system-bg1)" : "color-mix(in srgb, var(--system-bg1) 70%, transparent)",
-                  transition: "background-color 200ms ease, backdrop-filter 200ms ease",
+                  backgroundColor: "var(--system-bg1)",
                   color: "var(--system-icon1)",
                 }}
                 onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon0)"; }}
