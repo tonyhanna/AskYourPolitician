@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark, faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
-import { faCircleUserCircleUser } from "@fortawesome/pro-duotone-svg-icons";
+import { faGlasses } from "@fortawesome/pro-duotone-svg-icons";
 import { faCommentPlus } from "@fortawesome/pro-solid-svg-icons";
 import { faInfo, faMailbox, faMailboxFlagUp } from "@fortawesome/pro-duotone-svg-icons";
 import { directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
@@ -331,7 +331,7 @@ export function PoliticianTopBar({
                       <div className="absolute inset-0 rounded-full" style={{ backgroundColor: `${colorError}80` }} />
                     )}
                     <FontAwesomeIcon
-                      icon={showXmark ? faXmark : faCircleUserCircleUser}
+                      icon={showXmark ? faXmark : faGlasses}
                       className="relative"
                       style={{ color: showXmark ? errorContrast : partyTextColor, fontSize: 18 }}
                     />
