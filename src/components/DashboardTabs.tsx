@@ -147,7 +147,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
         return (
           <>
           <div style={{ height: 25 }} />
-          <div ref={createWrapRef} style={{ position: "sticky", top: 94, zIndex: 41, marginBottom: 25, width: "fit-content" }}>
+          <div ref={createWrapRef} style={{ position: "sticky", top: 94, zIndex: 41, width: "fit-content" }}>
             <button
               ref={createBtnRef}
               onClick={(e) => {
@@ -196,6 +196,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
               )}
             </button>
           </div>
+          <div style={{ height: 25 }} />
           </>
         );
       })()}
