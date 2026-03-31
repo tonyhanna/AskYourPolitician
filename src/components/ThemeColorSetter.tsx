@@ -21,11 +21,14 @@ import { useEffect } from "react";
  */
 export function ThemeColorSetter({ color, styleHref }: { color: string; styleHref?: string }) {
   useEffect(() => {
-    // Remove stale theme style tags from other pages
+    // Remove stale theme style tags from other pages.
+    // React renders precedence="theme" as data-precedence="theme"
+    // and href="x" as data-href="x" in the DOM.
     if (styleHref) {
-      document.querySelectorAll('style[data-precedence="theme"]').forEach((el) => {
-        const href = el.getAttribute("href");
-        if (href && href !== styleHref) {
+      document.querySelectorAll("style").forEach((el) => {
+        const dp = el.getAttribute("data-precedence");
+        const dh = el.getAttribute("data-href") || el.getAttribute("href");
+        if (dp === "theme" && dh && dh !== styleHref) {
           el.remove();
         }
       });
