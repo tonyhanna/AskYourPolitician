@@ -191,7 +191,7 @@ export default async function BorgerFeed({
         <style precedence="theme" href={`theme-${partySlug}`}>{`html body{background-color:${party.color}}`}</style>
       )}
       {/* Client-side: toggle body bg based on scroll (green at top, white when scrolled) */}
-      {party?.color && <ThemeColorSetter color={party.color} styleHref={`theme-${partySlug}`} />}
+      {party?.color && <ThemeColorSetter color={party.color} />}
       <div className="min-h-dvh flex flex-col">
       <PoliticianTopBar
         politicianName={politician.name}

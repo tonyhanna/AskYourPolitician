@@ -231,7 +231,7 @@ export default async function Dashboard() {
         <style precedence="theme" href={`theme-dashboard-${politician.partySlug}`}>{`html body{background-color:${partyColor}}`}</style>
       )}
       {/* Client-side: toggle body bg based on scroll (party color at top, system bg when scrolled) */}
-      {partyColor && <ThemeColorSetter color={partyColor} styleHref={`theme-dashboard-${politician?.partySlug}`} />}
+      {partyColor && <ThemeColorSetter color={partyColor} />}
       <div className="min-h-dvh flex flex-col">
       {politician && politicianParty && (
         <PoliticianTopBar
