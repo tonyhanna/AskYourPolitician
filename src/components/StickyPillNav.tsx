@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 export type PillNavItem = {
   id: string;
   label: string;
+  icon?: IconDefinition;
 };
 
 type StickyPillNavProps = {
@@ -89,13 +92,17 @@ export function StickyPillNav({
                   onPointerEnter={(e) => {
                     if (!canHover.current) return;
                     e.currentTarget.style.color = "var(--system-text2)";
+                    const svg = e.currentTarget.querySelector("svg");
+                    if (svg) svg.style.color = "var(--system-icon2)";
                   }}
                   onPointerLeave={(e) => {
                     if (!canHover.current) return;
                     e.currentTarget.style.color = isActive ? "var(--system-text0-contrast)" : "var(--system-text0)";
+                    const svg = e.currentTarget.querySelector("svg");
+                    if (svg) svg.style.color = isActive ? "var(--system-icon0-contrast)" : "var(--system-icon0)";
                   }}
                 >
-                  {item.label}
+                  {item.icon && <FontAwesomeIcon icon={item.icon} swapOpacity style={{ fontSize: 15, marginRight: 5, color: isActive ? "var(--system-icon0-contrast)" : "var(--system-icon0)" }} />}{item.label}
                 </button>
               );
             })}

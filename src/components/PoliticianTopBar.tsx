@@ -271,14 +271,14 @@ export function PoliticianTopBar({
               <img
                 src={partyLogoUrl}
                 alt=""
-                className="w-12 h-12 rounded-full object-cover shrink-0"
+                className="w-12 h-12 rounded-full object-cover shrink-0 cursor-pointer"
               />
             )}
             {profilePhotoUrl && (
               <img
                 src={profilePhotoUrl}
                 alt=""
-                className="w-12 h-12 rounded-full object-cover shrink-0"
+                className="w-12 h-12 rounded-full object-cover shrink-0 cursor-pointer"
               />
             )}
           </div>
