@@ -58,6 +58,16 @@ export function StickyPillNav({
   dockProgress = 0,
 }: StickyPillNavProps) {
   const [isAtTop, setIsAtTop] = useState(true);
+
+  // Suppress translateX transition when dockedContent appears/disappears
+  const prevDockedRef = useRef(!!dockedContent);
+  const suppressTransition = useRef(false);
+  if (!!dockedContent !== prevDockedRef.current) {
+    suppressTransition.current = true;
+    prevDockedRef.current = !!dockedContent;
+    requestAnimationFrame(() => { suppressTransition.current = false; });
+  }
+
   const canHover = useRef(false);
   useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
 
@@ -87,7 +97,7 @@ export function StickyPillNav({
           {dockedContent}
           <div
             className="flex items-center gap-2"
-            style={{ transform: dockedWidth > 0 ? `translateX(${dockedWidth}px)` : "translateX(0)", transition: dockedContent ? "none" : "transform 200ms cubic-bezier(0.05, 0.7, 0.1, 1.0)", willChange: "transform" }}
+            style={{ transform: dockedWidth > 0 ? `translateX(${dockedWidth}px)` : "translateX(0)", transition: suppressTransition.current ? "none" : "transform 200ms cubic-bezier(0.05, 0.7, 0.1, 1.0)", willChange: "transform" }}
           >
             {items.map((item) => {
               const isActive = item.id === activeId;
