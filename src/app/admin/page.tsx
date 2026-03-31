@@ -89,7 +89,8 @@ export default async function AdminPage() {
 
   return (
     <>
-    <main className="max-w-4xl mx-auto p-6 space-y-6" style={{ backgroundColor: "#f9fafb" }}>
+    <style precedence="theme" href="theme-admin">{`html body{background-color:#f9fafb}`}</style>
+    <main className="max-w-4xl mx-auto p-6 space-y-6">
       <h1 className="text-3xl font-bold text-gray-900">
         <span className="text-[#AAAAAA]">Introkrati:</span> Admin
       </h1>

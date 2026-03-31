@@ -144,7 +144,7 @@ export default async function QuestionLandingPage({ params }: Props) {
       <style>{`:root { --party-color: ${partyColor || "#3B82F6"}; }`}</style>
       <style precedence="theme" href={`theme-detail-${partySlug}`}>{`html body{background-color:${partyColor}}`}</style>
 
-      {partyColor && <ThemeColorSetter color={partyColor} />}
+      {partyColor && <ThemeColorSetter color={partyColor} styleHref={`theme-detail-${partySlug}`} />}
 
       <div className="min-h-dvh flex flex-col" style={{ backgroundColor: "var(--system-bg0, #ffffff)" }}>
       {/* PoliticianTopBar */}

@@ -14,9 +14,23 @@ import { useEffect } from "react";
  * The SSR style tag (page.tsx) sets `html body { background-color: partyColor }`
  * for initial paint (page always loads at scrollY=0).
  * The <meta name="theme-color"> handles Safari/Chrome toolbar color.
+ *
+ * On mount, removes any stale SSR <style> tags from previous pages (e.g. admin)
+ * that persist in <head> during client-side navigation and can cause iOS
+ * rubber-band glitches.
  */
-export function ThemeColorSetter({ color }: { color: string }) {
+export function ThemeColorSetter({ color, styleHref }: { color: string; styleHref?: string }) {
   useEffect(() => {
+    // Remove stale theme style tags from other pages
+    if (styleHref) {
+      document.querySelectorAll('style[data-precedence="theme"]').forEach((el) => {
+        const href = el.getAttribute("href");
+        if (href && href !== styleHref) {
+          el.remove();
+        }
+      });
+    }
+
     const html = document.documentElement;
     const body = document.body;
     const prevBody = body.style.backgroundColor;
@@ -40,7 +54,7 @@ export function ThemeColorSetter({ color }: { color: string }) {
       body.style.backgroundColor = prevBody;
       html.style.backgroundColor = prevHtml;
     };
-  }, [color]);
+  }, [color, styleHref]);
 
   return null;
 }
