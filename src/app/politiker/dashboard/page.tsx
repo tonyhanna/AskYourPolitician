@@ -232,7 +232,7 @@ export default async function Dashboard() {
       )}
       {/* Client-side: toggle body bg based on scroll (party color at top, system bg when scrolled) */}
       {partyColor && <ThemeColorSetter color={partyColor} />}
-      <div className="min-h-dvh flex flex-col">
+      <div className="min-h-dvh flex flex-col" style={{ backgroundColor: partyColor || undefined }}>
       {politician && politicianParty && (
         <PoliticianTopBar
           mode="dashboard"
