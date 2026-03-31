@@ -80,9 +80,11 @@ export function StickyPillNav({
       {dockProgress > 0 && (
         <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: -10, backdropFilter: `blur(${dockProgress * 12}px)`, WebkitBackdropFilter: `blur(${dockProgress * 12}px)`, backgroundColor: `color-mix(in srgb, var(--system-bg0) ${Math.round(dockProgress * 70)}%, transparent)`, zIndex: -1, opacity: dockProgress }} />
       )}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-2">
         {/* Left side: pills with translateX when docked */}
         {leftOverride || (
+          <>
+          {dockedContent}
           <div
             className="flex items-center gap-2"
             style={{ transform: dockedWidth > 0 ? `translateX(${dockedWidth}px)` : "translateX(0)", transition: "transform 200ms cubic-bezier(0.05, 0.7, 0.1, 1.0)", willChange: "transform" }}
@@ -119,6 +121,7 @@ export function StickyPillNav({
               );
             })}
           </div>
+          </>
         )}
         {/* Right side: extra content */}
         {rightContent}
