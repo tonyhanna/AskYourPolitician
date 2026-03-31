@@ -87,7 +87,7 @@ export function StickyPillNav({
           {dockedContent}
           <div
             className="flex items-center gap-2"
-            style={{ transform: dockedWidth > 0 ? `translateX(${dockedWidth}px)` : "translateX(0)", transition: "transform 200ms cubic-bezier(0.05, 0.7, 0.1, 1.0)", willChange: "transform" }}
+            style={{ transform: dockedWidth > 0 ? `translateX(${dockedWidth}px)` : "translateX(0)", transition: dockedContent ? "none" : "transform 200ms cubic-bezier(0.05, 0.7, 0.1, 1.0)", willChange: "transform" }}
           >
             {items.map((item) => {
               const isActive = item.id === activeId;
