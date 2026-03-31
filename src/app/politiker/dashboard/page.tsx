@@ -252,6 +252,8 @@ export default async function Dashboard() {
           isImpersonating={!!impersonatingId}
         />
       )}
+    {/* Empty div matching IntroSection's DOM structure — test if this fixes iOS rubber-band glitch */}
+    <div className="overflow-hidden" style={{ maxHeight: 0, opacity: 0 }} />
     <main className="flex-1 w-full px-[15px] pt-[15px]" style={{ backgroundColor: "var(--system-bg0)" }}>
 
       {politician ? (
