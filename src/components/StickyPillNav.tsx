@@ -23,16 +23,10 @@ type StickyPillNavProps = {
   blurBackground?: boolean;
   /** Content rendered in place of pills when items is empty (e.g. inline tags) */
   leftOverride?: React.ReactNode;
-  /** Content docked before the pill buttons (e.g. create button that scrolls up into nav) */
-  dockedContent?: React.ReactNode;
-  /** Width (px) to reserve on the left for an externally sticky button overlaying the nav */
-  dockedWidth?: number;
-  /** 0→1 progress for docked background fade-in */
-  dockProgress?: number;
 };
 
 /**
- * Shared sticky pill-button navigation used across citizen page, dashboard, and admin.
+ * Shared sticky pill-button navigation used across citizen page and dashboard.
  *
  * Behavior:
  * - Sticky at top-[94px] z-40
@@ -40,9 +34,6 @@ type StickyPillNavProps = {
  * - When scrolled: 70% transparent backgrounds with backdrop blur(12px)
  * - 200ms ease transitions on background-color and backdrop-filter
  * - Hover effects gated by (hover: hover) media query for iOS Safari safety
- *
- * Also exposes `isAtTop` and `canHover` via render prop pattern for consumers
- * that need scroll-aware styling on their own elements.
  */
 export function StickyPillNav({
   items,
@@ -53,21 +44,8 @@ export function StickyPillNav({
   forceOpaque,
   blurBackground,
   leftOverride,
-  dockedContent,
-  dockedWidth = 0,
-  dockProgress = 0,
 }: StickyPillNavProps) {
   const [isAtTop, setIsAtTop] = useState(true);
-
-  // Suppress translateX transition when dockedContent appears/disappears
-  const prevDockedRef = useRef(!!dockedContent);
-  const suppressTransition = useRef(false);
-  if (!!dockedContent !== prevDockedRef.current) {
-    suppressTransition.current = true;
-    prevDockedRef.current = !!dockedContent;
-    requestAnimationFrame(() => { suppressTransition.current = false; });
-  }
-
   const canHover = useRef(false);
   useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
 
@@ -82,25 +60,14 @@ export function StickyPillNav({
 
   return (
     <div className="sticky top-[94px] z-40 mb-[25px]" style={{ position: "sticky" }}>
-      {/* Always-present background that covers the gap between topbar and nav during iOS rubber-band */}
-      <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: 0, backgroundColor: "var(--system-bg0)", zIndex: -2 }} />
       {/* Full-width blur background (e.g. when filters are open on citizen page) */}
       {blurBackground && (
         <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: 0, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", backgroundColor: "color-mix(in srgb, var(--system-bg0) 70%, transparent)", zIndex: -1 }} />
       )}
-      {/* Docked background: fades in as create button approaches nav */}
-      {dockProgress > 0 && (
-        <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: -10, backdropFilter: `blur(${dockProgress * 12}px)`, WebkitBackdropFilter: `blur(${dockProgress * 12}px)`, backgroundColor: `color-mix(in srgb, var(--system-bg0) ${Math.round(dockProgress * 70)}%, transparent)`, zIndex: -1, opacity: dockProgress }} />
-      )}
-      <div className="flex items-start justify-between gap-2">
-        {/* Left side: pills with translateX when docked */}
+      <div className="flex items-start justify-between">
+        {/* Left side: pills or override content */}
         {leftOverride || (
-          <>
-          {dockedContent}
-          <div
-            className="flex items-center gap-2"
-            style={{ transform: dockedWidth > 0 ? `translateX(${dockedWidth}px)` : "translateX(0)", transition: suppressTransition.current ? "none" : "transform 200ms cubic-bezier(0.05, 0.7, 0.1, 1.0)", willChange: "transform" }}
-          >
+          <div className="flex items-center gap-2">
             {items.map((item) => {
               const isActive = item.id === activeId;
               return (
@@ -133,7 +100,6 @@ export function StickyPillNav({
               );
             })}
           </div>
-          </>
         )}
         {/* Right side: extra content */}
         {rightContent}
