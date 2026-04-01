@@ -226,6 +226,9 @@ function applyCSS(resolved: ResolvedColors) {
   root.style.setProperty("--system-error", resolved.error);
   root.style.setProperty("--system-error-contrast", resolved.errorContrast);
   root.style.setProperty("--system-overlay", resolved.overlay);
+  root.style.setProperty("--system-form-bg", resolved.formBg);
+  root.style.setProperty("--system-form-text0", resolved.formText0);
+  root.style.setProperty("--system-form-text1", resolved.formText1);
 }
 
 function isDarkForPreference(pref: ThemePreference): boolean {

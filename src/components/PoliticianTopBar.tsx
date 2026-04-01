@@ -436,7 +436,7 @@ export function PoliticianTopBar({
                     type="button"
                     onClick={() => { setText(""); inputRef.current?.focus(); }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1 cursor-pointer hover:opacity-50 transition-opacity"
-                    style={{ color: "var(--system-icon0, #FF0000)" }}
+                    style={{ color: "var(--system-icon2, #FF0000)" }}
                   >
                     <FontAwesomeIcon icon={faXmark} className="w-4 h-4" />
                   </button>
@@ -506,7 +506,7 @@ export function PoliticianTopBar({
                 type="button"
                 onClick={() => setFormActive(true)}
                 className="text-base px-5 py-2 rounded-full whitespace-nowrap cursor-pointer"
-                style={{ backgroundColor: "var(--system-form-bg, #FF0000)", color: pd, opacity: mailboxPhase === "fadeIn" ? 0 : 1, transition: mailboxPhase === null ? "opacity 300ms ease-out" : "none" }}
+                style={{ backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", opacity: mailboxPhase === "fadeIn" ? 0 : 1, transition: mailboxPhase === null ? "opacity 300ms ease-out" : "none" }}
               >
                 Foreslå et spørgsmål...
               </button>

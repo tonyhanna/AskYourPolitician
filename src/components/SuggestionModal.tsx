@@ -6,7 +6,7 @@ import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { faCommentPlus } from "@fortawesome/pro-solid-svg-icons";
 import { faEnvelopeCircleCheck } from "@fortawesome/pro-duotone-svg-icons";
 import { submitSuggestion, directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
-import { useSystemColors } from "./SystemColorProvider";
+
 
 type SuggestionModalProps = {
   isOpen: boolean;
@@ -31,12 +31,10 @@ export function SuggestionModal({
   redirectPath,
   onSuccess,
 }: SuggestionModalProps) {
-  const systemColors = useSystemColors();
-  const colorError = systemColors.error;
   // Party colors from CSS variables
-  const pp = "var(--party-primary)";
-  const pd = "var(--party-dark)";
-  const pl = "var(--party-light)";
+  const pp = "var(--party-primary, #FF0000)";
+  const pd = "var(--party-dark, #FF0000)";
+  const pl = "var(--party-light, #FF0000)";
 
   const [phase, setPhase] = useState<"form" | "emailSent">("form");
   const [text, setText] = useState(initialText);
@@ -134,8 +132,8 @@ export function SuggestionModal({
   }
 
   const inputStyle = {
-    color: pd,
-    backgroundColor: "#ffffff",
+    color: "var(--system-form-text0, #FF0000)",
+    backgroundColor: "var(--system-form-bg, #FF0000)",
     borderRadius: 9999,
     padding: "8px 20px",
     fontSize: "16px",
@@ -150,7 +148,7 @@ export function SuggestionModal({
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-[60]"
-        style={{ backgroundColor: "var(--system-overlay, #000000)", opacity: 0.7 }}
+        style={{ backgroundColor: "var(--system-overlay, #FF0000)", opacity: 0.7 }}
         onClick={onClose}
       />
 
@@ -158,11 +156,11 @@ export function SuggestionModal({
       <div className="fixed inset-0 z-[61] flex items-start justify-center px-4 py-8 overflow-y-auto">
         <div
           className="relative w-full max-w-md p-6 space-y-3 my-auto"
-          style={{ backgroundColor: "var(--system-bg2)", fontFamily: "var(--font-figtree)", fontWeight: 500, borderRadius: 10 }}
+          style={{ backgroundColor: "var(--system-bg2, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500, borderRadius: 10 }}
           onClick={(e) => e.stopPropagation()}
         >
           <style>{`
-            .modal-field::placeholder { color: var(--field-placeholder-color, ${pd}); opacity: var(--field-placeholder-opacity, 0.75); }
+            .modal-field::placeholder { color: var(--field-placeholder-color, var(--system-form-text1, #FF0000)); opacity: var(--field-placeholder-opacity, 1); }
             .modal-age::-webkit-inner-spin-button,
             .modal-age::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
             .modal-age { -moz-appearance: textfield; }
@@ -170,25 +168,25 @@ export function SuggestionModal({
 
           {/* Title + close button row */}
           <div className="relative" style={{ marginBottom: 25 }}>
-            <p className={`text-lg flex items-center gap-2 ${phase === "emailSent" ? "justify-center" : ""}`} style={{ color: pd, fontWeight: 600 }}>
-              {phase !== "emailSent" && <FontAwesomeIcon icon={faCommentPlus} style={{ color: pd }} />}
+            <p className={`text-lg flex items-center gap-2 ${phase === "emailSent" ? "justify-center" : ""}`} style={{ color: "var(--system-text0, #FF0000)", fontWeight: 600 }}>
+              {phase !== "emailSent" && <FontAwesomeIcon icon={faCommentPlus} style={{ color: "var(--system-icon0, #FF0000)" }} />}
               {phase === "emailSent" ? "Tjek din e-mail" : "Foreslå et spørgsmål"}
             </p>
             <button
               type="button"
               onClick={() => { if (phase === "emailSent") onSuccess(); onClose(); }}
               className="absolute top-1/2 right-0 -translate-y-1/2 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-              style={{ width: 24, height: 24, backgroundColor: "color-mix(in srgb, var(--party-dark) 50%, transparent)" }}
+              style={{ width: 24, height: 24, backgroundColor: "var(--system-bg0, #FF0000)" }}
               aria-label="Luk"
             >
-              <FontAwesomeIcon icon={faXmark} style={{ color: pl, fontSize: "13.5px" }} />
+              <FontAwesomeIcon icon={faXmark} style={{ color: "var(--system-icon1, #FF0000)", fontSize: "13.5px" }} />
             </button>
           </div>
 
           {phase === "emailSent" ? (
             <div className="text-center space-y-4 py-4">
-              <FontAwesomeIcon icon={faEnvelopeCircleCheck} style={{ color: pd, fontSize: 48 }} />
-              <p className="text-base" style={{ color: pd }}>
+              <FontAwesomeIcon icon={faEnvelopeCircleCheck} style={{ color: "var(--system-icon0, #FF0000)", fontSize: 48 }} />
+              <p className="text-base" style={{ color: "var(--system-text0, #FF0000)" }}>
                 Vi har sendt dig en bekræftelses-email. Klik på linket i emailen for at bekræfte dit forslag.
               </p>
             </div>
@@ -216,14 +214,14 @@ export function SuggestionModal({
                 borderRadius: 10,
                 fontSize: "32px",
                 lineHeight: 1.2,
-                "--field-placeholder-color": pd,
+                "--field-placeholder-color": "var(--system-form-text1, #FF0000)",
               } as React.CSSProperties}
             />
 
             {/* Identity fields (only for non-logged-in users) */}
             {!hasSession && (
               <>
-                <p className="text-base" style={{ color: pd, opacity: 0.5 }}>
+                <p className="text-base" style={{ color: "var(--system-text2, #FF0000)" }}>
                   Alder er valgfri
                 </p>
 
@@ -240,7 +238,7 @@ export function SuggestionModal({
                     style={{
                       ...inputStyle,
                       flex: "75",
-                      "--field-placeholder-color": fieldErrors.firstName ? colorError : pd,
+                      "--field-placeholder-color": fieldErrors.firstName ? "var(--system-error, #FF0000)" : "var(--system-form-text1, #FF0000)",
                       "--field-placeholder-opacity": fieldErrors.firstName ? "1" : "0.75",
                     } as React.CSSProperties}
                   />
@@ -270,15 +268,15 @@ export function SuggestionModal({
                     className="modal-field"
                     style={{
                       ...inputStyle,
-                      color: fieldErrors.emailInvalid ? colorError : pd,
-                      "--field-placeholder-color": fieldErrors.email ? colorError : pd,
+                      color: fieldErrors.emailInvalid ? "var(--system-error, #FF0000)" : "var(--system-form-text0, #FF0000)",
+                      "--field-placeholder-color": fieldErrors.email ? "var(--system-error, #FF0000)" : "var(--system-form-text1, #FF0000)",
                       "--field-placeholder-opacity": fieldErrors.email ? "1" : "0.75",
                     } as React.CSSProperties}
                   />
                   {fieldErrors.emailInvalid && (
                     <span
                       className="absolute right-5 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
-                      style={{ color: colorError, fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+                      style={{ color: "var(--system-error, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
                     >
                       Ukorrekt format
                     </span>
@@ -289,17 +287,17 @@ export function SuggestionModal({
 
             {/* Error message */}
             {error && (
-              <p className="text-sm" style={{ color: "#fee2e2" }}>{error}</p>
+              <p className="text-sm" style={{ color: "var(--system-error, #FF0000)" }}>{error}</p>
             )}
 
             {/* Submit button */}
             <button
               type="submit"
               disabled={pending || !text.trim()}
-              className="w-full text-base px-5 py-2.5 rounded-full cursor-pointer disabled:opacity-50 transition-opacity"
-              style={{ backgroundColor: pp, color: "var(--system-text0-contrast)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+              className="group w-full text-base px-5 py-2.5 rounded-full cursor-pointer disabled:opacity-50 transition-opacity"
+              style={{ backgroundColor: pp, color: "var(--system-text0-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
             >
-              {pending ? "Sender..." : "Send forslag"}
+              <span className="group-hover:opacity-50 transition-opacity">{pending ? "Sender..." : "Send forslag"}</span>
             </button>
           </form>
           )}

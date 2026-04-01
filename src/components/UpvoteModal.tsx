@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { faArrowUp as faArrowUpDuotone, faEnvelopeCircleCheck } from "@fortawesome/pro-duotone-svg-icons";
 import { submitUpvote } from "@/app/[partySlug]/[politicianSlug]/actions";
-import { useSystemColors } from "./SystemColorProvider";
+
 
 type UpvoteModalProps = {
   questionId: string;
@@ -26,12 +26,11 @@ export function UpvoteModal({
   redirectPath,
   onClose,
 }: UpvoteModalProps) {
-  const systemColors = useSystemColors();
-  const colorError = systemColors.error;
+  const colorError = "var(--system-error, #FF0000)";
   // Party colors from CSS variables
-  const pp = "var(--party-primary)";
-  const pd = "var(--party-dark)";
-  const pl = "var(--party-light)";
+  const pp = "var(--party-primary, #FF0000)";
+  const pd = "var(--party-dark, #FF0000)";
+  const pl = "var(--party-light, #FF0000)";
 
   const [phase, setPhase] = useState<ModalPhase>("form");
   const [error, setError] = useState<string | null>(null);
@@ -99,8 +98,8 @@ export function UpvoteModal({
   const canClose = phase !== "pending";
 
   const inputStyle: React.CSSProperties = {
-    color: pd,
-    backgroundColor: "#ffffff",
+    color: "var(--system-form-text0, #FF0000)",
+    backgroundColor: "var(--system-form-bg, #FF0000)",
     borderRadius: 9999,
     padding: "8px 20px",
     fontSize: "16px",
@@ -115,7 +114,7 @@ export function UpvoteModal({
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-[60]"
-        style={{ backgroundColor: "var(--system-overlay, #000000)", opacity: 0.7 }}
+        style={{ backgroundColor: "var(--system-overlay, #FF0000)", opacity: 0.7 }}
         onClick={canClose ? onClose : undefined}
       />
 
@@ -123,13 +122,13 @@ export function UpvoteModal({
       <div className="fixed inset-0 z-[61] flex items-start justify-center px-4 py-8 overflow-y-auto">
         <div
           className="relative w-full max-w-md p-6 space-y-3 my-auto"
-          style={{ backgroundColor: "var(--system-bg2)", fontFamily: "var(--font-figtree)", fontWeight: 500, borderRadius: 10 }}
+          style={{ backgroundColor: "var(--system-bg2, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500, borderRadius: 10 }}
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
         >
           <style>{`
-            .upvote-modal-field::placeholder { color: var(--field-placeholder-color, ${pd}); opacity: var(--field-placeholder-opacity, 0.75); }
+            .upvote-modal-field::placeholder { color: var(--field-placeholder-color, var(--system-form-text1, #FF0000)); opacity: var(--field-placeholder-opacity, 1); }
             .upvote-modal-age::-webkit-inner-spin-button,
             .upvote-modal-age::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
             .upvote-modal-age { -moz-appearance: textfield; }
@@ -137,8 +136,8 @@ export function UpvoteModal({
 
           {/* Title + close button row */}
           <div className="relative" style={{ marginBottom: 25 }}>
-            <p className={`text-lg flex items-center gap-2 ${phase === "emailSent" ? "justify-center" : ""}`} style={{ color: pd, fontWeight: 600 }}>
-              {phase !== "emailSent" && <FontAwesomeIcon icon={faArrowUpDuotone} style={{ color: pd }} />}
+            <p className={`text-lg flex items-center gap-2 ${phase === "emailSent" ? "justify-center" : ""}`} style={{ color: "var(--system-text0, #FF0000)", fontWeight: 600 }}>
+              {phase !== "emailSent" && <FontAwesomeIcon icon={faArrowUpDuotone} style={{ color: "var(--system-icon0, #FF0000)" }} />}
               {phase === "emailSent" ? "Tjek din e-mail" : "Upvote spørgsmål"}
             </p>
             {canClose && (
@@ -146,29 +145,29 @@ export function UpvoteModal({
                 type="button"
                 onClick={onClose}
                 className="absolute top-1/2 right-0 -translate-y-1/2 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-                style={{ width: 24, height: 24, backgroundColor: "color-mix(in srgb, var(--party-dark) 50%, transparent)" }}
+                style={{ width: 24, height: 24, backgroundColor: "var(--system-bg0, #FF0000)" }}
                 aria-label="Luk"
               >
-                <FontAwesomeIcon icon={faXmark} style={{ color: pl, fontSize: "13.5px" }} />
+                <FontAwesomeIcon icon={faXmark} style={{ color: "var(--system-icon1, #FF0000)", fontSize: "13.5px" }} />
               </button>
             )}
           </div>
 
           {phase === "emailSent" ? (
             <div className="text-center space-y-4 py-4">
-              <FontAwesomeIcon icon={faEnvelopeCircleCheck} style={{ color: pd, fontSize: 48 }} />
-              <p className="text-base" style={{ color: pd }}>
+              <FontAwesomeIcon icon={faEnvelopeCircleCheck} style={{ color: "var(--system-icon0, #FF0000)", fontSize: 48 }} />
+              <p className="text-base" style={{ color: "var(--system-text0, #FF0000)" }}>
                 Vi har sendt dig en bekræftelses-email. Klik på linket i emailen for at registrere din upvote.
               </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-3" noValidate>
               {/* Question text */}
-              <p style={{ color: pd, fontSize: "32px", lineHeight: 1.2, fontWeight: 500 }}>
+              <p style={{ color: "var(--system-text0, #FF0000)", fontSize: "32px", lineHeight: 1.2, fontWeight: 500 }}>
                 {questionText}
               </p>
 
-              <p className="text-base" style={{ color: pd, opacity: 0.5 }}>
+              <p className="text-base" style={{ color: "var(--system-text2, #FF0000)" }}>
                 Alder er valgfri
               </p>
 
@@ -186,7 +185,7 @@ export function UpvoteModal({
                   style={{
                     ...inputStyle,
                     flex: "75",
-                    "--field-placeholder-color": fieldErrors.firstName ? colorError : pd,
+                    "--field-placeholder-color": fieldErrors.firstName ? colorError : "var(--system-form-text1, #FF0000)",
                     "--field-placeholder-opacity": fieldErrors.firstName ? "1" : "0.75",
                   } as React.CSSProperties}
                 />
@@ -216,8 +215,8 @@ export function UpvoteModal({
                   className="upvote-modal-field"
                   style={{
                     ...inputStyle,
-                    color: fieldErrors.emailInvalid ? colorError : pd,
-                    "--field-placeholder-color": fieldErrors.email ? colorError : pd,
+                    color: fieldErrors.emailInvalid ? colorError : "var(--system-form-text0, #FF0000)",
+                    "--field-placeholder-color": fieldErrors.email ? colorError : "var(--system-form-text1, #FF0000)",
                     "--field-placeholder-opacity": fieldErrors.email ? "1" : "0.75",
                   } as React.CSSProperties}
                 />
@@ -233,17 +232,17 @@ export function UpvoteModal({
 
               {/* Error message */}
               {(phase === "error" || error) && (
-                <p className="text-sm" style={{ color: "#fee2e2" }}>{error}</p>
+                <p className="text-sm" style={{ color: "var(--system-error, #FF0000)" }}>{error}</p>
               )}
 
               {/* Submit button */}
               <button
                 type="submit"
                 disabled={phase === "pending"}
-                className="w-full text-base px-5 py-2.5 rounded-full cursor-pointer disabled:opacity-50 transition-opacity"
-                style={{ backgroundColor: pp, color: "var(--system-text0-contrast)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+                className="group w-full text-base px-5 py-2.5 rounded-full cursor-pointer disabled:opacity-50 transition-opacity"
+                style={{ backgroundColor: pp, color: "var(--system-text0-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
               >
-                {phase === "pending" ? "Sender..." : "Upvote"}
+                <span className="group-hover:opacity-50 transition-opacity">{phase === "pending" ? "Sender..." : "Upvote"}</span>
               </button>
             </form>
           )}
