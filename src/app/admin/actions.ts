@@ -141,7 +141,10 @@ export async function deleteParty(partyId: string) {
 export async function createPolitician(formData: FormData) {
   await requireAdmin();
 
-  const name = formData.get("name") as string;
+  const firstName = (formData.get("firstName") as string)?.trim() || "";
+  const middleName = (formData.get("middleName") as string)?.trim() || null;
+  const lastName = (formData.get("lastName") as string)?.trim() || "";
+  const name = [firstName, middleName, lastName].filter(Boolean).join(" ");
   const email = formData.get("email") as string;
   const partyId = formData.get("partyId") as string;
   const profilePhotoUrl = (formData.get("profilePhotoUrl") as string) || null;
@@ -155,7 +158,7 @@ export async function createPolitician(formData: FormData) {
   const chatbaseId = (formData.get("chatbaseId") as string)?.trim() || null;
   const defaultUpvoteGoal = parseInt(formData.get("defaultUpvoteGoal") as string) || 1000;
 
-  if (!name || !email || !partyId) throw new Error("Navn, email og parti er påkrævet");
+  if (!firstName || !lastName || !email || !partyId) throw new Error("Fornavn, efternavn, email og parti er påkrævet");
 
   // Get party for denormalized fields
   const [party] = await db
@@ -194,6 +197,9 @@ export async function createPolitician(formData: FormData) {
   await db.insert(politicians).values({
     userId: user.id,
     name,
+    firstName,
+    middleName,
+    lastName,
     slug,
     party: party.name,
     partySlug: party.slug,
@@ -218,7 +224,10 @@ export async function updatePolitician(formData: FormData) {
   await requireAdmin();
 
   const politicianId = formData.get("politicianId") as string;
-  const name = formData.get("name") as string;
+  const firstName = (formData.get("firstName") as string)?.trim() || "";
+  const middleName = (formData.get("middleName") as string)?.trim() || null;
+  const lastName = (formData.get("lastName") as string)?.trim() || "";
+  const name = [firstName, middleName, lastName].filter(Boolean).join(" ");
   const email = formData.get("email") as string;
   const partyId = formData.get("partyId") as string;
   const constituency = (formData.get("constituency") as string)?.trim() || null;
@@ -233,7 +242,7 @@ export async function updatePolitician(formData: FormData) {
   const chatbaseId = (formData.get("chatbaseId") as string)?.trim() || null;
   const defaultUpvoteGoal = parseInt(formData.get("defaultUpvoteGoal") as string) || 1000;
 
-  if (!name || !email || !partyId || !politicianId) throw new Error("Navn, email og parti er påkrævet");
+  if (!firstName || !lastName || !email || !partyId || !politicianId) throw new Error("Fornavn, efternavn, email og parti er påkrævet");
 
   const [party] = await db
     .select()
@@ -267,6 +276,9 @@ export async function updatePolitician(formData: FormData) {
     .update(politicians)
     .set({
       name,
+      firstName,
+      middleName,
+      lastName,
       slug,
       party: party.name,
       partySlug: party.slug,

@@ -38,6 +38,9 @@ export default async function EditPoliticianPage({ params }: { params: Promise<{
           politician={{
             id: politician.id,
             name: politician.name,
+            firstName: politician.firstName,
+            middleName: politician.middleName,
+            lastName: politician.lastName,
             email: politician.email,
             partyId: politician.partyId,
             constituency: politician.constituency,

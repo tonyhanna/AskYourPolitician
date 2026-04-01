@@ -8,6 +8,9 @@ import { createPolitician, updatePolitician, deletePolitician } from "@/app/admi
 type PoliticianData = {
   id: string;
   name: string;
+  firstName: string | null;
+  middleName: string | null;
+  lastName: string | null;
   email: string;
   partyId: string | null;
   constituency: string | null;
@@ -127,18 +130,6 @@ export function AdminPoliticianForm({ politician, allParties }: { politician: Po
       <input type="hidden" name="chatbaseId" value={chatbaseId} />
 
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Navn</label>
-        <input id="name" name="name" type="text" required defaultValue={politician?.name ?? ""}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-      </div>
-
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-        <input id="email" name="email" type="email" required defaultValue={politician?.email ?? ""}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-      </div>
-
-      <div>
         <label htmlFor="partyId" className="block text-sm font-medium text-gray-700 mb-1">Parti</label>
         <select id="partyId" name="partyId" required defaultValue={politician?.partyId ?? ""}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
@@ -147,6 +138,27 @@ export function AdminPoliticianForm({ politician, allParties }: { politician: Po
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Navn</label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <input name="firstName" type="text" required placeholder="Fornavn(e)"
+            defaultValue={politician?.firstName ?? ""}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <input name="middleName" type="text" placeholder="Mellemnavn(e)"
+            defaultValue={politician?.middleName ?? ""}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <input name="lastName" type="text" required placeholder="Efternavn(e)"
+            defaultValue={politician?.lastName ?? ""}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+        <input id="email" name="email" type="email" required defaultValue={politician?.email ?? ""}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
       </div>
 
       <div>
