@@ -35,7 +35,7 @@ export function UpvoteModal({
   const systemColors = useSystemColors();
   const colorError = systemColors.error;
   const bgColor = partyColor || "#3B82F6";
-  const nameColor = partyColorDark || systemColors.text0;
+  const submitButtonLabelColor = partyColorDark || systemColors.text0;
   const lightColor = partyColorLight || "#93C5FD";
 
   const [phase, setPhase] = useState<ModalPhase>("form");
@@ -104,7 +104,7 @@ export function UpvoteModal({
   const canClose = phase !== "pending";
 
   const inputStyle: React.CSSProperties = {
-    color: nameColor,
+    color: submitButtonLabelColor,
     backgroundColor: "#ffffff",
     borderRadius: 9999,
     padding: "8px 20px",
@@ -128,13 +128,13 @@ export function UpvoteModal({
       <div className="fixed inset-0 z-[61] flex items-start justify-center px-4 py-8 overflow-y-auto">
         <div
           className="relative w-full max-w-md p-6 space-y-3 my-auto"
-          style={{ backgroundColor: bgColor, fontFamily: "var(--font-figtree)", fontWeight: 500, borderRadius: 10 }}
+          style={{ backgroundColor: "var(--system-bg2)", fontFamily: "var(--font-figtree)", fontWeight: 500, borderRadius: 10 }}
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
         >
           <style>{`
-            .upvote-modal-field::placeholder { color: var(--field-placeholder-color, ${nameColor}); opacity: var(--field-placeholder-opacity, 0.75); }
+            .upvote-modal-field::placeholder { color: var(--field-placeholder-color, ${submitButtonLabelColor}); opacity: var(--field-placeholder-opacity, 0.75); }
             .upvote-modal-age::-webkit-inner-spin-button,
             .upvote-modal-age::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
             .upvote-modal-age { -moz-appearance: textfield; }
@@ -142,8 +142,8 @@ export function UpvoteModal({
 
           {/* Title + close button row */}
           <div className="relative" style={{ marginBottom: 25 }}>
-            <p className={`text-lg flex items-center gap-2 ${phase === "emailSent" ? "justify-center" : ""}`} style={{ color: nameColor, fontWeight: 600 }}>
-              {phase !== "emailSent" && <FontAwesomeIcon icon={faArrowUpDuotone} style={{ color: nameColor }} />}
+            <p className={`text-lg flex items-center gap-2 ${phase === "emailSent" ? "justify-center" : ""}`} style={{ color: submitButtonLabelColor, fontWeight: 600 }}>
+              {phase !== "emailSent" && <FontAwesomeIcon icon={faArrowUpDuotone} style={{ color: submitButtonLabelColor }} />}
               {phase === "emailSent" ? "Tjek din e-mail" : "Upvote spørgsmål"}
             </p>
             {canClose && (
@@ -151,7 +151,7 @@ export function UpvoteModal({
                 type="button"
                 onClick={onClose}
                 className="absolute top-1/2 right-0 -translate-y-1/2 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-                style={{ width: 24, height: 24, backgroundColor: `${nameColor}80` }}
+                style={{ width: 24, height: 24, backgroundColor: `${submitButtonLabelColor}80` }}
                 aria-label="Luk"
               >
                 <FontAwesomeIcon icon={faXmark} style={{ color: lightColor, fontSize: "13.5px" }} />
@@ -161,19 +161,19 @@ export function UpvoteModal({
 
           {phase === "emailSent" ? (
             <div className="text-center space-y-4 py-4">
-              <FontAwesomeIcon icon={faEnvelopeCircleCheck} style={{ color: nameColor, fontSize: 48 }} />
-              <p className="text-base" style={{ color: nameColor }}>
+              <FontAwesomeIcon icon={faEnvelopeCircleCheck} style={{ color: submitButtonLabelColor, fontSize: 48 }} />
+              <p className="text-base" style={{ color: submitButtonLabelColor }}>
                 Vi har sendt dig en bekræftelses-email. Klik på linket i emailen for at registrere din upvote.
               </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-3" noValidate>
               {/* Question text */}
-              <p style={{ color: nameColor, fontSize: "32px", lineHeight: 1.2, fontWeight: 500 }}>
+              <p style={{ color: submitButtonLabelColor, fontSize: "32px", lineHeight: 1.2, fontWeight: 500 }}>
                 {questionText}
               </p>
 
-              <p className="text-base" style={{ color: nameColor, opacity: 0.5 }}>
+              <p className="text-base" style={{ color: submitButtonLabelColor, opacity: 0.5 }}>
                 Alder er valgfri
               </p>
 
@@ -191,7 +191,7 @@ export function UpvoteModal({
                   style={{
                     ...inputStyle,
                     flex: "75",
-                    "--field-placeholder-color": fieldErrors.firstName ? colorError : nameColor,
+                    "--field-placeholder-color": fieldErrors.firstName ? colorError : submitButtonLabelColor,
                     "--field-placeholder-opacity": fieldErrors.firstName ? "1" : "0.75",
                   } as React.CSSProperties}
                 />
@@ -221,8 +221,8 @@ export function UpvoteModal({
                   className="upvote-modal-field"
                   style={{
                     ...inputStyle,
-                    color: fieldErrors.emailInvalid ? colorError : nameColor,
-                    "--field-placeholder-color": fieldErrors.email ? colorError : nameColor,
+                    color: fieldErrors.emailInvalid ? colorError : submitButtonLabelColor,
+                    "--field-placeholder-color": fieldErrors.email ? colorError : submitButtonLabelColor,
                     "--field-placeholder-opacity": fieldErrors.email ? "1" : "0.75",
                   } as React.CSSProperties}
                 />
@@ -246,7 +246,7 @@ export function UpvoteModal({
                 type="submit"
                 disabled={phase === "pending"}
                 className="w-full text-base px-5 py-2.5 rounded-full cursor-pointer disabled:opacity-50 transition-opacity"
-                style={{ backgroundColor: nameColor, color: "#ffffff", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+                style={{ backgroundColor: bgColor, color: "var(--system-text0-contrast)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
               >
                 {phase === "pending" ? "Sender..." : "Upvote"}
               </button>
