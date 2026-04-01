@@ -31,6 +31,12 @@ type PoliticianTopBarProps = {
   mode?: "citizen" | "dashboard";
   citizenPageUrl?: string | null;
   isImpersonating?: boolean;
+  topbarNameColor?: string | null;
+  topbarNameOpacity?: number | null;
+  topbarPartyColor?: string | null;
+  topbarPartyOpacity?: number | null;
+  topbarConstituencyColor?: string | null;
+  topbarConstituencyOpacity?: number | null;
 };
 
 export function PoliticianTopBar({
@@ -51,6 +57,12 @@ export function PoliticianTopBar({
   mode = "citizen",
   citizenPageUrl,
   isImpersonating,
+  topbarNameColor: topbarNameColorKey,
+  topbarNameOpacity,
+  topbarPartyColor: topbarPartyColorKey,
+  topbarPartyOpacity,
+  topbarConstituencyColor: topbarConstituencyColorKey,
+  topbarConstituencyOpacity,
 }: PoliticianTopBarProps) {
   const isDashboard = mode === "dashboard";
   const canHover = useRef(false);
@@ -76,9 +88,20 @@ export function PoliticianTopBar({
   }, [impersonateArmed]);
   const { error: colorError, errorContrast } = useSystemColors();
   const bgColor = partyColor ?? "#3B82F6";
-  const nameColor = partyColorDark ?? "#1E3A5F";
-  const partyTextColor = partyColorLight ?? "#93C5FD";
-  const constituencyColor = partyColorDark ?? "#1E3A5F";
+  // Resolve topbar text colors: key → party color, hex → direct, null → default
+  const resolveColor = (key: string | null | undefined, fallback: string) => {
+    if (!key) return fallback;
+    if (key === "primary") return partyColor || fallback;
+    if (key === "light") return partyColorLight || fallback;
+    if (key === "dark") return partyColorDark || fallback;
+    return key; // hex value
+  };
+  const nameColor = resolveColor(topbarNameColorKey, partyColorDark ?? "#1E3A5F");
+  const partyTextColor = resolveColor(topbarPartyColorKey, partyColorLight ?? "#93C5FD");
+  const constituencyColor = resolveColor(topbarConstituencyColorKey, partyColorDark ?? "#1E3A5F");
+  const nameOpacity = (topbarNameOpacity ?? 100) / 100;
+  const partyTextOpacity = (topbarPartyOpacity ?? 100) / 100;
+  const constituencyOpacity = (topbarConstituencyOpacity ?? 100) / 100;
 
   // Form interaction state
   const [formActive, setFormActive] = useState(false);
@@ -287,13 +310,13 @@ export function PoliticianTopBar({
           <div className={`min-w-0 ml-[3px] ${!isDashboard && formActive && !namesRevealed ? "sm:hidden" : ""}`} style={namesRevealed === "fading" ? { opacity: 0 } : namesRevealed === true ? { opacity: 1, transition: "opacity 300ms ease-out" } : undefined}>
             <p
               className="text-base leading-tight truncate"
-              style={{ color: nameColor }}
+              style={{ color: nameColor, opacity: isDashboard ? 1 : nameOpacity }}
             >
               {isDashboard ? "Dashboard" : politicianName}
             </p>
             <p
               className="text-base leading-tight truncate"
-              style={{ color: partyTextColor }}
+              style={{ color: isDashboard ? partyTextColor : partyTextColor, opacity: isDashboard ? 1 : partyTextOpacity }}
             >
               {isDashboard ? politicianName : partyName}
             </p>
@@ -465,7 +488,7 @@ export function PoliticianTopBar({
               {constituency && (
                 <span
                   className="text-base"
-                  style={{ color: constituencyColor, opacity: 0.5 }}
+                  style={{ color: constituencyColor, opacity: constituencyOpacity }}
                 >
                   {constituency}
                 </span>

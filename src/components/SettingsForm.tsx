@@ -6,6 +6,9 @@ import { updateSettings } from "@/app/politiker/dashboard/actions";
 
 type PoliticianData = {
   name: string;
+  firstName: string | null;
+  middleName: string | null;
+  lastName: string | null;
   partyId: string | null;
   email: string;
   slug: string;
@@ -124,17 +127,38 @@ export function SettingsForm({
       <input type="hidden" name="heroLine2Color" value={heroLine2Color} />
 
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-          Dit navn
-        </label>
-        <input
-          id="name"
-          name="name"
-          type="text"
-          required
-          defaultValue={politician?.name ?? googleName}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
+        <label className="block text-sm font-medium text-gray-700 mb-1">Navn</label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div>
+            <input
+              name="firstName"
+              type="text"
+              required
+              placeholder="Fornavn(e)"
+              defaultValue={politician?.firstName ?? googleName.split(" ")[0] ?? ""}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <input
+              name="middleName"
+              type="text"
+              placeholder="Mellemnavn(e)"
+              defaultValue={politician?.middleName ?? ""}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <input
+              name="lastName"
+              type="text"
+              required
+              placeholder="Efternavn(e)"
+              defaultValue={politician?.lastName ?? (googleName.split(" ").length > 1 ? googleName.split(" ").slice(-1)[0] : "") ?? ""}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
       </div>
       <div>
         <label htmlFor="partyId" className="block text-sm font-medium text-gray-700 mb-1">
@@ -466,5 +490,86 @@ export function SettingsForm({
         {pending ? "Gemmer..." : saved ? "Gemt" : "Gem indstillinger"}
       </button>
     </form>
+  );
+}
+
+function TopbarColorPicker({
+  label,
+  colorState,
+  setColor,
+  opacityState,
+  setOpacity,
+  allParties,
+  partyId,
+}: {
+  label: string;
+  colorState: string;
+  setColor: (v: string) => void;
+  opacityState: number;
+  setOpacity: (v: number) => void;
+  allParties: PartyOption[];
+  partyId: string;
+}) {
+  const selectedParty = allParties.find((p) => p.id === partyId);
+  const partyColorOptions = selectedParty
+    ? [
+        { key: "primary", hex: selectedParty.color },
+        { key: "light", hex: selectedParty.colorLight },
+        { key: "dark", hex: selectedParty.colorDark },
+      ].filter((c) => c.hex) as { key: string; hex: string }[]
+    : [];
+
+  const isCustom = colorState && !["primary", "light", "dark", ""].includes(colorState);
+
+  return (
+    <div className="mt-2">
+      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+      <div className="flex items-center gap-2">
+        {partyColorOptions.map(({ key, hex }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setColor(colorState === key ? "" : key)}
+            className={`w-7 h-7 rounded-full border-2 cursor-pointer transition ${
+              colorState === key ? "border-gray-900 scale-110" : "border-gray-300 hover:border-gray-400"
+            }`}
+            style={{ backgroundColor: hex }}
+            title={key}
+          />
+        ))}
+        <div className="relative">
+          <input
+            type="color"
+            value={isCustom ? colorState : "#000000"}
+            onChange={(e) => setColor(e.target.value)}
+            className={`w-7 h-7 rounded-full border-2 cursor-pointer p-0 ${
+              isCustom ? "border-gray-900 scale-110" : "border-gray-300 hover:border-gray-400"
+            }`}
+            title="Custom farve"
+          />
+        </div>
+        {colorState && (
+          <button
+            type="button"
+            onClick={() => setColor("")}
+            className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+          >
+            Nulstil
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-2 mt-1">
+        <label className="text-xs text-gray-400">Opacity</label>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={opacityState}
+          onChange={(e) => setOpacity(parseInt(e.target.value))}
+          className="flex-1 h-1 cursor-pointer"
+        />
+        <span className="text-xs text-gray-400 w-8 text-right">{opacityState}%</span>
+      </div>
+    </div>
   );
 }

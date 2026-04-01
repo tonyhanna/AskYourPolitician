@@ -123,7 +123,7 @@ export default async function BorgerFeed({
   }
 
   // Prepare data for filter component
-  const politicianFirstName = politician.name.split(" ")[0];
+  const politicianFirstName = politician.firstName || politician.name.split(" ")[0];
 
   // Collect all tags: from questions AND from politician's defined causes
   const allTagsSet = new Set<string>();
@@ -202,6 +202,12 @@ export default async function BorgerFeed({
         partyColor={party?.color ?? null}
         partyColorDark={party?.colorDark ?? null}
         partyColorLight={party?.colorLight ?? null}
+        topbarNameColor={party?.topbarNameColor ?? null}
+        topbarNameOpacity={party?.topbarNameOpacity ?? null}
+        topbarPartyColor={party?.topbarPartyColor ?? null}
+        topbarPartyOpacity={party?.topbarPartyOpacity ?? null}
+        topbarConstituencyColor={party?.topbarConstituencyColor ?? null}
+        topbarConstituencyOpacity={party?.topbarConstituencyOpacity ?? null}
         politicianId={politician.id}
         partySlug={partySlug}
         politicianSlug={politicianSlug}

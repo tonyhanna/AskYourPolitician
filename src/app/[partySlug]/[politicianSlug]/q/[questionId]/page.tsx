@@ -62,7 +62,7 @@ async function getQuestionData(partySlug: string, politicianSlug: string, questi
   }
 
   // Fetch party data for TopBar
-  let party: { color: string | null; colorDark: string | null; colorLight: string | null; logoUrl: string | null } | null = null;
+  let party: { color: string | null; colorDark: string | null; colorLight: string | null; logoUrl: string | null; topbarNameColor: string | null; topbarNameOpacity: number | null; topbarPartyColor: string | null; topbarPartyOpacity: number | null; topbarConstituencyColor: string | null; topbarConstituencyOpacity: number | null } | null = null;
   if (politician.partyId) {
     const [p] = await db
       .select({
@@ -70,6 +70,12 @@ async function getQuestionData(partySlug: string, politicianSlug: string, questi
         colorDark: parties.colorDark,
         colorLight: parties.colorLight,
         logoUrl: parties.logoUrl,
+        topbarNameColor: parties.topbarNameColor,
+        topbarNameOpacity: parties.topbarNameOpacity,
+        topbarPartyColor: parties.topbarPartyColor,
+        topbarPartyOpacity: parties.topbarPartyOpacity,
+        topbarConstituencyColor: parties.topbarConstituencyColor,
+        topbarConstituencyOpacity: parties.topbarConstituencyOpacity,
       })
       .from(parties)
       .where(eq(parties.id, politician.partyId))
@@ -157,6 +163,12 @@ export default async function QuestionLandingPage({ params }: Props) {
         partyColor={partyColor}
         partyColorDark={partyColorDark}
         partyColorLight={party?.colorLight ?? null}
+        topbarNameColor={party?.topbarNameColor ?? null}
+        topbarNameOpacity={party?.topbarNameOpacity ?? null}
+        topbarPartyColor={party?.topbarPartyColor ?? null}
+        topbarPartyOpacity={party?.topbarPartyOpacity ?? null}
+        topbarConstituencyColor={party?.topbarConstituencyColor ?? null}
+        topbarConstituencyOpacity={party?.topbarConstituencyOpacity ?? null}
         politicianId={politician.id}
         partySlug={partySlug}
         politicianSlug={politicianSlug}

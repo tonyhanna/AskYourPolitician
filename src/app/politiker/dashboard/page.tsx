@@ -51,7 +51,7 @@ export default async function Dashboard() {
 
   // Fetch all parties for dropdown
   const allParties = await db
-    .select({ id: parties.id, name: parties.name, color: parties.color, colorLight: parties.colorLight, colorDark: parties.colorDark, logoUrl: parties.logoUrl })
+    .select({ id: parties.id, name: parties.name, color: parties.color, colorLight: parties.colorLight, colorDark: parties.colorDark, logoUrl: parties.logoUrl, topbarNameColor: parties.topbarNameColor, topbarNameOpacity: parties.topbarNameOpacity, topbarPartyColor: parties.topbarPartyColor, topbarPartyOpacity: parties.topbarPartyOpacity, topbarConstituencyColor: parties.topbarConstituencyColor, topbarConstituencyOpacity: parties.topbarConstituencyOpacity })
     .from(parties)
     .orderBy(parties.name);
 
@@ -250,6 +250,12 @@ export default async function Dashboard() {
           hasSession={true}
           citizenPageUrl={uniqueUrl}
           isImpersonating={!!impersonatingId}
+          topbarNameColor={politicianParty.topbarNameColor ?? null}
+          topbarNameOpacity={politicianParty.topbarNameOpacity ?? null}
+          topbarPartyColor={politicianParty.topbarPartyColor ?? null}
+          topbarPartyOpacity={politicianParty.topbarPartyOpacity ?? null}
+          topbarConstituencyColor={politicianParty.topbarConstituencyColor ?? null}
+          topbarConstituencyOpacity={politicianParty.topbarConstituencyOpacity ?? null}
         />
       )}
     <main className="flex-1 w-full px-[15px] pt-[15px]" style={{ backgroundColor: "var(--system-bg0)" }}>
@@ -307,6 +313,9 @@ export default async function Dashboard() {
               <SettingsForm
                 politician={{
                   name: politician.name,
+                  firstName: politician.firstName,
+                  middleName: politician.middleName,
+                  lastName: politician.lastName,
                   partyId: politician.partyId,
                   email: politician.email,
                   slug: politician.slug,

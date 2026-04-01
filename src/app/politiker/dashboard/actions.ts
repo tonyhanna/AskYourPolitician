@@ -54,7 +54,10 @@ export async function updateSettings(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
-  const name = formData.get("name") as string;
+  const firstName = (formData.get("firstName") as string)?.trim() || "";
+  const middleName = (formData.get("middleName") as string)?.trim() || null;
+  const lastName = (formData.get("lastName") as string)?.trim() || "";
+  const name = [firstName, middleName, lastName].filter(Boolean).join(" ");
   const partyId = formData.get("partyId") as string;
   const email = formData.get("email") as string;
   const profilePhotoUrl = (formData.get("profilePhotoUrl") as string) || null;
@@ -68,8 +71,7 @@ export async function updateSettings(formData: FormData) {
   const heroLine2Color = (formData.get("heroLine2Color") as string)?.trim() || null;
   const chatbaseId = (formData.get("chatbaseId") as string)?.trim() || null;
   const defaultUpvoteGoal = parseInt(formData.get("defaultUpvoteGoal") as string) || 1000;
-
-  if (!name || !partyId || !email) throw new Error("Navn, parti og email er påkrævet");
+  if (!firstName || !lastName || !partyId || !email) throw new Error("Fornavn, efternavn, parti og email er påkrævet");
 
   // Look up party record
   const [partyRecord] = await db
@@ -101,6 +103,9 @@ export async function updateSettings(formData: FormData) {
       .update(politicians)
       .set({
         name,
+        firstName,
+        middleName,
+        lastName,
         slug,
         party: partyRecord.name,
         partySlug: partyRecord.slug,

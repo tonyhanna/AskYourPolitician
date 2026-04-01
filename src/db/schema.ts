@@ -86,6 +86,12 @@ export const parties = pgTable("parties", {
   color: varchar("color", { length: 7 }),
   colorLight: varchar("color_light", { length: 7 }),
   colorDark: varchar("color_dark", { length: 7 }),
+  topbarNameColor: varchar("topbar_name_color", { length: 20 }),
+  topbarNameOpacity: integer("topbar_name_opacity"),
+  topbarPartyColor: varchar("topbar_party_color", { length: 20 }),
+  topbarPartyOpacity: integer("topbar_party_opacity"),
+  topbarConstituencyColor: varchar("topbar_constituency_color", { length: 20 }),
+  topbarConstituencyOpacity: integer("topbar_constituency_opacity"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -97,6 +103,9 @@ export const politicians = pgTable("politicians", {
     .references(() => users.id, { onDelete: "cascade" })
     .unique(),
   name: varchar("name", { length: 255 }).notNull(),
+  firstName: varchar("first_name", { length: 255 }),
+  middleName: varchar("middle_name", { length: 255 }),
+  lastName: varchar("last_name", { length: 255 }),
   slug: varchar("slug", { length: 255 }).notNull(),
   party: varchar("party", { length: 255 }).notNull(),
   partySlug: varchar("party_slug", { length: 255 }).notNull(),

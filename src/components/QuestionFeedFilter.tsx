@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark, faCopy } from "@fortawesome/free-solid-svg-icons";
-import { faShare, faFire, faStars, faCommentDots, faCommentQuestion } from "@fortawesome/pro-duotone-svg-icons";
+import { faShare, faFire, faStarOfLife, faHeadSideSpeak, faBoxBallot } from "@fortawesome/pro-duotone-svg-icons";
 import { PlayableMediaCard } from "./PlayableMediaCard";
 import { AnsweredQuestionCard } from "./AnsweredQuestionCard";
 import { useShareCopy } from "@/hooks/useShareCopy";
@@ -181,9 +181,9 @@ export function QuestionFeedFilter({
   // Build nav items dynamically based on which sections have content
   const sectionNavItems = useMemo(() => {
     const items: PillNavItem[] = [];
-    if (pinnedQuestions.length > 0) items.push({ id: "pinned", label: "Udvalgt", icon: faStars });
-    if (answeredQuestions.length > 0) items.push({ id: "answered", label: "Besvaret", icon: faCommentDots, swapIconOpacity: true });
-    if (filteredQuestions.length > 0) items.push({ id: "unanswered", label: "Ubesvaret", icon: faCommentQuestion, swapIconOpacity: true });
+    if (pinnedQuestions.length > 0) items.push({ id: "pinned", label: "Udvalgt", icon: faStarOfLife, swapIconOpacity: true });
+    if (answeredQuestions.length > 0) items.push({ id: "answered", label: "Besvaret", icon: faHeadSideSpeak, swapIconOpacity: true });
+    if (filteredQuestions.length > 0) items.push({ id: "unanswered", label: "Ubesvaret", icon: faBoxBallot });
     return items;
   }, [pinnedQuestions.length, answeredQuestions.length, filteredQuestions.length]);
 
@@ -321,7 +321,7 @@ export function QuestionFeedFilter({
       {/* Answered questions grid */}
       {answeredQuestions.length > 0 && (
         <div id="section-answered" style={{ scrollMarginTop: 120 }}>
-          <h1 style={{ fontSize: "clamp(33px, 5vw, 41px)", fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text3)", marginBottom: 16 }}>Besvaret</h1>
+          <h1 style={{ fontSize: "clamp(33px, 5vw, 41px)", fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text3)", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}><FontAwesomeIcon icon={faHeadSideSpeak} swapOpacity style={{ fontSize: "clamp(26px, 4vw, 33px)" }} />Svar fra {politicianFirstName}</h1>
         </div>
       )}
       {answeredQuestions.length > 0 && (
@@ -348,7 +348,7 @@ export function QuestionFeedFilter({
       {/* Unanswered questions */}
       {filteredQuestions.length > 0 && (
         <div id="section-unanswered" style={{ scrollMarginTop: 120 }}>
-          <h1 style={{ fontSize: "clamp(33px, 5vw, 41px)", fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text3)", marginBottom: 16 }}>Ubesvaret: Til upvote</h1>
+          <h1 style={{ fontSize: "clamp(33px, 5vw, 41px)", fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text3)", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}><FontAwesomeIcon icon={faBoxBallot} style={{ fontSize: "clamp(26px, 4vw, 33px)" }} />Spørgsmål til upvote</h1>
         </div>
       )}
       {filteredQuestions.length > 0 ? (
