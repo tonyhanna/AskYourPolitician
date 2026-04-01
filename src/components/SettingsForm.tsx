@@ -160,27 +160,8 @@ export function SettingsForm({
           </div>
         </div>
       </div>
-      <div>
-        <label htmlFor="partyId" className="block text-sm font-medium text-gray-700 mb-1">
-          Parti
-        </label>
-        {allParties.length > 0 ? (
-          <select
-            id="partyId"
-            name="partyId"
-            required
-            defaultValue={politician?.partyId ?? ""}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="" disabled>Vælg parti...</option>
-            {allParties.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        ) : (
-          <p className="text-sm text-gray-500">Ingen partier oprettet endnu. Kontakt admin.</p>
-        )}
-      </div>
+      {/* Party is managed by admin only — pass as hidden field */}
+      <input type="hidden" name="partyId" value={politician?.partyId ?? ""} />
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
           E-mail
