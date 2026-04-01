@@ -409,7 +409,7 @@ export function PoliticianTopBar({
                 style={{ width: 40, height: 40, backgroundColor: "var(--system-form-bg, #FF0000)" }}
                 aria-label="Foreslå et spørgsmål"
               >
-                <FontAwesomeIcon icon={faCommentPlus} style={{ color: pd, fontSize: 20 }} />
+                <FontAwesomeIcon icon={faCommentPlus} style={{ color: "var(--system-icon0, #FF0000)", fontSize: 20 }} />
               </button>
             ) : null}
           </div>

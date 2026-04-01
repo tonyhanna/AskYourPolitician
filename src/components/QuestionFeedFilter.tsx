@@ -424,10 +424,10 @@ function PinnedQuestionCard({
             style={{
               fontSize: "clamp(28px, 8vw, 40px)",
               lineHeight: 1.3,
-              color: "#0E412E",
+              color: "var(--party-light, #FF0000)",
               fontFamily: "var(--font-figtree)",
               fontWeight: 400,
-              backgroundColor: "#ECF5DC",
+              backgroundColor: "var(--party-dark, #FF0000)",
               boxDecorationBreak: "clone",
               WebkitBoxDecorationBreak: "clone",
               padding: "2px 8px",
@@ -461,26 +461,26 @@ function PinnedQuestionCard({
         <div className="flex items-center gap-2 py-[20px]">
           <button
             onClick={handleShare}
-            className="hover:opacity-70 cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative"
+            className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative"
             style={{
               height: 24,
               width: 24,
-              backgroundColor: "var(--party-primary)",
+              backgroundColor: "var(--party-primary, #FF0000)",
             }}
             aria-label="Del"
           >
             <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 0 : 1, transition: "opacity 300ms ease" }}>
-              <FontAwesomeIcon icon={faShare} style={{ color: "var(--party-dark)", fontSize: "13.5px" }} />
+              <FontAwesomeIcon icon={faShare} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "13.5px" }} />
             </span>
             <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 1 : 0, transition: "opacity 300ms ease" }}>
-              <FontAwesomeIcon icon={faCopy} style={{ color: "var(--party-dark)", fontSize: "13.5px" }} />
+              <FontAwesomeIcon icon={faCopy} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "13.5px" }} />
             </span>
           </button>
           {question.tags.map((tag) => (
             <span
               key={tag}
               className="text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1"
-              style={{ backgroundColor: "#ECF5DC", color: "#0E412E", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+              style={{ backgroundColor: "var(--party-dark, #FF0000)", color: "var(--party-light, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
             >
               {tag}
             </span>
@@ -493,7 +493,7 @@ function PinnedQuestionCard({
         <PlayableMediaCard
           question={question}
 
-          bufferingColor="var(--party-light)"
+          bufferingColor="var(--party-light, #FF0000)"
           playingId={playingId}
           setPlayingId={setPlayingId}
           className="w-full lg:w-[337px] lg:mr-[9px]"
@@ -698,7 +698,7 @@ function UnansweredQuestionCard({
           style={{
             fontSize: 22,
             lineHeight: 1.3,
-            color: "var(--system-text0, #000000)",
+            color: "var(--system-text0, #FF0000)",
             fontFamily: "var(--font-figtree)",
             fontWeight: 500,
             textDecoration: "none",
@@ -730,26 +730,26 @@ function UnansweredQuestionCard({
         <div className="flex items-center gap-2 mt-auto" style={{ paddingTop: 20 }}>
           <button
             onClick={handleShare}
-            className="hover:opacity-70 cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative"
+            className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative"
             style={{
               height: 24,
               width: 24,
-              backgroundColor: "var(--party-primary)",
+              backgroundColor: "var(--party-primary, #FF0000)",
             }}
             aria-label="Del"
           >
             <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 0 : 1, transition: "opacity 300ms ease" }}>
-              <FontAwesomeIcon icon={faShare} style={{ color: "var(--party-dark)", fontSize: "13.5px" }} />
+              <FontAwesomeIcon icon={faShare} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "13.5px" }} />
             </span>
             <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 1 : 0, transition: "opacity 300ms ease" }}>
-              <FontAwesomeIcon icon={faCopy} style={{ color: "var(--party-dark)", fontSize: "13.5px" }} />
+              <FontAwesomeIcon icon={faCopy} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "13.5px" }} />
             </span>
           </button>
           {question.tags.map((tag) => (
             <span
               key={tag}
               className="text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1"
-              style={{ backgroundColor: "#ECF5DC", color: "#0E412E", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+              style={{ backgroundColor: "var(--party-dark, #FF0000)", color: "var(--party-light, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
             >
               {tag}
             </span>
