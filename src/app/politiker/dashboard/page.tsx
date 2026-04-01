@@ -232,7 +232,7 @@ export default async function Dashboard() {
       )}
       {/* Client-side: toggle body bg based on scroll (party color at top, system bg when scrolled) */}
       {partyColor && <ThemeColorSetter color={partyColor} />}
-      <div className="min-h-dvh flex flex-col">
+      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": politicianParty?.color || "#000000", "--party-dark": politicianParty?.colorDark || "#000000", "--party-light": politicianParty?.colorLight || "#ffffff" } as React.CSSProperties}>
       {politician && politicianParty && (
         <PoliticianTopBar
           mode="dashboard"
@@ -241,9 +241,6 @@ export default async function Dashboard() {
           profilePhotoUrl={politician.profilePhotoUrl}
           partyLogoUrl={politicianParty.logoUrl ?? null}
           constituency={politician.constituency}
-          partyColor={partyColor}
-          partyColorDark={politicianParty.colorDark ?? null}
-          partyColorLight={politicianParty.colorLight ?? null}
           politicianId={politician.id}
           partySlug={politician.partySlug}
           politicianSlug={politician.slug}

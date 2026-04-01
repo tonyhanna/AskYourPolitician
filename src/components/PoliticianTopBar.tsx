@@ -19,9 +19,6 @@ type PoliticianTopBarProps = {
   profilePhotoUrl: string | null;
   partyLogoUrl: string | null;
   constituency: string | null;
-  partyColor: string | null;
-  partyColorDark: string | null;
-  partyColorLight: string | null;
   politicianId: string;
   partySlug: string;
   politicianSlug: string;
@@ -45,9 +42,6 @@ export function PoliticianTopBar({
   profilePhotoUrl,
   partyLogoUrl,
   constituency,
-  partyColor,
-  partyColorDark,
-  partyColorLight,
   politicianId,
   partySlug,
   politicianSlug,
@@ -87,20 +81,21 @@ export function PoliticianTopBar({
     };
   }, [impersonateArmed]);
   const { error: colorError, errorContrast } = useSystemColors();
-  const bgColor = partyColor ?? "#3B82F6";
-  // Resolve topbar text colors: key → party color, hex → direct, null → default
+  // Party colors from CSS variables (set by page wrapper)
+  const pp = "var(--party-primary)";
+  const pd = "var(--party-dark)";
+  const pl = "var(--party-light)";
+  // Resolve topbar text color overrides: key → party var, hex → direct, null → default
   const resolveColor = (key: string | null | undefined, fallback: string) => {
     if (!key) return fallback;
-    if (key === "primary") return partyColor || fallback;
-    if (key === "light") return partyColorLight || fallback;
-    if (key === "dark") return partyColorDark || fallback;
+    if (key === "primary") return pp;
+    if (key === "light") return pl;
+    if (key === "dark") return pd;
     return key; // hex value
   };
-  const nameColor = resolveColor(topbarNameColorKey, partyColorDark ?? "#1E3A5F");
-  const partyTextColor = resolveColor(topbarPartyColorKey, partyColorLight ?? "#93C5FD");
-  const constituencyColor = resolveColor(topbarConstituencyColorKey, partyColorDark ?? "#1E3A5F");
-  // Form elements (on white bg) always use partyColorDark for contrast
-  const formColor = partyColorDark ?? "#1E3A5F";
+  const nameColor = resolveColor(topbarNameColorKey, pd);
+  const partyTextColor = resolveColor(topbarPartyColorKey, pl);
+  const constituencyColor = resolveColor(topbarConstituencyColorKey, pd);
   const nameOpacity = (topbarNameOpacity ?? 100) / 100;
   const partyTextOpacity = (topbarPartyOpacity ?? 100) / 100;
   const constituencyOpacity = (topbarConstituencyOpacity ?? 100) / 100;
@@ -252,7 +247,7 @@ export function PoliticianTopBar({
     <div
       ref={containerRef}
       className="sticky top-0 z-50 cursor-pointer"
-      style={{ backgroundColor: bgColor, fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+      style={{ backgroundColor: pp, fontFamily: "var(--font-figtree)", fontWeight: 500 }}
       onClick={(e) => {
         const target = e.target as HTMLElement;
         if (target.closest("button, a, input, textarea")) return;
@@ -288,7 +283,7 @@ export function PoliticianTopBar({
                 <FontAwesomeIcon
                   icon={faArrowLeft}
                   className="relative"
-                  style={{ color: partyColorDark || "#1E3A5F", fontSize: 18 }}
+                  style={{ color: pd, fontSize: 18 }}
                 />
               </a>
             )}
@@ -346,7 +341,7 @@ export function PoliticianTopBar({
                     className="rounded-full flex items-center justify-center cursor-pointer relative"
                     style={{
                       width: 40, height: 40,
-                      backgroundColor: showXmark ? "var(--system-bg0)" : formColor,
+                      backgroundColor: showXmark ? "var(--system-bg0)" : pd,
                     }}
                     aria-label={impersonateArmed ? "Stop impersonering" : "Admin"}
                     onPointerEnter={() => { if (canHover.current) setImpersonateHover(true); }}
@@ -358,7 +353,7 @@ export function PoliticianTopBar({
                     <FontAwesomeIcon
                       icon={showXmark ? faXmark : faGlasses}
                       className="relative"
-                      style={{ color: showXmark ? errorContrast : (partyColorLight || "#93C5FD"), fontSize: 18 }}
+                      style={{ color: showXmark ? errorContrast : (pl), fontSize: 18 }}
                     />
                   </button>
                 );
@@ -369,12 +364,12 @@ export function PoliticianTopBar({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-full flex items-center justify-center"
-                  style={{ width: 40, height: 40, backgroundColor: partyColorLight || "#93C5FD" }}
+                  style={{ width: 40, height: 40, backgroundColor: pl }}
                   aria-label="Se borgerside"
                   onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.opacity = "0.5"; }}
                   onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.opacity = "1"; }}
                 >
-                  <FontAwesomeIcon icon={faArrowRight} className="transition-opacity" style={{ color: formColor, fontSize: 18 }} />
+                  <FontAwesomeIcon icon={faArrowRight} className="transition-opacity" style={{ color: pd, fontSize: 18 }} />
                 </a>
               )}
             </div>
@@ -396,7 +391,7 @@ export function PoliticianTopBar({
               >
                 <FontAwesomeIcon
                   icon={faInfo}
-                  style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }}
+                  style={{ color: pd, fontSize: "13.5px" }}
                 />
               </button>
             )}
@@ -404,11 +399,11 @@ export function PoliticianTopBar({
             {mailboxPhase && mailboxPhase !== "fadeIn" ? (
               <div
                 className="rounded-full flex items-center justify-center"
-                style={{ width: 40, height: 40, backgroundColor: partyColorDark || "#1E3A5F" }}
+                style={{ width: 40, height: 40, backgroundColor: pd }}
               >
                 <FontAwesomeIcon
                   icon={mailboxPhase === "flagUp" ? faMailboxFlagUp : faMailbox}
-                  style={{ color: partyColorLight || "#DBEAFE", fontSize: 20 }}
+                  style={{ color: pl, fontSize: 20 }}
                 />
               </div>
             ) : !success ? (
@@ -419,7 +414,7 @@ export function PoliticianTopBar({
                 style={{ width: 40, height: 40, backgroundColor: "#ffffff" }}
                 aria-label="Foreslå et spørgsmål"
               >
-                <FontAwesomeIcon icon={faCommentPlus} style={{ color: formColor, fontSize: 20 }} />
+                <FontAwesomeIcon icon={faCommentPlus} style={{ color: pd, fontSize: 20 }} />
               </button>
             ) : null}
           </div>
@@ -439,14 +434,14 @@ export function PoliticianTopBar({
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   className="topbar-suggest-input w-full bg-white rounded-full px-5 pr-10 py-2 text-base focus:outline-none"
-                  style={{ color: formColor, "--placeholder-color": formColor } as React.CSSProperties}
+                  style={{ color: pd, "--placeholder-color": pd } as React.CSSProperties}
                 />
                 {text.length > 0 && (
                   <button
                     type="button"
                     onClick={() => { setText(""); inputRef.current?.focus(); }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1 cursor-pointer opacity-40 hover:opacity-70 transition-opacity"
-                    style={{ color: formColor }}
+                    style={{ color: pd }}
                   >
                     <FontAwesomeIcon icon={faXmark} className="w-4 h-4" />
                   </button>
@@ -461,8 +456,8 @@ export function PoliticianTopBar({
                   className="group rounded-full whitespace-nowrap shrink-0 flex items-center justify-center cursor-pointer disabled:cursor-default text-base border-none"
                   style={{
                     ...(mailboxPhase
-                      ? { backgroundColor: partyColorDark || "#1E3A5F" }
-                      : { ...(hasSession ? { backgroundColor: formColor, color: "#ffffff" } : { backgroundColor: partyColorLight || "#93C5FD", color: formColor }) }),
+                      ? { backgroundColor: pd }
+                      : { ...(hasSession ? { backgroundColor: pd, color: "#ffffff" } : { backgroundColor: pl, color: pd }) }),
                     ...(pillSizeRef.current
                       ? { width: pillSizeRef.current.width, height: pillSizeRef.current.height }
                       : { paddingLeft: 20, paddingRight: 20, paddingTop: 8, paddingBottom: 8 }),
@@ -472,7 +467,7 @@ export function PoliticianTopBar({
                   {mailboxPhase ? (
                     <FontAwesomeIcon
                       icon={mailboxPhase === "flagUp" ? faMailboxFlagUp : faMailbox}
-                      style={{ color: partyColorLight || "#DBEAFE", fontSize: 20 }}
+                      style={{ color: pl, fontSize: 20 }}
                     />
                   ) : (
                     <span className={`transition-opacity ${pending ? "opacity-50" : "group-hover:opacity-50"}`}>
@@ -508,7 +503,7 @@ export function PoliticianTopBar({
                 >
                   <FontAwesomeIcon
                     icon={faInfo}
-                    style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }}
+                    style={{ color: pd, fontSize: "13.5px" }}
                   />
                 </button>
               )}
@@ -516,7 +511,7 @@ export function PoliticianTopBar({
                 type="button"
                 onClick={() => setFormActive(true)}
                 className="bg-white text-base px-5 py-2 rounded-full whitespace-nowrap cursor-pointer"
-                style={{ color: formColor, opacity: mailboxPhase === "fadeIn" ? 0 : 1, transition: mailboxPhase === null ? "opacity 300ms ease-out" : "none" }}
+                style={{ color: pd, opacity: mailboxPhase === "fadeIn" ? 0 : 1, transition: mailboxPhase === null ? "opacity 300ms ease-out" : "none" }}
               >
                 Foreslå et spørgsmål...
               </button>
@@ -540,9 +535,6 @@ export function PoliticianTopBar({
         politicianId={politicianId}
         politicianSlug={politicianSlug}
         partySlug={partySlug}
-        partyColor={partyColor}
-        partyColorDark={partyColorDark}
-        partyColorLight={partyColorLight}
         hasSession={hasSession}
         redirectPath={redirectPath}
         onSuccess={() => {

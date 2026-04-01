@@ -192,16 +192,13 @@ export default async function BorgerFeed({
       )}
       {/* Client-side: toggle body bg based on scroll (green at top, white when scrolled) */}
       {party?.color && <ThemeColorSetter color={party.color} />}
-      <div className="min-h-dvh flex flex-col">
+      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": party?.color || "#000000", "--party-dark": party?.colorDark || "#000000", "--party-light": party?.colorLight || "#ffffff" } as React.CSSProperties}>
       <PoliticianTopBar
         politicianName={politician.name}
         partyName={politician.party}
         profilePhotoUrl={politician.profilePhotoUrl}
         partyLogoUrl={party?.logoUrl ?? null}
         constituency={politician.constituency}
-        partyColor={party?.color ?? null}
-        partyColorDark={party?.colorDark ?? null}
-        partyColorLight={party?.colorLight ?? null}
         topbarNameColor={party?.topbarNameColor ?? null}
         topbarNameOpacity={party?.topbarNameOpacity ?? null}
         topbarPartyColor={party?.topbarPartyColor ?? null}

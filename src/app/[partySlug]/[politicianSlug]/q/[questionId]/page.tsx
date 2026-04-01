@@ -152,7 +152,7 @@ export default async function QuestionLandingPage({ params }: Props) {
 
       {partyColor && <ThemeColorSetter color={partyColor} />}
 
-      <div className="min-h-dvh flex flex-col" style={{ backgroundColor: "var(--system-bg0, #ffffff)" }}>
+      <div className="min-h-dvh flex flex-col" style={{ backgroundColor: "var(--system-bg0, #ffffff)", "--party-primary": partyColor || "#000000", "--party-dark": partyColorDark || "#000000", "--party-light": party?.colorLight || "#ffffff" } as React.CSSProperties}>
       {/* PoliticianTopBar */}
       <PoliticianTopBar
         politicianName={politician.name}
@@ -160,9 +160,6 @@ export default async function QuestionLandingPage({ params }: Props) {
         profilePhotoUrl={politician.profilePhotoUrl}
         partyLogoUrl={party?.logoUrl ?? null}
         constituency={politician.constituency}
-        partyColor={partyColor}
-        partyColorDark={partyColorDark}
-        partyColorLight={party?.colorLight ?? null}
         topbarNameColor={party?.topbarNameColor ?? null}
         topbarNameOpacity={party?.topbarNameOpacity ?? null}
         topbarPartyColor={party?.topbarPartyColor ?? null}
