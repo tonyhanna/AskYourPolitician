@@ -240,7 +240,7 @@ export function UpvoteModal({
                 type="submit"
                 disabled={phase === "pending"}
                 className="group w-full text-base px-5 py-2.5 rounded-full cursor-pointer disabled:opacity-50 transition-opacity"
-                style={{ backgroundColor: pp, color: "var(--system-text0-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+                style={{ backgroundColor: "var(--system-bg0-contrast, #FF0000)", color: "var(--system-text0-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
               >
                 <span className="group-hover:opacity-50 transition-opacity">{phase === "pending" ? "Sender..." : "Upvote"}</span>
               </button>
