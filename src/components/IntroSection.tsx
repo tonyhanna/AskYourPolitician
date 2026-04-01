@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { BannerHero } from "./BannerHero";
+import { useCanHover } from "./StickyPillNav";
 
 export function IntroSection({
   bannerUrl,
@@ -12,7 +13,6 @@ export function IntroSection({
   heroLine1Color,
   heroLine2,
   heroLine2Color,
-  dismissButtonColor,
   politicianSlug,
 }: {
   bannerUrl?: string | null;
@@ -21,10 +21,10 @@ export function IntroSection({
   heroLine1Color?: string | null;
   heroLine2?: string | null;
   heroLine2Color?: string | null;
-  dismissButtonColor?: string | null;
   politicianSlug: string;
 }) {
   const storageKey = `intro-dismissed:${politicianSlug}`;
+  const canHover = useCanHover();
   const [dismissed, setDismissed] = useState(true); // default true to avoid flash
   const [loaded, setLoaded] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -104,13 +104,15 @@ export function IntroSection({
         {/* Dismiss button */}
         <button
           onClick={dismiss}
-          className="absolute top-3 right-3 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-          style={{ width: 24, height: 24, backgroundColor: dismissButtonColor ? `${dismissButtonColor}80` : "rgba(0,0,0,0.5)", zIndex: 10 }}
+          className="absolute top-3 right-3 rounded-full flex items-center justify-center cursor-pointer"
+          style={{ width: 24, height: 24, backgroundColor: "var(--system-bg0, #FF0000)", zIndex: 10 }}
           aria-label="Luk banner"
+          onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-icon0, #FF0000)"; }}
+          onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-icon1, #FF0000)"; }}
         >
           <FontAwesomeIcon
             icon={faXmark}
-            style={{ color: "#ffffff", fontSize: "13.5px" }}
+            style={{ color: "var(--system-icon1, #FF0000)", fontSize: "13.5px" }}
           />
         </button>
       </div>

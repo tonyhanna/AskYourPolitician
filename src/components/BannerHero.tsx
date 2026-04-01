@@ -130,7 +130,7 @@ export function BannerHero({
                   style={{
                     fontFamily: "var(--font-figtree)",
                     fontWeight: 500,
-                    color: heroLine1Color || "#ffffff",
+                    color: heroLine1Color || "#FF0000",
                   }}
                 >
                   {heroLine1}
@@ -142,7 +142,7 @@ export function BannerHero({
                   style={{
                     fontFamily: "var(--font-figtree)",
                     fontWeight: 500,
-                    color: heroLine2Color || "#ffffff",
+                    color: heroLine2Color || "#FF0000",
                   }}
                 >
                   {heroLine2}

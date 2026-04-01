@@ -217,7 +217,6 @@ export default async function BorgerFeed({
         heroLine1Color={resolvedHeroLine1Color}
         heroLine2={politician.heroLine2}
         heroLine2Color={resolvedHeroLine2Color}
-        dismissButtonColor={party?.colorDark ?? null}
         politicianSlug={politicianSlug}
       />
       <main className="px-[15px] pt-[15px] pb-1 flex flex-col flex-1" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
