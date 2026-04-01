@@ -13,8 +13,6 @@ export function UpvoteButton({
   hasSession,
   partySlug,
   politicianSlug,
-  partyColor,
-  partyColorDark,
   onLoginUpvote,
 }: {
   questionId: string;
@@ -23,14 +21,12 @@ export function UpvoteButton({
   hasSession: boolean;
   partySlug: string;
   politicianSlug: string;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
   onLoginUpvote?: () => void;
 }) {
   const [pending, setPending] = useState(false);
 
   const pillClass = "inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full cursor-pointer transition hover:opacity-70";
-  const pillStyle = { backgroundColor: partyColor || "#3B82F6", color: "#ffffff" };
+  const pillStyle = { backgroundColor: "var(--party-primary)", color: "#ffffff" };
 
   if (isUpvoted) {
     return (

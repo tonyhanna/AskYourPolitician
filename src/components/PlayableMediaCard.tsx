@@ -16,8 +16,6 @@ type PlayableMediaCardProps = {
     muxAssetStatus?: string | null;
     muxMediaType?: string | null;
   };
-  partyColor?: string | null;
-  partyColorDark?: string | null;
   bufferingColor?: string | null;
   playingId?: string | null;
   setPlayingId?: (id: string | null) => void;
@@ -27,8 +25,6 @@ type PlayableMediaCardProps = {
 
 export function PlayableMediaCard({
   question,
-  partyColor,
-  partyColorDark,
   bufferingColor,
   playingId,
   setPlayingId,
@@ -260,8 +256,8 @@ export function PlayableMediaCard({
               transition: "opacity 300ms ease, transform 300ms ease",
             }}
           >
-            <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ backgroundColor: partyColor || "#00D564", opacity: isHovering ? 1 : 0.75 }} />
-            <FontAwesomeIcon icon={faPlay} className="relative" style={{ color: partyColorDark || "#0E412E", fontSize: 20, marginLeft: 2 }} />
+            <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ backgroundColor: "var(--party-primary)", opacity: isHovering ? 1 : 0.75 }} />
+            <FontAwesomeIcon icon={faPlay} className="relative" style={{ color: "var(--party-dark)", fontSize: 20, marginLeft: 2 }} />
           </div>
         </>
       )}

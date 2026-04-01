@@ -8,7 +8,7 @@ function isMobile() {
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
-export function CopyLinkButton({ url, title, compact = false, partyColor }: { url: string; title?: string; compact?: boolean; partyColor?: string | null }) {
+export function CopyLinkButton({ url, title, compact = false }: { url: string; title?: string; compact?: boolean }) {
   const [copied, setCopied] = useState(false);
 
   async function handleClick() {
@@ -42,7 +42,7 @@ export function CopyLinkButton({ url, title, compact = false, partyColor }: { ur
       <button
         onClick={handleClick}
         className="inline-flex items-center gap-1.5 text-xs py-1.5 pr-3 cursor-pointer transition hover:opacity-70"
-        style={{ color: partyColor || "#3B82F6" }}
+        style={{ color: "var(--party-primary)" }}
       >
         <FontAwesomeIcon icon={faCopy} className="text-xs" />
         {copied ? "Kopieret!" : "Del"}
@@ -54,7 +54,7 @@ export function CopyLinkButton({ url, title, compact = false, partyColor }: { ur
     <button
       onClick={handleClick}
       className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full cursor-pointer transition hover:opacity-70"
-      style={{ backgroundColor: "#E8E7E5", color: partyColor || "#3B82F6" }}
+      style={{ backgroundColor: "#E8E7E5", color: "var(--party-primary)" }}
     >
       <FontAwesomeIcon icon={faCopy} className="text-xs" />
       {copied ? "Kopieret!" : "Kopier link"}

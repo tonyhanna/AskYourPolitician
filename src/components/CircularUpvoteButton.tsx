@@ -42,8 +42,6 @@ type CircularUpvoteButtonProps = {
   hasSession: boolean;
   partySlug: string;
   politicianSlug: string;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
   size?: number;
   onLoginUpvote?: () => void;
   goalReachedAt?: string | null;
@@ -63,8 +61,6 @@ export function CircularUpvoteButton({
   hasSession,
   partySlug,
   politicianSlug,
-  partyColor,
-  partyColorDark,
   size = 40,
   onLoginUpvote,
   goalReachedAt,
@@ -82,12 +78,16 @@ export function CircularUpvoteButton({
   const iconSize = Math.round(size * 0.525);
   const plusOneSize = Math.round(size * 0.4375);
 
-  // Derived colors used across appearance + tooltip
-  const partyBg = partyColor || "#00D564";
-  const partyDark = partyColorDark || "#0E412E";
+  // Party colors from CSS variables
+  const pp = "var(--party-primary)";
+  const pd = "var(--party-dark)";
+  // System colors with alpha (these are hex values, so hex-alpha works)
   const redBg = `${colorError}${alphaHex}`;
   const yellowBg = `${colorPending}${alphaHex}`;
-  const partyBgAlpha = `${partyBg}${alphaHex}`;
+  // Party color with alpha — use color-mix since CSS vars can't use hex-alpha
+  const ppAlpha = isDark
+    ? "color-mix(in srgb, var(--party-primary) 75%, transparent)"
+    : "color-mix(in srgb, var(--party-primary) 50%, transparent)";
 
   // ── Core state ──────────────────────────────────────────────────────
   const [state, setState] = useState<State>(() => deriveState(goalReached, isUpvoted));
@@ -272,11 +272,11 @@ export function CircularUpvoteButton({
     switch (state) {
       case "goalReachedNotUpvoted":
         return {
-          bg: partyBgAlpha, width: 260,
+          bg: ppAlpha, width: 260,
           content: (
             <>
-              <span className="text-sm block" style={{ color: partyDark, opacity: 0.5 }}>{deadlineText}.</span>
-              <span className="text-sm block mt-1" style={{ color: partyDark }}>
+              <span className="text-sm block" style={{ color: pd, opacity: 0.5 }}>{deadlineText}.</span>
+              <span className="text-sm block mt-1" style={{ color: pd }}>
                 Dette spørgsmål har nået sit upvote-mål. Sæt din egen upvote for at blive notificeret, når {politicianFirstName} svarer.
               </span>
             </>
@@ -298,12 +298,12 @@ export function CircularUpvoteButton({
           : { bg: redBg, content: <span className="text-sm" style={{ color: errorContrast }}>Vil du fjerne din tidligere upvote?</span> };
 
       case "submitted":
-        return { bg: partyBgAlpha, content: <span className="text-sm" style={{ color: partyDark }}>Tjek din e-mail</span> };
+        return { bg: ppAlpha, content: <span className="text-sm" style={{ color: pd }}>Tjek din e-mail</span> };
 
       default:
         return null;
     }
-  }, [isHovering, armed, desktopConfirmed, state, partyBgAlpha, partyDark, redBg, errorContrast, deadlineText, politicianFirstName]);
+  }, [isHovering, armed, desktopConfirmed, state, ppAlpha, pd, redBg, errorContrast, deadlineText, politicianFirstName]);
 
   // ── Button appearance ───────────────────────────────────────────────
   const appearance = useMemo(() => {
@@ -313,15 +313,15 @@ export function CircularUpvoteButton({
 
     switch (state) {
       case "idle":
-        return { icon: faArrowUpDuotone, iconColor: partyDark, bgColor: active ? partyDark : partyBg, label: "Upvote" };
+        return { icon: faArrowUpDuotone, iconColor: pd, bgColor: active ? pd : pp, label: "Upvote" };
 
       case "upvoted":
         if (isConfirmStep) return { icon: faThumbsUp, iconColor: errorContrast, bgColor: redBg, label: "Bekræft fjern upvote" };
         if (isFirstStep) return { icon: faXmark, iconColor: errorContrast, bgColor: redBg, label: "Fjern upvote" };
-        return { icon: faCheck, iconColor: partyDark, bgColor: partyBgAlpha, label: "Du har upvoted" };
+        return { icon: faCheck, iconColor: pd, bgColor: ppAlpha, label: "Du har upvoted" };
 
       case "goalReachedNotUpvoted":
-        if (active) return { icon: faArrowUpDuotone, iconColor: partyDark, bgColor: partyBg, label: "Upvote" };
+        if (active) return { icon: faArrowUpDuotone, iconColor: pd, bgColor: pp, label: "Upvote" };
         return { icon: faHourglass, iconColor: pendingContrast, bgColor: yellowBg, label: "Afventer svar" };
 
       case "goalReachedUpvoted":
@@ -330,12 +330,12 @@ export function CircularUpvoteButton({
         return { icon: faHourglass, iconColor: pendingContrast, bgColor: yellowBg, label: "Afventer svar" };
 
       case "submitted":
-        return { icon: faCheck, iconColor: partyDark, bgColor: `${partyBg}80`, label: "Upvote sendt" };
+        return { icon: faCheck, iconColor: pd, bgColor: `${pp}80`, label: "Upvote sendt" };
 
       case "pending":
-        return { icon: faArrowUpDuotone, iconColor: partyDark, bgColor: partyBg, label: "Behandler..." };
+        return { icon: faArrowUpDuotone, iconColor: pd, bgColor: pp, label: "Behandler..." };
     }
-  }, [state, isHovering, armed, desktopConfirmed, partyBg, partyDark, partyBgAlpha, redBg, yellowBg, colorPending, pendingContrast, errorContrast]);
+  }, [state, isHovering, armed, desktopConfirmed, pp, pd, ppAlpha, redBg, yellowBg, colorPending, pendingContrast, errorContrast]);
 
   const showPlusOne = state === "idle" && (isHovering || armed > 0);
 

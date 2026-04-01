@@ -200,9 +200,6 @@ export default async function QuestionLandingPage({ params }: Props) {
           appUrl={appUrl}
           partySlug={partySlug}
           politicianSlug={politicianSlug}
-          partyColor={partyColor}
-          partyColorDark={partyColorDark}
-          partyColorLight={party?.colorLight ?? null}
           hasSession={!!citizen}
           politicianName={politician.name}
           politicianFirstName={politician.name.split(" ")[0]}
@@ -215,8 +212,6 @@ export default async function QuestionLandingPage({ params }: Props) {
           citizenEmail={citizen?.email ?? null}
           partySlug={partySlug}
           politicianSlug={politicianSlug}
-          partyColor={partyColor}
-          partyColorDark={partyColorDark}
         />
 
         {politician.chatbaseId && (

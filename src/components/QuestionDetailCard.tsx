@@ -32,9 +32,6 @@ type QuestionDetailCardProps = {
   appUrl: string;
   partySlug: string;
   politicianSlug: string;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
-  partyColorLight?: string | null;
   hasSession: boolean;
   politicianName: string;
   politicianFirstName: string;
@@ -47,9 +44,6 @@ export function QuestionDetailCard({
   appUrl,
   partySlug,
   politicianSlug,
-  partyColor,
-  partyColorDark,
-  partyColorLight,
   hasSession,
   politicianName,
   politicianFirstName,
@@ -137,8 +131,6 @@ export function QuestionDetailCard({
                   hasSession={hasSession}
                   partySlug={partySlug}
                   politicianSlug={politicianSlug}
-                  partyColor={partyColor}
-                  partyColorDark={partyColorDark}
                   size={80}
                   tooltipPosition="left"
                   onLoginUpvote={() => setShowUpvoteModal(true)}
@@ -196,15 +188,15 @@ export function QuestionDetailCard({
               style={{
                 height: 24,
                 width: 24,
-                backgroundColor: partyColor || "#3B82F6",
+                backgroundColor: "var(--party-primary)",
               }}
               aria-label="Del"
             >
               <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 0 : 1, transition: "opacity 300ms ease" }}>
-                <FontAwesomeIcon icon={faShare} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
+                <FontAwesomeIcon icon={faShare} style={{ color: "var(--party-dark)", fontSize: "13.5px" }} />
               </span>
               <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 1 : 0, transition: "opacity 300ms ease" }}>
-                <FontAwesomeIcon icon={faCopy} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
+                <FontAwesomeIcon icon={faCopy} style={{ color: "var(--party-dark)", fontSize: "13.5px" }} />
               </span>
             </button>
             {question.tags.map((tag) => (
@@ -223,9 +215,7 @@ export function QuestionDetailCard({
         {hasThumbnail && hasAnswer && (
           <PlayableMediaCard
             question={question}
-            partyColor={partyColor}
-            partyColorDark={partyColorDark}
-            bufferingColor={partyColorLight}
+            bufferingColor="var(--party-light)"
             className="w-full lg:w-[337px] lg:mr-[9px]"
           />
         )}
@@ -238,9 +228,6 @@ export function QuestionDetailCard({
         questionText={question.text}
         partySlug={partySlug}
         politicianSlug={politicianSlug}
-        partyColor={partyColor}
-        partyColorDark={partyColorDark}
-        partyColorLight={partyColorLight}
         redirectPath={`${basePath}/q/${question.id}`}
         onClose={() => setShowUpvoteModal(false)}
       />

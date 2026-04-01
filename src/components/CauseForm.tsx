@@ -5,7 +5,7 @@ import { createCause } from "@/app/politiker/dashboard/actions";
 import { generateSlug } from "@/lib/utils";
 import { PointsEditor } from "@/components/PointsEditor";
 
-export function CauseForm({ politicianId, partyColor, partyColorDark, partyColorLight }: { politicianId: string; partyColor?: string | null; partyColorDark?: string | null; partyColorLight?: string | null }) {
+export function CauseForm({ politicianId }: { politicianId: string }) {
   const canHover = useRef(false);
   useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
   const [open, setOpen] = useState(false);

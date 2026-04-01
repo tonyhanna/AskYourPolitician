@@ -14,18 +14,12 @@ export function AnsweredQuestionCard({
   question,
   basePath,
   appUrl,
-  partyColor,
-  partyColorDark,
-  partyColorLight,
   playingId,
   setPlayingId,
 }: {
   question: FeedQuestion;
   basePath: string;
   appUrl: string;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
-  partyColorLight?: string | null;
   playingId: string | null;
   setPlayingId: (id: string | null) => void;
 }) {
@@ -256,7 +250,7 @@ export function AnsweredQuestionCard({
       {photoUrl ? (
         <img src={photoUrl} alt="" loading="eager" className="absolute inset-0 w-full h-full object-cover" />
       ) : (
-        <div className="absolute inset-0" style={{ backgroundColor: partyColor || "#7E7D7A" }} />
+        <div className="absolute inset-0" style={{ backgroundColor: "var(--party-primary)" }} />
       )}
       {muxClipUrl && (
         <video ref={clipRef} src={muxClipUrl} muted loop playsInline preload="none" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0 }} />
@@ -307,7 +301,7 @@ export function AnsweredQuestionCard({
 
       {/* Bottom: highlighted text + share + tags */}
       <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-20" style={{ zIndex: 3, pointerEvents: "none", opacity: isWatching ? 0 : 1, transform: isWatching ? "translateY(-20px)" : "translateZ(0)", transition: "opacity 300ms ease, transform 300ms ease", backfaceVisibility: "hidden", willChange: "opacity, transform" }}>
-        <span style={{ fontSize: "22px", lineHeight: 1.3, color: partyColorDark || "#0E412E", fontFamily: "var(--font-figtree)", fontWeight: 400, backgroundColor: partyColorLight || "#DBEAFE", boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone", padding: "2px 8px" }}>
+        <span style={{ fontSize: "22px", lineHeight: 1.3, color: "var(--party-dark)", fontFamily: "var(--font-figtree)", fontWeight: 400, backgroundColor: "var(--party-light)", boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone", padding: "2px 8px" }}>
           {question.text}
         </span>
 
@@ -322,8 +316,8 @@ export function AnsweredQuestionCard({
         <div className="flex items-center gap-2 mt-3" style={{ pointerEvents: "auto" }}>
           {hasPlayableMedia && (
             <div className="flex items-center justify-center rounded-full flex-shrink-0 relative transition-opacity duration-300" style={{ width: 48, height: 48, opacity: isWatching ? 0 : 1, backfaceVisibility: "hidden", transform: "translateZ(0)" }}>
-              <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ backgroundColor: partyColor || "#00D564", opacity: isHovering ? 1 : 0.75 }} />
-              <FontAwesomeIcon icon={faPlay} className="relative" style={{ color: partyColorDark || "#0E412E", fontSize: 20, marginLeft: 2 }} />
+              <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ backgroundColor: "var(--party-primary)", opacity: isHovering ? 1 : 0.75 }} />
+              <FontAwesomeIcon icon={faPlay} className="relative" style={{ color: "var(--party-dark)", fontSize: 20, marginLeft: 2 }} />
             </div>
           )}
           <div className="ml-auto flex items-center gap-2">
@@ -332,16 +326,16 @@ export function AnsweredQuestionCard({
                 {tag}
               </span>
             ))}
-            <button onClick={handleShare} className="hover:opacity-70 cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative" style={{ height: 24, width: 24, backgroundColor: partyColor || "#3B82F6" }} aria-label="Del">
+            <button onClick={handleShare} className="hover:opacity-70 cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative" style={{ height: 24, width: 24, backgroundColor: "var(--party-primary)" }} aria-label="Del">
               <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 0 : 1, transition: "opacity 300ms ease" }}>
-                <FontAwesomeIcon icon={faShare} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
+                <FontAwesomeIcon icon={faShare} style={{ color: "var(--party-dark)", fontSize: "13.5px" }} />
               </span>
               <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 1 : 0, transition: "opacity 300ms ease" }}>
-                <FontAwesomeIcon icon={faCopy} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
+                <FontAwesomeIcon icon={faCopy} style={{ color: "var(--party-dark)", fontSize: "13.5px" }} />
               </span>
             </button>
-            <a href={`${basePath}/q/${question.id}`} onClick={(e) => e.stopPropagation()} className="hover:opacity-70 rounded-full flex items-center justify-center flex-shrink-0" style={{ width: 24, height: 24, backgroundColor: partyColor || "#3B82F6" }} aria-label="Se detaljer">
-              <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} style={{ color: partyColorDark || "#1E3A5F", fontSize: "11px" }} />
+            <a href={`${basePath}/q/${question.id}`} onClick={(e) => e.stopPropagation()} className="hover:opacity-70 rounded-full flex items-center justify-center flex-shrink-0" style={{ width: 24, height: 24, backgroundColor: "var(--party-primary)" }} aria-label="Se detaljer">
+              <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} style={{ color: "var(--party-dark)", fontSize: "11px" }} />
             </a>
           </div>
         </div>

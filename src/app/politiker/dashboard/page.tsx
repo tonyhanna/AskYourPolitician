@@ -260,8 +260,6 @@ export default async function Dashboard() {
       {politician ? (
         <DashboardTabs
           logoutAction={async () => { "use server"; await signOut({ redirectTo: "/politiker" }); }}
-          partyColor={partyColor}
-          partyColorDark={politicianParty?.colorDark ?? null}
           questionsTab={
             <div key="questions" className="space-y-6">
               <QuestionForm
@@ -269,9 +267,6 @@ export default async function Dashboard() {
                 disabled={false}
                 availableTags={availableTags}
                 defaultUpvoteGoal={politician.defaultUpvoteGoal}
-                partyColor={partyColor}
-                partyColorDark={politicianParty?.colorDark ?? null}
-                partyColorLight={politicianParty?.colorLight ?? null}
               />
               {(politicianQuestions.length > 0 || pendingSuggestions.length > 0) && (
                   <QuestionList
@@ -285,7 +280,7 @@ export default async function Dashboard() {
           }
           causesTab={
             <div key="causes" className="space-y-6">
-              <CauseForm politicianId={politician.id} partyColor={partyColor} partyColorDark={politicianParty?.colorDark ?? null} partyColorLight={politicianParty?.colorLight ?? null} />
+              <CauseForm politicianId={politician.id} />
               {politicianCauses.length > 0 && (
                   <CauseList causes={politicianCauses} />
               )}

@@ -11,15 +11,11 @@ export function QuestionDetailEllipsis({
   citizenEmail,
   partySlug,
   politicianSlug,
-  partyColor,
-  partyColorDark,
 }: {
   hasSession: boolean;
   citizenEmail: string | null;
   partySlug: string;
   politicianSlug: string;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { preference, setPreference } = useTheme();

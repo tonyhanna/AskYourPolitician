@@ -8,17 +8,11 @@ export function QuestionForm({
   disabled,
   availableTags,
   defaultUpvoteGoal = 1000,
-  partyColor,
-  partyColorDark,
-  partyColorLight,
 }: {
   politicianId?: string;
   disabled: boolean;
   availableTags: { tagId: string; title: string }[];
   defaultUpvoteGoal?: number;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
-  partyColorLight?: string | null;
 }) {
   const canHover = useRef(false);
   useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);

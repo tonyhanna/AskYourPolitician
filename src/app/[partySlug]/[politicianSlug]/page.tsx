@@ -231,9 +231,6 @@ export default async function BorgerFeed({
         hasSession={!!citizen}
         partySlug={partySlug}
         politicianSlug={politicianSlug}
-        partyColor={party?.color ?? null}
-        partyColorDark={party?.colorDark ?? null}
-        partyColorLight={party?.colorLight ?? null}
         citizenEmail={citizen?.email ?? null}
       />
 

@@ -19,11 +19,9 @@ type Props = {
   causesTab: React.ReactNode;
   settingsTab: React.ReactNode;
   logoutAction: () => Promise<void>;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
 };
 
-export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutAction, partyColor, partyColorDark }: Props) {
+export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutAction }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("questions");
   const scrollPositions = useRef<Record<Tab, number>>({ questions: 0, causes: 0, settings: 0 });
   const canHover = useCanHover();
@@ -115,8 +113,8 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
           style={{
             width: 56,
             height: 56,
-            backgroundColor: partyColor || "#00D564",
-            color: partyColorDark || "#1E3A5F",
+            backgroundColor: "var(--party-primary)",
+            color: "var(--party-dark)",
             boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
           }}
           onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.querySelectorAll("svg").forEach((svg) => { svg.style.opacity = "0.5"; }); }}

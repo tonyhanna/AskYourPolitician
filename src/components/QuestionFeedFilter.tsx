@@ -48,9 +48,6 @@ export function QuestionFeedFilter({
   hasSession,
   partySlug,
   politicianSlug,
-  partyColor,
-  partyColorDark,
-  partyColorLight,
   citizenEmail,
 }: {
   questions: FeedQuestion[];
@@ -62,9 +59,6 @@ export function QuestionFeedFilter({
   hasSession: boolean;
   partySlug: string;
   politicianSlug: string;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
-  partyColorLight?: string | null;
   citizenEmail?: string | null;
 }) {
   const systemColors = useSystemColors();
@@ -300,9 +294,7 @@ export function QuestionFeedFilter({
               question={question}
               basePath={basePath}
               appUrl={appUrl}
-              partyColor={partyColor}
-              partyColorDark={partyColorDark}
-              partyColorLight={partyColorLight}
+
               playingId={playingId}
               setPlayingId={setPlayingId}
             />
@@ -329,9 +321,8 @@ export function QuestionFeedFilter({
           questions={answeredQuestions}
           basePath={basePath}
           appUrl={appUrl}
-          partyColor={partyColor}
-          partyColorDark={partyColorDark}
-          partyColorLight={partyColorLight}
+
+
           playingId={playingId}
           setPlayingId={setPlayingId}
         />
@@ -360,8 +351,7 @@ export function QuestionFeedFilter({
           partySlug={partySlug}
           politicianSlug={politicianSlug}
           politicianFirstName={politicianFirstName}
-          partyColor={partyColor}
-          partyColorDark={partyColorDark}
+
           onLoginUpvote={(qId) => setUpvoteModalQuestionId(qId)}
         />
       ) : isFiltered && questions.length > 0 ? (
@@ -376,8 +366,7 @@ export function QuestionFeedFilter({
         citizenEmail={citizenEmail ?? null}
         partySlug={partySlug}
         politicianSlug={politicianSlug}
-        partyColor={partyColor}
-        partyColorDark={partyColorDark}
+
       />
 
       {/* Upvote login modal */}
@@ -387,9 +376,8 @@ export function QuestionFeedFilter({
           questionText={questions.find(q => q.id === upvoteModalQuestionId)?.text || ""}
           partySlug={partySlug}
           politicianSlug={politicianSlug}
-          partyColor={partyColor}
-          partyColorDark={partyColorDark}
-          partyColorLight={partyColorLight}
+
+
           onClose={() => setUpvoteModalQuestionId(null)}
         />
       )}
@@ -409,18 +397,12 @@ function PinnedQuestionCard({
   question,
   basePath,
   appUrl,
-  partyColor,
-  partyColorDark,
-  partyColorLight,
   playingId,
   setPlayingId,
 }: {
   question: FeedQuestion;
   basePath: string;
   appUrl: string;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
-  partyColorLight?: string | null;
   playingId: string | null;
   setPlayingId: (id: string | null) => void;
 }) {
@@ -485,15 +467,15 @@ function PinnedQuestionCard({
             style={{
               height: 24,
               width: 24,
-              backgroundColor: partyColor || "#3B82F6",
+              backgroundColor: "var(--party-primary)",
             }}
             aria-label="Del"
           >
             <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 0 : 1, transition: "opacity 300ms ease" }}>
-              <FontAwesomeIcon icon={faShare} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
+              <FontAwesomeIcon icon={faShare} style={{ color: "var(--party-dark)", fontSize: "13.5px" }} />
             </span>
             <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 1 : 0, transition: "opacity 300ms ease" }}>
-              <FontAwesomeIcon icon={faCopy} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
+              <FontAwesomeIcon icon={faCopy} style={{ color: "var(--party-dark)", fontSize: "13.5px" }} />
             </span>
           </button>
           {question.tags.map((tag) => (
@@ -512,9 +494,8 @@ function PinnedQuestionCard({
       {(hasMuxMedia || thumbnailPhotoUrl) && (
         <PlayableMediaCard
           question={question}
-          partyColor={partyColor}
-          partyColorDark={partyColorDark}
-          bufferingColor={partyColorLight}
+
+          bufferingColor="var(--party-light)"
           playingId={playingId}
           setPlayingId={setPlayingId}
           className="w-full lg:w-[337px] lg:mr-[9px]"
@@ -531,18 +512,12 @@ function AnsweredQuestionsGrid({
   questions,
   basePath,
   appUrl,
-  partyColor,
-  partyColorDark,
-  partyColorLight,
   playingId,
   setPlayingId,
 }: {
   questions: FeedQuestion[];
   basePath: string;
   appUrl: string;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
-  partyColorLight?: string | null;
   playingId: string | null;
   setPlayingId: (id: string | null) => void;
 }) {
@@ -576,9 +551,7 @@ function AnsweredQuestionsGrid({
               question={q}
               basePath={basePath}
               appUrl={appUrl}
-              partyColor={partyColor}
-              partyColorDark={partyColorDark}
-              partyColorLight={partyColorLight}
+
               playingId={playingId}
               setPlayingId={setPlayingId}
             />
@@ -615,8 +588,6 @@ function UnansweredQuestionsGrid({
   partySlug,
   politicianSlug,
   politicianFirstName,
-  partyColor,
-  partyColorDark,
   onLoginUpvote,
 }: {
   questions: FeedQuestion[];
@@ -626,8 +597,6 @@ function UnansweredQuestionsGrid({
   partySlug: string;
   politicianSlug: string;
   politicianFirstName: string;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
   onLoginUpvote?: (questionId: string) => void;
 }) {
   const { gridRef, cols, isFullWidth, gridWidth, cardW, gapW } = useResponsiveGrid(questions.length);
@@ -683,8 +652,6 @@ function UnansweredQuestionsGrid({
                     partySlug={partySlug}
                     politicianSlug={politicianSlug}
                     politicianFirstName={politicianFirstName}
-                    partyColor={partyColor}
-                    partyColorDark={partyColorDark}
                     onLoginUpvote={onLoginUpvote}
                   />
                 </div>
@@ -705,8 +672,6 @@ function UnansweredQuestionCard({
   partySlug,
   politicianSlug,
   politicianFirstName,
-  partyColor,
-  partyColorDark,
   onLoginUpvote,
 }: {
   question: FeedQuestion;
@@ -716,8 +681,6 @@ function UnansweredQuestionCard({
   partySlug: string;
   politicianSlug: string;
   politicianFirstName: string;
-  partyColor?: string | null;
-  partyColorDark?: string | null;
   onLoginUpvote?: (questionId: string) => void;
 }) {
   const { copied, handleShare } = useShareCopy(
@@ -773,15 +736,15 @@ function UnansweredQuestionCard({
             style={{
               height: 24,
               width: 24,
-              backgroundColor: partyColor || "#3B82F6",
+              backgroundColor: "var(--party-primary)",
             }}
             aria-label="Del"
           >
             <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 0 : 1, transition: "opacity 300ms ease" }}>
-              <FontAwesomeIcon icon={faShare} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
+              <FontAwesomeIcon icon={faShare} style={{ color: "var(--party-dark)", fontSize: "13.5px" }} />
             </span>
             <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 1 : 0, transition: "opacity 300ms ease" }}>
-              <FontAwesomeIcon icon={faCopy} style={{ color: partyColorDark || "#1E3A5F", fontSize: "13.5px" }} />
+              <FontAwesomeIcon icon={faCopy} style={{ color: "var(--party-dark)", fontSize: "13.5px" }} />
             </span>
           </button>
           {question.tags.map((tag) => (
@@ -806,8 +769,7 @@ function UnansweredQuestionCard({
           hasSession={hasSession}
           partySlug={partySlug}
           politicianSlug={politicianSlug}
-          partyColor={partyColor}
-          partyColorDark={partyColorDark}
+
           size={40}
           tooltipPosition="top"
           onLoginUpvote={() => onLoginUpvote?.(question.id)}
