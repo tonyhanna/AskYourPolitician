@@ -36,12 +36,12 @@ export default async function EditPartyPage({ params }: { params: Promise<{ part
           color: party.color,
           colorLight: party.colorLight,
           colorDark: party.colorDark,
-          topbarNameColor: party.topbarNameColor,
-          topbarNameOpacity: party.topbarNameOpacity,
-          topbarPartyColor: party.topbarPartyColor,
-          topbarPartyOpacity: party.topbarPartyOpacity,
-          topbarConstituencyColor: party.topbarConstituencyColor,
-          topbarConstituencyOpacity: party.topbarConstituencyOpacity,
+          topbarLeft1Color: party.topbarLeft1Color,
+          topbarLeft1Opacity: party.topbarLeft1Opacity,
+          topbarLeft2Color: party.topbarLeft2Color,
+          topbarLeft2Opacity: party.topbarLeft2Opacity,
+          topbarRightColor: party.topbarRightColor,
+          topbarRightOpacity: party.topbarRightOpacity,
         }} />
       </section>
     </main>

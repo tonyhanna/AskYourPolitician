@@ -46,6 +46,7 @@ export default async function RootLayout({
       "--system-pending": settings.colorPending, "--system-pending-contrast": settings.colorPendingContrast,
       "--system-error": settings.colorError, "--system-error-contrast": settings.colorErrorContrast,
       "--system-overlay": settings.colorOverlay,
+      "--system-form-bg": settings.colorFormBg, "--system-form-text0": settings.colorFormText0, "--system-form-text1": settings.colorFormText1,
       "--system-background": settings.colorBg0,
     },
     dark: {
@@ -61,6 +62,7 @@ export default async function RootLayout({
       "--system-pending": settings.colorPendingDark, "--system-pending-contrast": settings.colorPendingContrastDark,
       "--system-error": settings.colorErrorDark, "--system-error-contrast": settings.colorErrorContrastDark,
       "--system-overlay": settings.colorOverlayDark,
+      "--system-form-bg": settings.colorFormBgDark, "--system-form-text0": settings.colorFormText0Dark, "--system-form-text1": settings.colorFormText1Dark,
       "--system-background": settings.colorBg0Dark,
     },
   });
@@ -124,6 +126,12 @@ export default async function RootLayout({
           colorErrorContrastDark={settings.colorErrorContrastDark}
           colorOverlay={settings.colorOverlay}
           colorOverlayDark={settings.colorOverlayDark}
+          colorFormBg={settings.colorFormBg}
+          colorFormBgDark={settings.colorFormBgDark}
+          colorFormText0={settings.colorFormText0}
+          colorFormText0Dark={settings.colorFormText0Dark}
+          colorFormText1={settings.colorFormText1}
+          colorFormText1Dark={settings.colorFormText1Dark}
         >
           {children}
         </SystemColorProvider>

@@ -185,6 +185,12 @@ export default async function AdminPage() {
             colorErrorContrastDark={settings.colorErrorContrastDark}
             colorOverlay={settings.colorOverlay}
             colorOverlayDark={settings.colorOverlayDark}
+            colorFormBg={settings.colorFormBg}
+            colorFormBgDark={settings.colorFormBgDark}
+            colorFormText0={settings.colorFormText0}
+            colorFormText0Dark={settings.colorFormText0Dark}
+            colorFormText1={settings.colorFormText1}
+            colorFormText1Dark={settings.colorFormText1Dark}
           />
         }
       />

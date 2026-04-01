@@ -51,7 +51,7 @@ export default async function Dashboard() {
 
   // Fetch all parties for dropdown
   const allParties = await db
-    .select({ id: parties.id, name: parties.name, color: parties.color, colorLight: parties.colorLight, colorDark: parties.colorDark, logoUrl: parties.logoUrl, topbarNameColor: parties.topbarNameColor, topbarNameOpacity: parties.topbarNameOpacity, topbarPartyColor: parties.topbarPartyColor, topbarPartyOpacity: parties.topbarPartyOpacity, topbarConstituencyColor: parties.topbarConstituencyColor, topbarConstituencyOpacity: parties.topbarConstituencyOpacity })
+    .select({ id: parties.id, name: parties.name, color: parties.color, colorLight: parties.colorLight, colorDark: parties.colorDark, logoUrl: parties.logoUrl, topbarLeft1Color: parties.topbarLeft1Color, topbarLeft1Opacity: parties.topbarLeft1Opacity, topbarLeft2Color: parties.topbarLeft2Color, topbarLeft2Opacity: parties.topbarLeft2Opacity, topbarRightColor: parties.topbarRightColor, topbarRightOpacity: parties.topbarRightOpacity })
     .from(parties)
     .orderBy(parties.name);
 
@@ -218,28 +218,26 @@ export default async function Dashboard() {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   const uniqueUrl = politician ? `${appUrl}/${politician.partySlug}/${politician.slug}` : null;
-  const politicianParty = politician ? allParties.find((p) => p.id === politician.partyId) : null;
-
-  const partyColor = politicianParty?.color ?? null;
+  const party = politician ? allParties.find((p) => p.id === politician.partyId) : null;
 
   return (
     <>
       {/* SSR theme-color meta tag for Safari/Chrome mobile toolbar */}
-      {partyColor && <meta name="theme-color" content={partyColor} />}
+      {party?.color && <meta name="theme-color" content={party.color} />}
       {/* SSR style: paint body bg to party color for overscroll rubber-band */}
-      {partyColor && politician && (
-        <style precedence="theme" href={`theme-dashboard-${politician.partySlug}`}>{`html body{background-color:${partyColor}}`}</style>
+      {party?.color && politician && (
+        <style precedence="theme" href={`theme-dashboard-${politician.partySlug}`}>{`html body{background-color:${party.color}}`}</style>
       )}
       {/* Client-side: toggle body bg based on scroll (party color at top, system bg when scrolled) */}
-      {partyColor && <ThemeColorSetter color={partyColor} />}
-      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": politicianParty?.color || "#000000", "--party-dark": politicianParty?.colorDark || "#000000", "--party-light": politicianParty?.colorLight || "#ffffff" } as React.CSSProperties}>
-      {politician && politicianParty && (
+      {party?.color && <ThemeColorSetter color={party.color} />}
+      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": party?.color || "#FF0000", "--party-dark": party?.colorDark || "#FF0000", "--party-light": party?.colorLight || "#FF0000" } as React.CSSProperties}>
+      {politician && party && (
         <PoliticianTopBar
           mode="dashboard"
           politicianName={politician.name}
           partyName={politician.party}
           profilePhotoUrl={politician.profilePhotoUrl}
-          partyLogoUrl={politicianParty.logoUrl ?? null}
+          partyLogoUrl={party.logoUrl ?? null}
           constituency={politician.constituency}
           politicianId={politician.id}
           partySlug={politician.partySlug}
@@ -247,15 +245,15 @@ export default async function Dashboard() {
           hasSession={true}
           citizenPageUrl={uniqueUrl}
           isImpersonating={!!impersonatingId}
-          topbarNameColor={politicianParty.topbarNameColor ?? null}
-          topbarNameOpacity={politicianParty.topbarNameOpacity ?? null}
-          topbarPartyColor={politicianParty.topbarPartyColor ?? null}
-          topbarPartyOpacity={politicianParty.topbarPartyOpacity ?? null}
-          topbarConstituencyColor={politicianParty.topbarConstituencyColor ?? null}
-          topbarConstituencyOpacity={politicianParty.topbarConstituencyOpacity ?? null}
+          topbarLeft1Color={party.topbarLeft1Color ?? null}
+          topbarLeft1Opacity={party.topbarLeft1Opacity ?? null}
+          topbarLeft2Color={party.topbarLeft2Color ?? null}
+          topbarLeft2Opacity={party.topbarLeft2Opacity ?? null}
+          topbarRightColor={party.topbarRightColor ?? null}
+          topbarRightOpacity={party.topbarRightOpacity ?? null}
         />
       )}
-    <main className="flex-1 w-full px-[15px] pt-[15px]" style={{ backgroundColor: "var(--system-bg0)" }}>
+    <main className="flex-1 w-full px-[15px] pt-[15px]" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
 
       {politician ? (
         <DashboardTabs

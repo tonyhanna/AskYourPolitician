@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef, useCallback } from "react";
 
-export function SuccessBanner() {
+export function TopbarBanner() {
   const searchParams = useSearchParams();
   const [isError, setIsError] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -86,8 +86,8 @@ export function SuccessBanner() {
         style={{
           fontFamily: "var(--font-figtree)",
           fontWeight: 500,
-          backgroundColor: isError ? "#FEE2E2" : "#ffffff",
-          color: isError ? "#991B1B" : "#2E2E2E",
+          backgroundColor: "var(--system-bg0, #FF0000)",
+          color: isError ? "var(--system-error, #FF0000)" : "var(--system-success, #FF0000)",
           borderBottom: "none",
         }}
       >

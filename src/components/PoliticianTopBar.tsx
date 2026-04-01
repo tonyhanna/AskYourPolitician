@@ -10,7 +10,7 @@ import { faInfo, faMailbox, faMailboxFlagUp } from "@fortawesome/pro-duotone-svg
 import { directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { stopImpersonation } from "@/app/admin/actions";
 import { useSystemColors } from "./SystemColorProvider";
-import { SuccessBanner } from "./SuccessBanner";
+import { TopbarBanner } from "./TopbarBanner";
 import { SuggestionModal } from "./SuggestionModal";
 
 type PoliticianTopBarProps = {
@@ -28,12 +28,12 @@ type PoliticianTopBarProps = {
   mode?: "citizen" | "dashboard";
   citizenPageUrl?: string | null;
   isImpersonating?: boolean;
-  topbarNameColor?: string | null;
-  topbarNameOpacity?: number | null;
-  topbarPartyColor?: string | null;
-  topbarPartyOpacity?: number | null;
-  topbarConstituencyColor?: string | null;
-  topbarConstituencyOpacity?: number | null;
+  topbarLeft1Color?: string | null;
+  topbarLeft1Opacity?: number | null;
+  topbarLeft2Color?: string | null;
+  topbarLeft2Opacity?: number | null;
+  topbarRightColor?: string | null;
+  topbarRightOpacity?: number | null;
 };
 
 export function PoliticianTopBar({
@@ -51,12 +51,12 @@ export function PoliticianTopBar({
   mode = "citizen",
   citizenPageUrl,
   isImpersonating,
-  topbarNameColor: topbarNameColorKey,
-  topbarNameOpacity,
-  topbarPartyColor: topbarPartyColorKey,
-  topbarPartyOpacity,
-  topbarConstituencyColor: topbarConstituencyColorKey,
-  topbarConstituencyOpacity,
+  topbarLeft1Color: topbarLeft1ColorKey,
+  topbarLeft1Opacity,
+  topbarLeft2Color: topbarLeft2ColorKey,
+  topbarLeft2Opacity,
+  topbarRightColor: topbarRightColorKey,
+  topbarRightOpacity,
 }: PoliticianTopBarProps) {
   const isDashboard = mode === "dashboard";
   const canHover = useRef(false);
@@ -82,9 +82,9 @@ export function PoliticianTopBar({
   }, [impersonateArmed]);
   const { error: colorError, errorContrast } = useSystemColors();
   // Party colors from CSS variables (set by page wrapper)
-  const pp = "var(--party-primary)";
-  const pd = "var(--party-dark)";
-  const pl = "var(--party-light)";
+  const pp = "var(--party-primary, #FF0000)";
+  const pd = "var(--party-dark, #FF0000)";
+  const pl = "var(--party-light, #FF0000)";
   // Resolve topbar text color overrides: key → party var, hex → direct, null → default
   const resolveColor = (key: string | null | undefined, fallback: string) => {
     if (!key) return fallback;
@@ -93,12 +93,12 @@ export function PoliticianTopBar({
     if (key === "dark") return pd;
     return key; // hex value
   };
-  const nameColor = resolveColor(topbarNameColorKey, pd);
-  const partyTextColor = resolveColor(topbarPartyColorKey, pl);
-  const constituencyColor = resolveColor(topbarConstituencyColorKey, pd);
-  const nameOpacity = (topbarNameOpacity ?? 100) / 100;
-  const partyTextOpacity = (topbarPartyOpacity ?? 100) / 100;
-  const constituencyOpacity = (topbarConstituencyOpacity ?? 100) / 100;
+  const left1Color = resolveColor(topbarLeft1ColorKey, pd);
+  const left2Color = resolveColor(topbarLeft2ColorKey, pl);
+  const rightColor = resolveColor(topbarRightColorKey, pd);
+  const left1Opacity = (topbarLeft1Opacity ?? 100) / 100;
+  const left2Opacity = (topbarLeft2Opacity ?? 100) / 100;
+  const rightOpacity = (topbarRightOpacity ?? 100) / 100;
 
   // Form interaction state
   const [formActive, setFormActive] = useState(false);
@@ -110,7 +110,6 @@ export function PoliticianTopBar({
   const pillBtnRef = useRef<HTMLButtonElement>(null);
   const pillSizeRef = useRef<{ width: number; height: number } | null>(null);
   const [namesRevealed, setNamesRevealed] = useState<false | "fading" | true>(false);
-  const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const introStorageKey = `intro-dismissed:${politicianSlug}`;
   const [introDismissed, setIntroDismissed] = useState(false);
@@ -166,7 +165,7 @@ export function PoliticianTopBar({
   function resetForm() {
     setFormActive(false);
     setText("");
-    setError(null);
+
     setModalOpen(false);
   }
 
@@ -210,7 +209,7 @@ export function PoliticianTopBar({
       pillSizeRef.current = { width: pillBtnRef.current.offsetWidth, height: pillBtnRef.current.offsetHeight };
     }
     setPending(true);
-    setError(null);
+
 
     const formData = new FormData(e.currentTarget);
     formData.set("text", text);
@@ -226,7 +225,7 @@ export function PoliticianTopBar({
       }
       startMailboxAnimation(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Der opstod en fejl");
+      alert(err instanceof Error ? err.message : "Der opstod en fejl");
     } finally {
       setPending(false);
     }
@@ -255,10 +254,10 @@ export function PoliticianTopBar({
       }}
     >
       <Suspense>
-        <SuccessBanner />
+        <TopbarBanner />
       </Suspense>
       <style>{`
-        .topbar-suggest-input::placeholder { color: var(--placeholder-color); opacity: 0.5; }
+        .topbar-suggest-input::placeholder { color: var(--placeholder-color); opacity: 1.0; }
         .topbar-field::placeholder { color: var(--field-placeholder-color, #9ca3af); }
         .topbar-btn:hover:not(:disabled) { opacity: 0.8; }
         .topbar-age::-webkit-inner-spin-button,
@@ -277,8 +276,8 @@ export function PoliticianTopBar({
                 aria-label="Tilbage"
               >
                 <span
-                  className="absolute inset-0 rounded-full transition-opacity group-hover:opacity-50"
-                  style={{ backgroundColor: "rgba(255,255,255,0.25)" }}
+                  className="absolute inset-0 rounded-full transition-opacity opacity-25 group-hover:opacity-50"
+                  style={{ backgroundColor: pl }}
                 />
                 <FontAwesomeIcon
                   icon={faArrowLeft}
@@ -307,13 +306,13 @@ export function PoliticianTopBar({
           <div className={`min-w-0 ml-[3px] ${!isDashboard && formActive && !namesRevealed ? "sm:hidden" : ""}`} style={namesRevealed === "fading" ? { opacity: 0 } : namesRevealed === true ? { opacity: 1, transition: "opacity 300ms ease-out" } : undefined}>
             <p
               className="text-base leading-tight truncate"
-              style={{ color: nameColor, opacity: isDashboard ? 1 : nameOpacity }}
+              style={{ color: left1Color, opacity: left1Opacity }}
             >
               {isDashboard ? "Dashboard" : politicianName}
             </p>
             <p
               className="text-base leading-tight truncate"
-              style={{ color: isDashboard ? partyTextColor : partyTextColor, opacity: isDashboard ? 1 : partyTextOpacity }}
+              style={{ color: left2Color, opacity: left2Opacity }}
             >
               {isDashboard ? politicianName : partyName}
             </p>
@@ -338,22 +337,18 @@ export function PoliticianTopBar({
                       await stopImpersonation();
                       window.location.href = "/admin";
                     }}
-                    className="rounded-full flex items-center justify-center cursor-pointer relative"
+                    className="rounded-full flex items-center justify-center cursor-pointer"
                     style={{
                       width: 40, height: 40,
-                      backgroundColor: showXmark ? "var(--system-bg0)" : pd,
+                      backgroundColor: showXmark ? "var(--system-error, #FF0000)" : pd,
                     }}
                     aria-label={impersonateArmed ? "Stop impersonering" : "Admin"}
                     onPointerEnter={() => { if (canHover.current) setImpersonateHover(true); }}
                     onPointerLeave={() => { if (canHover.current) setImpersonateHover(false); }}
                   >
-                    {showXmark && (
-                      <div className="absolute inset-0 rounded-full" style={{ backgroundColor: `${colorError}80` }} />
-                    )}
                     <FontAwesomeIcon
                       icon={showXmark ? faXmark : faGlasses}
-                      className="relative"
-                      style={{ color: showXmark ? errorContrast : (pl), fontSize: 18 }}
+                      style={{ color: showXmark ? "var(--system-error-contrast, #FF0000)" : (pl), fontSize: 18 }}
                     />
                   </button>
                 );
@@ -386,7 +381,7 @@ export function PoliticianTopBar({
                   window.dispatchEvent(new Event("show-intro"));
                 }}
                 className="cursor-pointer hover:opacity-50 transition-opacity rounded-full flex items-center justify-center"
-                style={{ width: 24, height: 24, backgroundColor: "rgba(255,255,255,0.5)" }}
+                style={{ width: 24, height: 24, backgroundColor: pl }}
                 aria-label="Vis information"
               >
                 <FontAwesomeIcon
@@ -411,7 +406,7 @@ export function PoliticianTopBar({
                 type="button"
                 onClick={() => setModalOpen(true)}
                 className="cursor-pointer transition-opacity rounded-full flex items-center justify-center"
-                style={{ width: 40, height: 40, backgroundColor: "#ffffff" }}
+                style={{ width: 40, height: 40, backgroundColor: "var(--system-form-bg, #FF0000)" }}
                 aria-label="Foreslå et spørgsmål"
               >
                 <FontAwesomeIcon icon={faCommentPlus} style={{ color: pd, fontSize: 20 }} />
@@ -433,15 +428,15 @@ export function PoliticianTopBar({
                   placeholder="Foreslå et spørgsmål..."
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  className="topbar-suggest-input w-full bg-white rounded-full px-5 pr-10 py-2 text-base focus:outline-none"
-                  style={{ color: pd, "--placeholder-color": pd } as React.CSSProperties}
+                  className="topbar-suggest-input w-full rounded-full px-5 pr-10 py-2 text-base focus:outline-none"
+                  style={{ backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", "--placeholder-color": "var(--system-form-text1, #FF0000)" } as React.CSSProperties}
                 />
                 {text.length > 0 && (
                   <button
                     type="button"
                     onClick={() => { setText(""); inputRef.current?.focus(); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 cursor-pointer opacity-40 hover:opacity-70 transition-opacity"
-                    style={{ color: pd }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 cursor-pointer hover:opacity-50 transition-opacity"
+                    style={{ color: "var(--system-icon0, #FF0000)" }}
                   >
                     <FontAwesomeIcon icon={faXmark} className="w-4 h-4" />
                   </button>
@@ -457,7 +452,7 @@ export function PoliticianTopBar({
                   style={{
                     ...(mailboxPhase
                       ? { backgroundColor: pd }
-                      : { ...(hasSession ? { backgroundColor: pd, color: "#ffffff" } : { backgroundColor: pl, color: pd }) }),
+                      : { ...(hasSession ? { backgroundColor: pd, color: pl } : { backgroundColor: pl, color: pd }) }),
                     ...(pillSizeRef.current
                       ? { width: pillSizeRef.current.width, height: pillSizeRef.current.height }
                       : { paddingLeft: 20, paddingRight: 20, paddingTop: 8, paddingBottom: 8 }),
@@ -485,7 +480,7 @@ export function PoliticianTopBar({
               {constituency && (
                 <span
                   className="text-base"
-                  style={{ color: constituencyColor, opacity: constituencyOpacity }}
+                  style={{ color: rightColor, opacity: rightOpacity }}
                 >
                   {constituency}
                 </span>
@@ -498,7 +493,7 @@ export function PoliticianTopBar({
                     window.dispatchEvent(new Event("show-intro"));
                   }}
                   className="cursor-pointer hover:opacity-50 transition-opacity rounded-full flex items-center justify-center"
-                  style={{ width: 24, height: 24, backgroundColor: "rgba(255,255,255,0.5)" }}
+                  style={{ width: 24, height: 24, backgroundColor: pl }}
                   aria-label="Vis information"
                 >
                   <FontAwesomeIcon
@@ -510,8 +505,8 @@ export function PoliticianTopBar({
               <button
                 type="button"
                 onClick={() => setFormActive(true)}
-                className="bg-white text-base px-5 py-2 rounded-full whitespace-nowrap cursor-pointer"
-                style={{ color: pd, opacity: mailboxPhase === "fadeIn" ? 0 : 1, transition: mailboxPhase === null ? "opacity 300ms ease-out" : "none" }}
+                className="text-base px-5 py-2 rounded-full whitespace-nowrap cursor-pointer"
+                style={{ backgroundColor: "var(--system-form-bg, #FF0000)", color: pd, opacity: mailboxPhase === "fadeIn" ? 0 : 1, transition: mailboxPhase === null ? "opacity 300ms ease-out" : "none" }}
               >
                 Foreslå et spørgsmål...
               </button>
@@ -520,11 +515,6 @@ export function PoliticianTopBar({
         </div>
 
         {/* Error when logged in (desktop topbar submit) — citizen mode only */}
-        {!isDashboard && formActive && error && hasSession && (
-          <div className="px-[15px] pb-2">
-            <p className="text-sm text-red-200">{error}</p>
-          </div>
-        )}
       </form>
 
       {/* Suggestion modal (mobile: all users, desktop: logged-out only) — citizen mode only */}

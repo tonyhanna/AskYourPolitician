@@ -53,6 +53,12 @@ type SystemColors = {
   colorErrorContrastDark: string;
   colorOverlay: string;
   colorOverlayDark: string;
+  colorFormBg: string;
+  colorFormBgDark: string;
+  colorFormText0: string;
+  colorFormText0Dark: string;
+  colorFormText1: string;
+  colorFormText1Dark: string;
 };
 
 /** Resolved colors for the current theme (light or dark) */
@@ -82,6 +88,9 @@ export type ResolvedColors = {
   error: string;
   errorContrast: string;
   overlay: string;
+  formBg: string;
+  formText0: string;
+  formText1: string;
 };
 
 export type ThemePreference = "system" | "light" | "dark";
@@ -121,6 +130,9 @@ const DEFAULT_COLORS: ResolvedColors = {
   error: "#FF4105",
   errorContrast: "#FFFFFF",
   overlay: "#000000",
+  formBg: "#FFFFFF",
+  formText0: "#000000",
+  formText1: "#6B7280",
 };
 
 const ThemeContext = createContext<ThemeContextValue>({
@@ -181,6 +193,9 @@ function resolve(isDark: boolean, colors: SystemColors): ResolvedColors {
     error: isDark ? colors.colorErrorDark : colors.colorError,
     errorContrast: isDark ? colors.colorErrorContrastDark : colors.colorErrorContrast,
     overlay: isDark ? colors.colorOverlayDark : colors.colorOverlay,
+    formBg: isDark ? colors.colorFormBgDark : colors.colorFormBg,
+    formText0: isDark ? colors.colorFormText0Dark : colors.colorFormText0,
+    formText1: isDark ? colors.colorFormText1Dark : colors.colorFormText1,
   };
 }
 

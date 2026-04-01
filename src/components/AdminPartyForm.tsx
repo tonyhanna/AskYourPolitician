@@ -12,12 +12,12 @@ type PartyData = {
   color: string | null;
   colorLight: string | null;
   colorDark: string | null;
-  topbarNameColor: string | null;
-  topbarNameOpacity: number | null;
-  topbarPartyColor: string | null;
-  topbarPartyOpacity: number | null;
-  topbarConstituencyColor: string | null;
-  topbarConstituencyOpacity: number | null;
+  topbarLeft1Color: string | null;
+  topbarLeft1Opacity: number | null;
+  topbarLeft2Color: string | null;
+  topbarLeft2Opacity: number | null;
+  topbarRightColor: string | null;
+  topbarRightOpacity: number | null;
 } | null;
 
 async function cropToSquare(file: File): Promise<File> {
@@ -46,15 +46,15 @@ export function AdminPartyForm({ party }: { party: PartyData }) {
   const [deleting, setDeleting] = useState(false);
   const [logoUrl, setLogoUrl] = useState(party?.logoUrl ?? "");
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [color, setColor] = useState(party?.color ?? "#000000");
-  const [colorLight, setColorLight] = useState(party?.colorLight ?? "#E5E7EB");
-  const [colorDark, setColorDark] = useState(party?.colorDark ?? "#1F2937");
-  const [topbarNameColor, setTopbarNameColor] = useState(party?.topbarNameColor ?? "");
-  const [topbarNameOpacity, setTopbarNameOpacity] = useState(party?.topbarNameOpacity ?? 100);
-  const [topbarPartyColor, setTopbarPartyColor] = useState(party?.topbarPartyColor ?? "");
-  const [topbarPartyOpacity, setTopbarPartyOpacity] = useState(party?.topbarPartyOpacity ?? 100);
-  const [topbarConstituencyColor, setTopbarConstituencyColor] = useState(party?.topbarConstituencyColor ?? "");
-  const [topbarConstituencyOpacity, setTopbarConstituencyOpacity] = useState(party?.topbarConstituencyOpacity ?? 100);
+  const [color, setColor] = useState(party?.color ?? "#FF0000");
+  const [colorLight, setColorLight] = useState(party?.colorLight ?? "#FFFFFF");
+  const [colorDark, setColorDark] = useState(party?.colorDark ?? "#000000");
+  const [topbarLeft1Color, setTopbarLeft1Color] = useState(party?.topbarLeft1Color ?? "");
+  const [topbarLeft1Opacity, setTopbarLeft1Opacity] = useState(party?.topbarLeft1Opacity ?? 100);
+  const [topbarLeft2Color, setTopbarLeft2Color] = useState(party?.topbarLeft2Color ?? "");
+  const [topbarLeft2Opacity, setTopbarLeft2Opacity] = useState(party?.topbarLeft2Opacity ?? 100);
+  const [topbarRightColor, setTopbarRightColor] = useState(party?.topbarRightColor ?? "");
+  const [topbarRightOpacity, setTopbarRightOpacity] = useState(party?.topbarRightOpacity ?? 100);
 
   async function handleLogoUpload(file: File) {
     if (!file.type.startsWith("image/")) return;
@@ -90,12 +90,12 @@ export function AdminPartyForm({ party }: { party: PartyData }) {
       <input type="hidden" name="color" value={color} />
       <input type="hidden" name="colorLight" value={colorLight} />
       <input type="hidden" name="colorDark" value={colorDark} />
-      <input type="hidden" name="topbarNameColor" value={topbarNameColor} />
-      <input type="hidden" name="topbarNameOpacity" value={topbarNameOpacity} />
-      <input type="hidden" name="topbarPartyColor" value={topbarPartyColor} />
-      <input type="hidden" name="topbarPartyOpacity" value={topbarPartyOpacity} />
-      <input type="hidden" name="topbarConstituencyColor" value={topbarConstituencyColor} />
-      <input type="hidden" name="topbarConstituencyOpacity" value={topbarConstituencyOpacity} />
+      <input type="hidden" name="topbarLeft1Color" value={topbarLeft1Color} />
+      <input type="hidden" name="topbarLeft1Opacity" value={topbarLeft1Opacity} />
+      <input type="hidden" name="topbarLeft2Color" value={topbarLeft2Color} />
+      <input type="hidden" name="topbarLeft2Opacity" value={topbarLeft2Opacity} />
+      <input type="hidden" name="topbarRightColor" value={topbarRightColor} />
+      <input type="hidden" name="topbarRightOpacity" value={topbarRightOpacity} />
 
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Partinavn</label>
@@ -155,9 +155,9 @@ export function AdminPartyForm({ party }: { party: PartyData }) {
         <label className="block text-sm font-medium text-gray-700">Topbar tekstfarver</label>
         <p className="text-xs text-gray-500 -mt-2">Vælg farver for tekstelementer i politikerens topbar. Vælg en af partiets farver eller en custom farve.</p>
         {([
-          { label: "Politikernavn", colorState: topbarNameColor, setColor: setTopbarNameColor, opacityState: topbarNameOpacity, setOpacity: setTopbarNameOpacity, defaultKey: "dark" },
-          { label: "Partinavn", colorState: topbarPartyColor, setColor: setTopbarPartyColor, opacityState: topbarPartyOpacity, setOpacity: setTopbarPartyOpacity, defaultKey: "light" },
-          { label: "Kreds", colorState: topbarConstituencyColor, setColor: setTopbarConstituencyColor, opacityState: topbarConstituencyOpacity, setOpacity: setTopbarConstituencyOpacity, defaultKey: "dark" },
+          { label: "Venstre tekst: Linie 1", colorState: topbarLeft1Color, setColor: setTopbarLeft1Color, opacityState: topbarLeft1Opacity, setOpacity: setTopbarLeft1Opacity, defaultKey: "dark" },
+          { label: "Venstre tekst: Linie 2", colorState: topbarLeft2Color, setColor: setTopbarLeft2Color, opacityState: topbarLeft2Opacity, setOpacity: setTopbarLeft2Opacity, defaultKey: "light" },
+          { label: "Højre tekst", colorState: topbarRightColor, setColor: setTopbarRightColor, opacityState: topbarRightOpacity, setOpacity: setTopbarRightOpacity, defaultKey: "dark" },
         ] as const).map((item) => {
           const partyColorOptions = [
             { key: "primary", hex: color },

@@ -192,19 +192,19 @@ export default async function BorgerFeed({
       )}
       {/* Client-side: toggle body bg based on scroll (green at top, white when scrolled) */}
       {party?.color && <ThemeColorSetter color={party.color} />}
-      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": party?.color || "#000000", "--party-dark": party?.colorDark || "#000000", "--party-light": party?.colorLight || "#ffffff" } as React.CSSProperties}>
+      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": party?.color || "#FF0000", "--party-dark": party?.colorDark || "#FF0000", "--party-light": party?.colorLight || "#FF0000" } as React.CSSProperties}>
       <PoliticianTopBar
         politicianName={politician.name}
         partyName={politician.party}
         profilePhotoUrl={politician.profilePhotoUrl}
         partyLogoUrl={party?.logoUrl ?? null}
         constituency={politician.constituency}
-        topbarNameColor={party?.topbarNameColor ?? null}
-        topbarNameOpacity={party?.topbarNameOpacity ?? null}
-        topbarPartyColor={party?.topbarPartyColor ?? null}
-        topbarPartyOpacity={party?.topbarPartyOpacity ?? null}
-        topbarConstituencyColor={party?.topbarConstituencyColor ?? null}
-        topbarConstituencyOpacity={party?.topbarConstituencyOpacity ?? null}
+        topbarLeft1Color={party?.topbarLeft1Color ?? null}
+        topbarLeft1Opacity={party?.topbarLeft1Opacity ?? null}
+        topbarLeft2Color={party?.topbarLeft2Color ?? null}
+        topbarLeft2Opacity={party?.topbarLeft2Opacity ?? null}
+        topbarRightColor={party?.topbarRightColor ?? null}
+        topbarRightOpacity={party?.topbarRightOpacity ?? null}
         politicianId={politician.id}
         partySlug={partySlug}
         politicianSlug={politicianSlug}
@@ -220,7 +220,7 @@ export default async function BorgerFeed({
         dismissButtonColor={party?.colorDark ?? null}
         politicianSlug={politicianSlug}
       />
-      <main className="px-[15px] pt-[15px] pb-1 flex flex-col flex-1" style={{ backgroundColor: "var(--system-bg0, #ffffff)" }}>
+      <main className="px-[15px] pt-[15px] pb-1 flex flex-col flex-1" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
       <QuestionFeedFilter
         questions={feedQuestions}
         allTags={[...allTagsSet]}

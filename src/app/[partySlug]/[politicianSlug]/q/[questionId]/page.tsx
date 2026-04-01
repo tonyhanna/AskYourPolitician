@@ -62,7 +62,7 @@ async function getQuestionData(partySlug: string, politicianSlug: string, questi
   }
 
   // Fetch party data for TopBar
-  let party: { color: string | null; colorDark: string | null; colorLight: string | null; logoUrl: string | null; topbarNameColor: string | null; topbarNameOpacity: number | null; topbarPartyColor: string | null; topbarPartyOpacity: number | null; topbarConstituencyColor: string | null; topbarConstituencyOpacity: number | null } | null = null;
+  let party: { color: string | null; colorDark: string | null; colorLight: string | null; logoUrl: string | null; topbarLeft1Color: string | null; topbarLeft1Opacity: number | null; topbarLeft2Color: string | null; topbarLeft2Opacity: number | null; topbarRightColor: string | null; topbarRightOpacity: number | null } | null = null;
   if (politician.partyId) {
     const [p] = await db
       .select({
@@ -70,12 +70,12 @@ async function getQuestionData(partySlug: string, politicianSlug: string, questi
         colorDark: parties.colorDark,
         colorLight: parties.colorLight,
         logoUrl: parties.logoUrl,
-        topbarNameColor: parties.topbarNameColor,
-        topbarNameOpacity: parties.topbarNameOpacity,
-        topbarPartyColor: parties.topbarPartyColor,
-        topbarPartyOpacity: parties.topbarPartyOpacity,
-        topbarConstituencyColor: parties.topbarConstituencyColor,
-        topbarConstituencyOpacity: parties.topbarConstituencyOpacity,
+        topbarLeft1Color: parties.topbarLeft1Color,
+        topbarLeft1Opacity: parties.topbarLeft1Opacity,
+        topbarLeft2Color: parties.topbarLeft2Color,
+        topbarLeft2Opacity: parties.topbarLeft2Opacity,
+        topbarRightColor: parties.topbarRightColor,
+        topbarRightOpacity: parties.topbarRightOpacity,
       })
       .from(parties)
       .where(eq(parties.id, politician.partyId))
@@ -138,21 +138,20 @@ export default async function QuestionLandingPage({ params }: Props) {
   }
 
   const appSettings = await getAppSettings();
-  const partyColor = party?.color ?? null;
-  const partyColorDark = party?.colorDark ?? null;
 
   return (
     <>
       {/* Theme color meta tag */}
-      {partyColor && (
-        <meta name="theme-color" content={partyColor} />
+      {party?.color && (
+        <meta name="theme-color" content={party.color} />
       )}
-      <style>{`:root { --party-color: ${partyColor || "#3B82F6"}; }`}</style>
-      <style precedence="theme" href={`theme-detail-${partySlug}`}>{`html body{background-color:${partyColor}}`}</style>
+      {party?.color && (
+        <style precedence="theme" href={`theme-detail-${partySlug}`}>{`html body{background-color:${party.color}}`}</style>
+      )}
 
-      {partyColor && <ThemeColorSetter color={partyColor} />}
+      {party?.color && <ThemeColorSetter color={party.color} />}
 
-      <div className="min-h-dvh flex flex-col" style={{ backgroundColor: "var(--system-bg0, #ffffff)", "--party-primary": partyColor || "#000000", "--party-dark": partyColorDark || "#000000", "--party-light": party?.colorLight || "#ffffff" } as React.CSSProperties}>
+      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": party?.color || "#FF0000", "--party-dark": party?.colorDark || "#FF0000", "--party-light": party?.colorLight || "#FF0000" } as React.CSSProperties}>
       {/* PoliticianTopBar */}
       <PoliticianTopBar
         politicianName={politician.name}
@@ -160,12 +159,12 @@ export default async function QuestionLandingPage({ params }: Props) {
         profilePhotoUrl={politician.profilePhotoUrl}
         partyLogoUrl={party?.logoUrl ?? null}
         constituency={politician.constituency}
-        topbarNameColor={party?.topbarNameColor ?? null}
-        topbarNameOpacity={party?.topbarNameOpacity ?? null}
-        topbarPartyColor={party?.topbarPartyColor ?? null}
-        topbarPartyOpacity={party?.topbarPartyOpacity ?? null}
-        topbarConstituencyColor={party?.topbarConstituencyColor ?? null}
-        topbarConstituencyOpacity={party?.topbarConstituencyOpacity ?? null}
+        topbarLeft1Color={party?.topbarLeft1Color ?? null}
+        topbarLeft1Opacity={party?.topbarLeft1Opacity ?? null}
+        topbarLeft2Color={party?.topbarLeft2Color ?? null}
+        topbarLeft2Opacity={party?.topbarLeft2Opacity ?? null}
+        topbarRightColor={party?.topbarRightColor ?? null}
+        topbarRightOpacity={party?.topbarRightOpacity ?? null}
         politicianId={politician.id}
         partySlug={partySlug}
         politicianSlug={politicianSlug}
@@ -174,7 +173,7 @@ export default async function QuestionLandingPage({ params }: Props) {
         redirectPath={`${basePath}/q/${question.id}`}
       />
 
-      <main className="px-[15px] py-6 pb-1 flex flex-col flex-1" style={{ backgroundColor: "var(--system-bg0, #ffffff)" }}>
+      <main className="px-[15px] py-6 pb-1 flex flex-col flex-1" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
         {/* Question detail card */}
         <QuestionDetailCard
           question={{

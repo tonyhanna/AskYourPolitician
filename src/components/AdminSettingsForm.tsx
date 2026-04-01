@@ -54,6 +54,12 @@ type Props = {
   colorErrorContrastDark: string;
   colorOverlay: string;
   colorOverlayDark: string;
+  colorFormBg: string;
+  colorFormBgDark: string;
+  colorFormText0: string;
+  colorFormText0Dark: string;
+  colorFormText1: string;
+  colorFormText1Dark: string;
 };
 
 function ColorPicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
@@ -206,6 +212,10 @@ export function AdminSettingsForm(initial: Props) {
             subLabel="Kontrastfarve" subLightValue={colors.colorErrorContrast} subDarkValue={colors.colorErrorContrastDark} onSubLightChange={set("colorErrorContrast")} onSubDarkChange={set("colorErrorContrastDark")}
           />
           <ColorRow label="Mørkt overlag" lightValue={colors.colorOverlay} darkValue={colors.colorOverlayDark} onLightChange={set("colorOverlay")} onDarkChange={set("colorOverlayDark")} />
+
+          <ColorRow label="Formular baggrund" lightValue={colors.colorFormBg} darkValue={colors.colorFormBgDark} onLightChange={set("colorFormBg")} onDarkChange={set("colorFormBgDark")} />
+          <ColorRow label="Formular tekst 0" lightValue={colors.colorFormText0} darkValue={colors.colorFormText0Dark} onLightChange={set("colorFormText0")} onDarkChange={set("colorFormText0Dark")} />
+          <ColorRow label="Formular tekst 1" lightValue={colors.colorFormText1} darkValue={colors.colorFormText1Dark} onLightChange={set("colorFormText1")} onDarkChange={set("colorFormText1Dark")} />
         </div>
       </div>
 

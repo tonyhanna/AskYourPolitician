@@ -6,7 +6,7 @@
 }
 
 html {
-  background-color: var(--system-bg0, #ffffff);
+  background-color: var(--system-bg0, #FF0000);
 }
 
 @theme inline {
