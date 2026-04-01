@@ -11,7 +11,7 @@ import { useResponsiveGrid } from "@/hooks/useResponsiveGrid";
 import { UpvoteModal } from "./UpvoteModal";
 import { CircularUpvoteButton } from "./CircularUpvoteButton";
 import { QuestionDetailEllipsis } from "./QuestionDetailEllipsis";
-import { useSystemColors } from "./SystemColorProvider";
+
 import { StickyPillNav, type PillNavItem } from "./StickyPillNav";
 
 export type FeedQuestion = {
@@ -61,8 +61,6 @@ export function QuestionFeedFilter({
   politicianSlug: string;
   citizenEmail?: string | null;
 }) {
-  const systemColors = useSystemColors();
-  const { pending: colorPending, error: colorError } = systemColors;
   const canHover = useRef(false);
   useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -198,12 +196,12 @@ export function QuestionFeedFilter({
                 className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
                 style={{
                   fontFamily: "var(--font-figtree)", fontWeight: 500,
-                  backgroundColor: selectedTags.has(tag) ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                  backgroundColor: selectedTags.has(tag) ? "var(--system-bg0-contrast, #FF0000)" : "var(--system-bg1, #FF0000)",
                   transition: "background-color 200ms ease",
-                  color: selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)",
+                  color: selectedTags.has(tag) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)",
                 }}
-                onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
-                onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+                onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2, #FF0000)"; }}
+                onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)"; }}
               >
                 {tag}
               </button>
@@ -216,7 +214,7 @@ export function QuestionFeedFilter({
               <button
                 onClick={reset}
                 className="text-sm cursor-pointer"
-                style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: colorError }}
+                style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
               >
                 Nulstil
               </button>
@@ -227,13 +225,13 @@ export function QuestionFeedFilter({
                 className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
                 style={{
                   width: 32, height: 32,
-                  backgroundColor: isFiltered ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                  backgroundColor: isFiltered ? "var(--system-bg0-contrast, #FF0000)" : "var(--system-bg1, #FF0000)",
                 }}
                 aria-label="Filtre"
-                onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-error)"; }}
-                onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-pending)"; }}
+                onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-error, #FF0000)"; }}
+                onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-pending, #FF0000)"; }}
               >
-                <FontAwesomeIcon icon={faFire} swapOpacity style={{ color: "var(--system-pending)", transition: "color 150ms", fontSize: 15 }} />
+                <FontAwesomeIcon icon={faFire} swapOpacity style={{ color: "var(--system-pending, #FF0000)", transition: "color 150ms", fontSize: 15 }} />
               </button>
             ) : (
               <button
@@ -241,11 +239,11 @@ export function QuestionFeedFilter({
                 className="rounded-full flex items-center justify-center cursor-pointer transition-colors duration-150"
                 style={{
                   width: 32, height: 32,
-                  backgroundColor: "var(--system-bg1)",
-                  color: "var(--system-icon1)",
+                  backgroundColor: "var(--system-bg1, #FF0000)",
+                  color: "var(--system-icon1, #FF0000)",
                 }}
-                onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon0)"; }}
-                onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon1)"; }}
+                onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon0, #FF0000)"; }}
+                onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon1, #FF0000)"; }}
                 aria-label="Luk filtre"
               >
                 <FontAwesomeIcon icon={faXmark} style={{ fontSize: 14 }} />
@@ -263,12 +261,12 @@ export function QuestionFeedFilter({
                 className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
                 style={{
                   fontFamily: "var(--font-figtree)", fontWeight: 500,
-                  backgroundColor: selectedTags.has(tag) ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                  backgroundColor: selectedTags.has(tag) ? "var(--system-bg0-contrast, #FF0000)" : "var(--system-bg1, #FF0000)",
                   transition: "background-color 200ms ease",
-                  color: selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)",
+                  color: selectedTags.has(tag) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)",
                 }}
-                onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
-                onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast)" : "var(--system-text0)"; }}
+                onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2, #FF0000)"; }}
+                onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)"; }}
               >
                 {tag}
               </button>
@@ -280,7 +278,7 @@ export function QuestionFeedFilter({
       />
 
       {questions.length === 0 && (
-        <p className="max-w-2xl mx-auto text-gray-500 text-center py-8">
+        <p className="max-w-2xl mx-auto text-center py-8" style={{ color: "var(--system-text1, #FF0000)" }}>
           Der er endnu ingen spørgsmål fra denne politiker.
         </p>
       )}
@@ -306,7 +304,7 @@ export function QuestionFeedFilter({
       {pinnedQuestions.length > 0 && answeredQuestions.length > 0 && (
         <div
           className="my-6"
-          style={{ height: 1, backgroundColor: "var(--system-bg2)" }}
+          style={{ height: 1, backgroundColor: "var(--system-bg2, #FF0000)" }}
         />
       )}
 
@@ -332,7 +330,7 @@ export function QuestionFeedFilter({
       {answeredQuestions.length > 0 && (
         <div
           className="my-6"
-          style={{ height: 1, backgroundColor: "var(--system-bg2)" }}
+          style={{ height: 1, backgroundColor: "var(--system-bg2, #FF0000)" }}
         />
       )}
 
@@ -445,8 +443,8 @@ function PinnedQuestionCard({
               style={{
                 fontSize: 12,
                 lineHeight: 1.3,
-                color: "var(--system-text0)",
-                backgroundColor: "var(--system-bg1)",
+                color: "var(--system-text0, #FF0000)",
+                backgroundColor: "var(--system-bg1, #FF0000)",
                 boxDecorationBreak: "clone",
                 WebkitBoxDecorationBreak: "clone",
                 padding: "2px 8px",
@@ -564,11 +562,11 @@ function AnsweredQuestionsGrid({
               className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-colors duration-150"
               style={{
                 fontFamily: "var(--font-figtree)", fontWeight: 500,
-                backgroundColor: "var(--system-bg0-contrast)",
-                color: "var(--system-text0-contrast)",
+                backgroundColor: "var(--system-bg0-contrast, #FF0000)",
+                color: "var(--system-text0-contrast, #FF0000)",
               }}
-              onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2)"; }}
-              onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text0-contrast)"; }}
+              onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2, #FF0000)"; }}
+              onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text0-contrast, #FF0000)"; }}
             >
               Vis flere
             </button>
@@ -628,7 +626,7 @@ function UnansweredQuestionsGrid({
                     style={{
                       gridColumn: "1 / -1",
                       height: 1,
-                      backgroundColor: "var(--system-bg2)",
+                      backgroundColor: "var(--system-bg2, #FF0000)",
                     }}
                   />
                 )}
@@ -640,7 +638,7 @@ function UnansweredQuestionsGrid({
                       style={{
                         left: -(gapW / 2) - 0.5,
                         width: 1,
-                        backgroundColor: "var(--system-bg2)",
+                        backgroundColor: "var(--system-bg2, #FF0000)",
                       }}
                     />
                   )}
@@ -716,8 +714,8 @@ function UnansweredQuestionCard({
                 display: "inline-block",
                 fontSize: 12,
                 lineHeight: 1.3,
-                color: "var(--system-text0)",
-                backgroundColor: "var(--system-bg1)",
+                color: "var(--system-text0, #FF0000)",
+                backgroundColor: "var(--system-bg1, #FF0000)",
                 padding: "2px 4px",
                 borderRadius: 3,
                 fontFamily: "var(--font-figtree)",

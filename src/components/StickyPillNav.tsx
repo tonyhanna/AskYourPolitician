@@ -52,7 +52,7 @@ export function StickyPillNav({
     <div className="sticky top-[94px] z-40 mb-[25px]" style={{ position: "sticky" }}>
       {/* Full-width blur background (e.g. when filters are open on citizen page) */}
       {blurBackground && (
-        <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: 0, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", backgroundColor: "color-mix(in srgb, var(--system-bg0) 70%, transparent)", zIndex: -1 }} />
+        <div style={{ position: "absolute", top: -24, left: -15, right: -15, bottom: 0, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", backgroundColor: "color-mix(in srgb, var(--system-bg0, #FF0000) 70%, transparent)", zIndex: -1 }} />
       )}
       <div className="flex items-start justify-between">
         {/* Left side: pills or override content */}
@@ -68,23 +68,23 @@ export function StickyPillNav({
                   style={{
                     fontFamily: "var(--font-figtree)",
                     fontWeight: 500,
-                    backgroundColor: isActive ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
-                    color: isActive ? "var(--system-text0-contrast)" : "var(--system-text0)",
+                    backgroundColor: isActive ? "var(--system-bg0-contrast, #FF0000)" : "var(--system-bg1, #FF0000)",
+                    color: isActive ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)",
                   }}
                   onPointerEnter={(e) => {
                     if (!canHover.current) return;
-                    e.currentTarget.style.color = "var(--system-text2)";
+                    e.currentTarget.style.color = "var(--system-text2, #FF0000)";
                     const svg = e.currentTarget.querySelector("svg");
-                    if (svg) svg.style.color = "var(--system-icon2)";
+                    if (svg) svg.style.color = "var(--system-icon2, #FF0000)";
                   }}
                   onPointerLeave={(e) => {
                     if (!canHover.current) return;
-                    e.currentTarget.style.color = isActive ? "var(--system-text0-contrast)" : "var(--system-text0)";
+                    e.currentTarget.style.color = isActive ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)";
                     const svg = e.currentTarget.querySelector("svg");
-                    if (svg) svg.style.color = isActive ? "var(--system-icon0-contrast)" : "var(--system-icon0)";
+                    if (svg) svg.style.color = isActive ? "var(--system-icon0-contrast, #FF0000)" : "var(--system-icon0, #FF0000)";
                   }}
                 >
-                  {item.icon && <FontAwesomeIcon icon={item.icon} swapOpacity={item.swapIconOpacity} style={{ fontSize: 15, marginRight: 5, color: isActive ? "var(--system-icon0-contrast)" : "var(--system-icon0)" }} />}{item.label}
+                  {item.icon && <FontAwesomeIcon icon={item.icon} swapOpacity={item.swapIconOpacity} style={{ fontSize: 15, marginRight: 5, color: isActive ? "var(--system-icon0-contrast, #FF0000)" : "var(--system-icon0, #FF0000)" }} />}{item.label}
                 </button>
               );
             })}

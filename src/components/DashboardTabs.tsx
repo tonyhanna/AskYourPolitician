@@ -65,13 +65,13 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
               style={{
                 width: 32,
                 height: 32,
-                backgroundColor: activeTab === "settings" ? "var(--system-bg0-contrast)" : "var(--system-bg1)",
+                backgroundColor: activeTab === "settings" ? "var(--system-bg0-contrast, #FF0000)" : "var(--system-bg1, #FF0000)",
               }}
               aria-label="Indstillinger"
-              onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-icon2)"; }}
-              onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = activeTab === "settings" ? "var(--system-icon0-contrast)" : "var(--system-icon0)"; }}
+              onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-icon2, #FF0000)"; }}
+              onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = activeTab === "settings" ? "var(--system-icon0-contrast, #FF0000)" : "var(--system-icon0, #FF0000)"; }}
             >
-              <FontAwesomeIcon icon={faUserGear} swapOpacity style={{ color: activeTab === "settings" ? "var(--system-icon0-contrast)" : "var(--system-icon0)", fontSize: 15 }} />
+              <FontAwesomeIcon icon={faUserGear} swapOpacity style={{ color: activeTab === "settings" ? "var(--system-icon0-contrast, #FF0000)" : "var(--system-icon0, #FF0000)", fontSize: 15 }} />
             </button>
             <form action={logoutAction}>
               <button
@@ -80,13 +80,13 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
                 style={{
                   width: 32,
                   height: 32,
-                  backgroundColor: "var(--system-bg1)",
+                  backgroundColor: "var(--system-bg1, #FF0000)",
                 }}
                 aria-label="Log ud"
-                onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-text2)"; }}
-                onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-text0)"; }}
+                onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-text2, #FF0000)"; }}
+                onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-text0, #FF0000)"; }}
               >
-                <FontAwesomeIcon icon={faArrowRightFromBracket} style={{ color: "var(--system-text0)", transition: "color 150ms", fontSize: 15 }} />
+                <FontAwesomeIcon icon={faArrowRightFromBracket} style={{ color: "var(--system-text0, #FF0000)", transition: "color 150ms", fontSize: 15 }} />
               </button>
             </form>
           </div>
@@ -113,9 +113,8 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
           style={{
             width: 56,
             height: 56,
-            backgroundColor: "var(--party-primary)",
-            color: "var(--party-dark)",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            backgroundColor: "var(--party-primary, #FF0000)",
+            color: "var(--party-dark, #FF0000)",
           }}
           onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.querySelectorAll("svg").forEach((svg) => { svg.style.opacity = "0.5"; }); }}
           onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.querySelectorAll("svg").forEach((svg) => { svg.style.opacity = "1"; }); }}

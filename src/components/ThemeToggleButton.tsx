@@ -48,7 +48,7 @@ export function ThemeToggleButton() {
         className="rounded-full flex items-center justify-center"
         style={{
           height: 24,
-          backgroundColor: "var(--system-bg1)",
+          backgroundColor: "var(--system-bg1, #FF0000)",
           overflow: "hidden",
           transition: "width 200ms ease",
           width: expanded ? 24 * 3 + 5 * 2 : 24,
@@ -58,8 +58,8 @@ export function ThemeToggleButton() {
           <div className="flex items-center" style={{ gap: 5 }}>
           {themeOptions.map(({ pref, icon }) => {
             const isSelected = preference === pref;
-            const idle = isSelected ? "var(--system-icon0)" : "var(--system-icon3)";
-            const hover = isSelected ? "var(--system-icon1)" : "var(--system-icon2)";
+            const idle = isSelected ? "var(--system-icon0, #FF0000)" : "var(--system-icon3, #FF0000)";
+            const hover = isSelected ? "var(--system-icon1, #FF0000)" : "var(--system-icon2, #FF0000)";
             return (
               <button
                 key={pref}
@@ -84,10 +84,10 @@ export function ThemeToggleButton() {
             style={{
               width: 24,
               height: 24,
-              color: "var(--system-icon1)",
+              color: "var(--system-icon1, #FF0000)",
             }}
-            onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon0)"; }}
-            onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon1)"; }}
+            onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon0, #FF0000)"; }}
+            onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-icon1, #FF0000)"; }}
             aria-label="Skift tema"
           >
             <FontAwesomeIcon icon={currentIcon} style={{ fontSize: "13.5px" }} />
