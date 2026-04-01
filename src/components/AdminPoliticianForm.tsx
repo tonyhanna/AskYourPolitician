@@ -58,6 +58,8 @@ export function AdminPoliticianForm({ politician, allParties }: { politician: Po
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [selectedPartyId, setSelectedPartyId] = useState(politician?.partyId ?? "");
+  const selectedParty = allParties.find((p) => p.id === selectedPartyId);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(politician?.profilePhotoUrl ?? "");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [bannerUrl, setBannerUrl] = useState(politician?.bannerUrl ?? "");
@@ -131,7 +133,8 @@ export function AdminPoliticianForm({ politician, allParties }: { politician: Po
 
       <div>
         <label htmlFor="partyId" className="block text-sm font-medium text-gray-700 mb-1">Parti</label>
-        <select id="partyId" name="partyId" required defaultValue={politician?.partyId ?? ""}
+        <select id="partyId" name="partyId" required value={selectedPartyId}
+          onChange={(e) => setSelectedPartyId(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
           <option value="">Vælg parti...</option>
           {allParties.map((p) => (
@@ -261,7 +264,6 @@ export function AdminPoliticianForm({ politician, allParties }: { politician: Po
           { name: "heroLine1", colorState: heroLine1Color, setColor: setHeroLine1Color, defaultValue: politician?.heroLine1 ?? "", placeholder: "Linje 1" },
           { name: "heroLine2", colorState: heroLine2Color, setColor: setHeroLine2Color, defaultValue: politician?.heroLine2 ?? "", placeholder: "Linje 2" },
         ].map((line) => {
-          const selectedParty = allParties.find((p) => p.id === (politician?.partyId ?? ""));
           const partyColorOptions = selectedParty
             ? [
                 { key: "primary", hex: selectedParty.color },
