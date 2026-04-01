@@ -235,9 +235,12 @@ export function PlayableMediaCard({
     >
       {/* Processing overlay */}
       {isPreparing && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ zIndex: 10, backgroundColor: "rgba(0,0,0,0.6)" }}>
-          <div className="animate-spin" style={{ width: 40, height: 40, borderRadius: "50%", border: "4px solid rgba(255,255,255,0.25)", borderTopColor: "#ffffff" }} />
-          <span className="text-white text-sm mt-3" style={{ fontFamily: "var(--font-figtree)" }}>Behandler video...</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ zIndex: 10, backgroundColor: "var(--system-overlay, #FF0000)", opacity: 0.6 }}>
+          <div style={{ position: "relative", width: 40, height: 40 }}>
+            <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "4px solid var(--system-bg0-contrast, #FF0000)", opacity: 0.5 }} />
+            <div className="animate-spin" style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "4px solid transparent", borderTopColor: "var(--system-bg0, #FF0000)" }} />
+          </div>
+          <span className="text-sm mt-3" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0-contrast, #FF0000)" }}>Behandler video...</span>
         </div>
       )}
 
@@ -246,7 +249,7 @@ export function PlayableMediaCard({
         <>
           <div
             className="absolute inset-0 transition-opacity duration-200"
-            style={{ zIndex: 1, opacity: !isWatching && isHovering ? 0.2 : 0, backgroundColor: "var(--system-overlay, #000000)", pointerEvents: "none", borderRadius: 20 }}
+            style={{ zIndex: 1, opacity: !isWatching && isHovering ? 0.2 : 0, backgroundColor: "var(--system-overlay, #FF0000)", pointerEvents: "none", borderRadius: 20 }}
           />
           <div
             className="absolute bottom-3 left-3 flex items-center justify-center rounded-full"
@@ -256,8 +259,8 @@ export function PlayableMediaCard({
               transition: "opacity 300ms ease, transform 300ms ease",
             }}
           >
-            <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ backgroundColor: "var(--party-primary)", opacity: isHovering ? 1 : 0.75 }} />
-            <FontAwesomeIcon icon={faPlay} className="relative" style={{ color: "var(--party-dark)", fontSize: 20, marginLeft: 2 }} />
+            <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ backgroundColor: "var(--party-primary, #FF0000)", opacity: isHovering ? 1 : 0.75 }} />
+            <FontAwesomeIcon icon={faPlay} className="relative" style={{ color: "var(--party-dark, #FF0000)", fontSize: 20, marginLeft: 2 }} />
           </div>
         </>
       )}
@@ -272,9 +275,9 @@ export function PlayableMediaCard({
           {/* Track */}
           <div style={{ position: "relative", height: 4, borderRadius: 9999, overflow: "hidden" }}>
             {/* Static background */}
-            <div style={{ position: "absolute", inset: 0, backgroundColor: "var(--system-bg0-contrast)", opacity: 0.5 }} />
+            <div style={{ position: "absolute", inset: 0, backgroundColor: "var(--system-bg0-contrast, #FF0000)", opacity: 0.5 }} />
             {/* Progress fill */}
-            <div ref={progressBarRef} style={{ position: "relative", height: "100%", width: "100%", backgroundColor: "var(--system-bg0)", transformOrigin: "left", transform: "scaleX(0)", willChange: "transform" }} />
+            <div ref={progressBarRef} style={{ position: "relative", height: "100%", width: "100%", backgroundColor: "var(--system-bg0, #FF0000)", transformOrigin: "left", transform: "scaleX(0)", willChange: "transform" }} />
           </div>
         </div>
       )}
@@ -298,9 +301,9 @@ export function PlayableMediaCard({
         <div ref={bufferingRef} className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 4, opacity: 0, pointerEvents: "none", transition: "opacity 150ms" }}>
           <div style={{ position: "relative", width: 40, height: 40 }}>
             {/* Static ring (bg0-contrast at 50%) */}
-            <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "4px solid var(--system-bg0-contrast)", opacity: 0.5 }} />
+            <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "4px solid var(--system-bg0-contrast, #FF0000)", opacity: 0.5 }} />
             {/* Spinning indicator (bg0) */}
-            <div className="animate-spin" style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "4px solid transparent", borderTopColor: "var(--system-bg0)" }} />
+            <div className="animate-spin" style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "4px solid transparent", borderTopColor: "var(--system-bg0, #FF0000)" }} />
           </div>
         </div>
       )}
