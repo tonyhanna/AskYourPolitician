@@ -12,6 +12,12 @@ type PartyData = {
   color: string | null;
   colorLight: string | null;
   colorDark: string | null;
+  topbarNameColor: string | null;
+  topbarNameOpacity: number | null;
+  topbarPartyColor: string | null;
+  topbarPartyOpacity: number | null;
+  topbarConstituencyColor: string | null;
+  topbarConstituencyOpacity: number | null;
 } | null;
 
 async function cropToSquare(file: File): Promise<File> {
@@ -43,6 +49,12 @@ export function AdminPartyForm({ party }: { party: PartyData }) {
   const [color, setColor] = useState(party?.color ?? "#000000");
   const [colorLight, setColorLight] = useState(party?.colorLight ?? "#E5E7EB");
   const [colorDark, setColorDark] = useState(party?.colorDark ?? "#1F2937");
+  const [topbarNameColor, setTopbarNameColor] = useState(party?.topbarNameColor ?? "");
+  const [topbarNameOpacity, setTopbarNameOpacity] = useState(party?.topbarNameOpacity ?? 100);
+  const [topbarPartyColor, setTopbarPartyColor] = useState(party?.topbarPartyColor ?? "");
+  const [topbarPartyOpacity, setTopbarPartyOpacity] = useState(party?.topbarPartyOpacity ?? 100);
+  const [topbarConstituencyColor, setTopbarConstituencyColor] = useState(party?.topbarConstituencyColor ?? "");
+  const [topbarConstituencyOpacity, setTopbarConstituencyOpacity] = useState(party?.topbarConstituencyOpacity ?? 100);
 
   async function handleLogoUpload(file: File) {
     if (!file.type.startsWith("image/")) return;
@@ -78,6 +90,12 @@ export function AdminPartyForm({ party }: { party: PartyData }) {
       <input type="hidden" name="color" value={color} />
       <input type="hidden" name="colorLight" value={colorLight} />
       <input type="hidden" name="colorDark" value={colorDark} />
+      <input type="hidden" name="topbarNameColor" value={topbarNameColor} />
+      <input type="hidden" name="topbarNameOpacity" value={topbarNameOpacity} />
+      <input type="hidden" name="topbarPartyColor" value={topbarPartyColor} />
+      <input type="hidden" name="topbarPartyOpacity" value={topbarPartyOpacity} />
+      <input type="hidden" name="topbarConstituencyColor" value={topbarConstituencyColor} />
+      <input type="hidden" name="topbarConstituencyOpacity" value={topbarConstituencyOpacity} />
 
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Partinavn</label>
@@ -130,6 +148,64 @@ export function AdminPartyForm({ party }: { party: PartyData }) {
           <div className="w-8 h-8 rounded-full border border-gray-200" style={{ backgroundColor: color }} title="Primær" />
           <div className="w-8 h-8 rounded-full border border-gray-200" style={{ backgroundColor: colorDark }} title="Mørk" />
         </div>
+      </div>
+
+      {/* Topbar farver */}
+      <div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">Topbar tekstfarver</label>
+        <p className="text-xs text-gray-500 -mt-2">Vælg farver for tekstelementer i politikerens topbar. Vælg en af partiets farver eller en custom farve.</p>
+        {([
+          { label: "Politikernavn", colorState: topbarNameColor, setColor: setTopbarNameColor, opacityState: topbarNameOpacity, setOpacity: setTopbarNameOpacity, defaultKey: "dark" },
+          { label: "Partinavn", colorState: topbarPartyColor, setColor: setTopbarPartyColor, opacityState: topbarPartyOpacity, setOpacity: setTopbarPartyOpacity, defaultKey: "light" },
+          { label: "Kreds", colorState: topbarConstituencyColor, setColor: setTopbarConstituencyColor, opacityState: topbarConstituencyOpacity, setOpacity: setTopbarConstituencyOpacity, defaultKey: "dark" },
+        ] as const).map((item) => {
+          const partyColorOptions = [
+            { key: "primary", hex: color },
+            { key: "light", hex: colorLight },
+            { key: "dark", hex: colorDark },
+          ];
+          const isCustom = item.colorState && !["primary", "light", "dark", ""].includes(item.colorState);
+          return (
+            <div key={item.label}>
+              <label className="block text-xs text-gray-500 mb-1">{item.label} <span className="text-gray-400">(default: {item.defaultKey})</span></label>
+              <div className="flex items-center gap-2">
+                {partyColorOptions.map(({ key, hex }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => item.setColor(item.colorState === key ? "" : key)}
+                    className={`w-7 h-7 rounded-full border-2 cursor-pointer transition ${
+                      item.colorState === key ? "border-gray-900 scale-110" : "border-gray-300 hover:border-gray-400"
+                    }`}
+                    style={{ backgroundColor: hex }}
+                    title={key}
+                  />
+                ))}
+                <input
+                  type="color"
+                  value={isCustom ? item.colorState : "#000000"}
+                  onChange={(e) => item.setColor(e.target.value)}
+                  className={`w-7 h-7 rounded-full border-2 cursor-pointer p-0 ${
+                    isCustom ? "border-gray-900 scale-110" : "border-gray-300 hover:border-gray-400"
+                  }`}
+                  title="Custom farve"
+                />
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={item.opacityState}
+                  onChange={(e) => item.setOpacity(parseInt(e.target.value))}
+                  className="w-20 h-1 cursor-pointer"
+                />
+                <span className="text-xs text-gray-400 w-8">{item.opacityState}%</span>
+                {item.colorState && (
+                  <button type="button" onClick={() => { item.setColor(""); item.setOpacity(100); }} className="text-xs text-red-600 hover:text-red-800 cursor-pointer">Nulstil</button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="flex items-center gap-4">

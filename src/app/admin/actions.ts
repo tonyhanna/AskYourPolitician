@@ -48,6 +48,12 @@ export async function createParty(formData: FormData) {
   const color = (formData.get("color") as string) || null;
   const colorLight = (formData.get("colorLight") as string) || null;
   const colorDark = (formData.get("colorDark") as string) || null;
+  const topbarNameColor = (formData.get("topbarNameColor") as string)?.trim() || null;
+  const topbarNameOpacity = formData.get("topbarNameOpacity") ? parseInt(formData.get("topbarNameOpacity") as string) : null;
+  const topbarPartyColor = (formData.get("topbarPartyColor") as string)?.trim() || null;
+  const topbarPartyOpacity = formData.get("topbarPartyOpacity") ? parseInt(formData.get("topbarPartyOpacity") as string) : null;
+  const topbarConstituencyColor = (formData.get("topbarConstituencyColor") as string)?.trim() || null;
+  const topbarConstituencyOpacity = formData.get("topbarConstituencyOpacity") ? parseInt(formData.get("topbarConstituencyOpacity") as string) : null;
 
   if (!name) throw new Error("Parti-navn er påkrævet");
 
@@ -68,6 +74,12 @@ export async function createParty(formData: FormData) {
     color,
     colorLight,
     colorDark,
+    topbarNameColor,
+    topbarNameOpacity,
+    topbarPartyColor,
+    topbarPartyOpacity,
+    topbarConstituencyColor,
+    topbarConstituencyOpacity,
   });
 
   revalidatePath("/admin");
@@ -82,6 +94,12 @@ export async function updateParty(formData: FormData) {
   const color = (formData.get("color") as string) || null;
   const colorLight = (formData.get("colorLight") as string) || null;
   const colorDark = (formData.get("colorDark") as string) || null;
+  const topbarNameColor = (formData.get("topbarNameColor") as string)?.trim() || null;
+  const topbarNameOpacity = formData.get("topbarNameOpacity") ? parseInt(formData.get("topbarNameOpacity") as string) : null;
+  const topbarPartyColor = (formData.get("topbarPartyColor") as string)?.trim() || null;
+  const topbarPartyOpacity = formData.get("topbarPartyOpacity") ? parseInt(formData.get("topbarPartyOpacity") as string) : null;
+  const topbarConstituencyColor = (formData.get("topbarConstituencyColor") as string)?.trim() || null;
+  const topbarConstituencyOpacity = formData.get("topbarConstituencyOpacity") ? parseInt(formData.get("topbarConstituencyOpacity") as string) : null;
 
   if (!name || !partyId) throw new Error("Parti-navn er påkrævet");
 
@@ -89,7 +107,7 @@ export async function updateParty(formData: FormData) {
 
   await db
     .update(parties)
-    .set({ name, slug, logoUrl, color, colorLight, colorDark, updatedAt: new Date() })
+    .set({ name, slug, logoUrl, color, colorLight, colorDark, topbarNameColor, topbarNameOpacity, topbarPartyColor, topbarPartyOpacity, topbarConstituencyColor, topbarConstituencyOpacity, updatedAt: new Date() })
     .where(eq(parties.id, partyId));
 
   // Update denormalized party/partySlug on all politicians in this party
