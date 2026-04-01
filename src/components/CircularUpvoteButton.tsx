@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faXmark, faThumbsUp } from "@fortawesome/free-solid-svg-icons";
 import { faArrowUp as faArrowUpDuotone, faHourglass } from "@fortawesome/pro-duotone-svg-icons";
 import { directUpvote, cancelUpvote } from "@/app/[partySlug]/[politicianSlug]/actions";
-import { useSystemColors, useTheme } from "./SystemColorProvider";
+import { useTheme } from "./SystemColorProvider";
 
 /**
  * Shared circular upvote button used in both UnansweredQuestionCard and QuestionDetailCard.
@@ -72,22 +72,27 @@ export function CircularUpvoteButton({
   tooltipPosition = "left",
   onModalSubmitted,
 }: CircularUpvoteButtonProps) {
-  const { pending: colorPending, error: colorError, pendingContrast, errorContrast } = useSystemColors();
   const { isDark } = useTheme();
-  const alphaHex = isDark ? "BF" : "80";
   const iconSize = Math.round(size * 0.525);
   const plusOneSize = Math.round(size * 0.4375);
 
   // Party colors from CSS variables
-  const pp = "var(--party-primary)";
-  const pd = "var(--party-dark)";
-  // System colors with alpha (these are hex values, so hex-alpha works)
-  const redBg = `${colorError}${alphaHex}`;
-  const yellowBg = `${colorPending}${alphaHex}`;
-  // Party color with alpha — use color-mix since CSS vars can't use hex-alpha
+  const pp = "var(--party-primary, #FF0000)";
+  const pd = "var(--party-dark, #FF0000)";
+  const pl = "var(--party-light, #FF0000)";
+  // System colors with alpha via color-mix
+  const redBg = isDark
+    ? "color-mix(in srgb, var(--system-error, #FF0000) 75%, transparent)"
+    : "color-mix(in srgb, var(--system-error, #FF0000) 50%, transparent)";
+  const yellowBg = isDark
+    ? "color-mix(in srgb, var(--system-pending, #FF0000) 75%, transparent)"
+    : "color-mix(in srgb, var(--system-pending, #FF0000) 50%, transparent)";
+  const errorContrast = "var(--system-error-contrast, #FF0000)";
+  const pendingContrast = "var(--system-pending-contrast, #FF0000)";
+  // Party color with alpha
   const ppAlpha = isDark
-    ? "color-mix(in srgb, var(--party-primary) 75%, transparent)"
-    : "color-mix(in srgb, var(--party-primary) 50%, transparent)";
+    ? "color-mix(in srgb, var(--party-primary, #FF0000) 75%, transparent)"
+    : "color-mix(in srgb, var(--party-primary, #FF0000) 50%, transparent)";
 
   // ── Core state ──────────────────────────────────────────────────────
   const [state, setState] = useState<State>(() => deriveState(goalReached, isUpvoted));
@@ -330,19 +335,19 @@ export function CircularUpvoteButton({
         return { icon: faHourglass, iconColor: pendingContrast, bgColor: yellowBg, label: "Afventer svar" };
 
       case "submitted":
-        return { icon: faCheck, iconColor: pd, bgColor: `${pp}80`, label: "Upvote sendt" };
+        return { icon: faCheck, iconColor: pd, bgColor: ppAlpha, label: "Upvote sendt" };
 
       case "pending":
         return { icon: faArrowUpDuotone, iconColor: pd, bgColor: pp, label: "Behandler..." };
     }
-  }, [state, isHovering, armed, desktopConfirmed, pp, pd, ppAlpha, redBg, yellowBg, colorPending, pendingContrast, errorContrast]);
+  }, [state, isHovering, armed, desktopConfirmed, pp, pd, ppAlpha, redBg, yellowBg, pendingContrast, errorContrast]);
 
   const showPlusOne = state === "idle" && (isHovering || armed > 0);
 
   // ── Tooltip position ────────────────────────────────────────────────
   const tooltipEl = useMemo(() => {
     if (!tooltip) return null;
-    const isRed = tooltip.bg.startsWith(colorError);
+    const isRed = tooltip.bg.includes("system-error");
     const flipped = flipTooltipRef.current;
     const alignRight = alignRightRef.current;
     const desktopH = alignRight ? "sm:right-0" : "sm:right-auto sm:left-1/2 sm:-translate-x-1/2";
@@ -377,7 +382,7 @@ export function CircularUpvoteButton({
         {tooltip.content}
       </div>
     );
-  }, [tooltip, tooltipPosition, colorError]);
+  }, [tooltip, tooltipPosition]);
 
   // ── Render ──────────────────────────────────────────────────────────
   return (
@@ -394,7 +399,7 @@ export function CircularUpvoteButton({
           aria-label={appearance.label}
         >
           {showPlusOne ? (
-            <span style={{ color: "#FFFFFF", fontSize: plusOneSize, fontFamily: "var(--font-figtree)", fontWeight: 700 }}>+1</span>
+            <span style={{ color: pl, fontSize: plusOneSize, fontFamily: "var(--font-figtree)", fontWeight: 700 }}>+1</span>
           ) : (
             <FontAwesomeIcon icon={appearance.icon} style={{ color: appearance.iconColor, fontSize: iconSize }} />
           )}
