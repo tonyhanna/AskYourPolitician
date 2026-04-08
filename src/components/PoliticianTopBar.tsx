@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark, faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
-import { faGlasses } from "@fortawesome/pro-duotone-svg-icons";
+import { faGlasses, faArrowUTurnLeftDown } from "@fortawesome/pro-duotone-svg-icons";
 import { faCommentPlus } from "@fortawesome/pro-solid-svg-icons";
 import { faInfo, faMailbox, faMailboxFlagUp } from "@fortawesome/pro-duotone-svg-icons";
 import { directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
@@ -340,15 +340,15 @@ export function PoliticianTopBar({
                     className="rounded-full flex items-center justify-center cursor-pointer"
                     style={{
                       width: 40, height: 40,
-                      backgroundColor: showXmark ? "var(--system-error, #FF0000)" : pd,
+                      backgroundColor: pd,
                     }}
                     aria-label={impersonateArmed ? "Stop impersonering" : "Admin"}
                     onPointerEnter={() => { if (canHover.current) setImpersonateHover(true); }}
                     onPointerLeave={() => { if (canHover.current) setImpersonateHover(false); }}
                   >
                     <FontAwesomeIcon
-                      icon={showXmark ? faXmark : faGlasses}
-                      style={{ color: showXmark ? "var(--system-error-contrast, #FF0000)" : (pl), fontSize: 18 }}
+                      icon={showXmark ? faArrowUTurnLeftDown : faGlasses}
+                      style={{ color: pl, fontSize: 18 }}
                     />
                   </button>
                 );

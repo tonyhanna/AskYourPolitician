@@ -21,7 +21,7 @@ export function SuggestionList({
 }) {
   if (suggestions.length === 0) {
     return (
-      <p className="text-sm text-gray-500">Ingen forslag fra borgere endnu.</p>
+      <p className="text-sm" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>Ingen forslag fra borgere endnu.</p>
     );
   }
 
