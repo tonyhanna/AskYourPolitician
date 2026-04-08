@@ -493,7 +493,7 @@ export async function togglePinQuestion(questionId: string) {
 
   // Verify question belongs to this politician
   const [question] = await db
-    .select({ id: questions.id, pinned: questions.pinned })
+    .select({ id: questions.id, pinned: questions.pinned, answerUrl: questions.answerUrl, muxAssetStatus: questions.muxAssetStatus })
     .from(questions)
     .where(
       and(
@@ -506,18 +506,32 @@ export async function togglePinQuestion(questionId: string) {
   if (!question) throw new Error("Spørgsmål ikke fundet");
 
   const newPinned = !question.pinned;
+  const hasAnswer = !!question.answerUrl || !!question.muxAssetStatus;
 
-  // Only one question can be pinned at a time — unpin all others first
+  // One pinned per category (answered/unanswered) — unpin others in same category
   if (newPinned) {
-    await db
-      .update(questions)
-      .set({ pinned: false })
+    const allInCategory = await db
+      .select({ id: questions.id, answerUrl: questions.answerUrl, muxAssetStatus: questions.muxAssetStatus })
+      .from(questions)
       .where(
         and(
           eq(questions.politicianId, politician.id),
           eq(questions.pinned, true)
         )
       );
+
+    const idsToUnpin = allInCategory
+      .filter((q) => {
+        const qHasAnswer = !!q.answerUrl || !!q.muxAssetStatus;
+        return qHasAnswer === hasAnswer; // same category
+      })
+      .map((q) => q.id);
+
+    if (idsToUnpin.length > 0) {
+      for (const id of idsToUnpin) {
+        await db.update(questions).set({ pinned: false }).where(eq(questions.id, id));
+      }
+    }
   }
 
   await db

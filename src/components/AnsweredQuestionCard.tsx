@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faCopy } from "@fortawesome/free-solid-svg-icons";
-import { faShare, faUpRightAndDownLeftFromCenter } from "@fortawesome/pro-duotone-svg-icons";
+import { faShare, faMaximize } from "@fortawesome/pro-duotone-svg-icons";
 import { getAnswerMediaInfo } from "@/lib/answer-utils";
 import { getMuxThumbnailUrl, getMuxMp4Url } from "@/lib/mux";
 import { useHlsPlayer } from "@/hooks/useHlsPlayer";
@@ -335,7 +335,7 @@ export function AnsweredQuestionCard({
               </span>
             </button>
             <a href={`${basePath}/q/${question.id}`} onClick={(e) => e.stopPropagation()} className="group rounded-full flex items-center justify-center flex-shrink-0" style={{ width: 24, height: 24, backgroundColor: "var(--party-primary, #FF0000)" }} aria-label="Se detaljer">
-              <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "11px" }} />
+              <FontAwesomeIcon icon={faMaximize} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "11px" }} />
             </a>
           </div>
         </div>

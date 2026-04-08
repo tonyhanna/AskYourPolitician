@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef, useSyncExternalStore } from "react";
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster, getMuxUploadUrl, submitMuxAnswer, checkMuxAnswerStatus } from "@/app/politiker/dashboard/actions";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowUp, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faHourglass, faShare, faPen, faTrash, faAlarmExclamation } from "@fortawesome/pro-duotone-svg-icons";
+import { faStarOfLife as faStarOfLifeSolid, faReply } from "@fortawesome/pro-solid-svg-icons";
+import { faStarOfLifeRegular } from "@/lib/custom-icons";
+import { faCopy } from "@fortawesome/free-solid-svg-icons";
+import { useShareCopy } from "@/hooks/useShareCopy";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { SuggestionList } from "./SuggestionList";
 import { isBlobUrl } from "@/lib/answer-utils";
@@ -108,13 +115,15 @@ export function QuestionList({
   const answered = questions.filter((q) => hasAnswer(q));
 
   // Sort pinned to top within each group
-  const allUnanswered = [...missed, ...unanswered, ...forUpvoting];
+  const allUnanswered = [...missed, ...unanswered];
   const unansweredPinned = allUnanswered.filter((q) => q.pinned);
   const unansweredNotPinned = allUnanswered.filter((q) => !q.pinned);
+  const forUpvotingPinned = forUpvoting.filter((q) => q.pinned);
+  const forUpvotingNotPinned = forUpvoting.filter((q) => !q.pinned);
   const answeredPinned = answered.filter((q) => q.pinned);
   const answeredNotPinned = answered.filter((q) => !q.pinned);
 
-  const hasCol1Content = pendingSuggestions.length > 0 || allUnanswered.length > 0;
+  const hasCol1Content = pendingSuggestions.length > 0 || allUnanswered.length > 0 || forUpvoting.length > 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -122,9 +131,9 @@ export function QuestionList({
       <div className="space-y-6">
         {pendingSuggestions.length > 0 && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-700">
-              Spørgsmål til godkendelse
-              <span className="ml-2 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-full font-medium align-middle">
+            <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
+              Til godkendelse
+              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: "var(--system-pending, #FF0000)", color: "var(--system-pending-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 600, position: "relative", top: -1 }}>
                 {pendingSuggestions.length}
               </span>
             </h3>
@@ -133,7 +142,12 @@ export function QuestionList({
         )}
         {allUnanswered.length > 0 ? (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-700">Ubesvaret</h3>
+            <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
+              Ubesvaret
+              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: "var(--system-error, #FF0000)", color: "var(--system-error-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 600, position: "relative", top: -1 }}>
+                {allUnanswered.length}
+              </span>
+            </h3>
             {unansweredPinned.map((q) => (
               <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
             ))}
@@ -144,9 +158,29 @@ export function QuestionList({
               <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
             ))}
           </div>
-        ) : !hasCol1Content && (
+        ) : null}
+        {forUpvoting.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
+              Til upvote
+              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 600, position: "relative", top: -1 }}>
+                {forUpvoting.length}
+              </span>
+            </h3>
+            {forUpvotingPinned.map((q) => (
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+            ))}
+            {forUpvotingPinned.length > 0 && forUpvotingNotPinned.length > 0 && (
+              <hr style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }} />
+            )}
+            {forUpvotingNotPinned.map((q) => (
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+            ))}
+          </div>
+        )}
+        {!hasCol1Content && (
           <div className="py-12 text-center" style={{ color: "var(--system-text2, #FF0000)" }}>
-            <p className="text-sm" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500 }}>Ingen ubesvarede spørgsmål</p>
+            <p className="text-sm" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500 }}>Ingen spørgsmål endnu</p>
           </div>
         )}
       </div>
@@ -155,7 +189,7 @@ export function QuestionList({
       <div className="space-y-4">
         {answered.length > 0 ? (
           <>
-            <h3 className="text-lg font-semibold text-gray-700">Besvaret</h3>
+            <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>Besvaret</h3>
             {answeredPinned.map((q) => (
               <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
             ))}
@@ -176,6 +210,68 @@ export function QuestionList({
   );
 }
 
+function AlarmTooltipButton() {
+  const [show, setShow] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const flippedRef = useRef(false);
+
+  // Dismiss on outside tap (mobile)
+  useEffect(() => {
+    if (!show) return;
+    const handler = (e: TouchEvent | MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setShow(false);
+    };
+    document.addEventListener("touchstart", handler, { capture: true });
+    document.addEventListener("mousedown", handler, { capture: true });
+    return () => {
+      document.removeEventListener("touchstart", handler, { capture: true });
+      document.removeEventListener("mousedown", handler, { capture: true });
+    };
+  }, [show]);
+
+  const handleShow = () => {
+    if (wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      flippedRef.current = rect.top < 200;
+    }
+    setShow(true);
+  };
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <div
+        className="rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer"
+        style={{ height: 40, width: 40, backgroundColor: "var(--system-bg0, #FF0000)" }}
+        onMouseEnter={handleShow}
+        onMouseLeave={() => setShow(false)}
+        onClick={() => { if (show) setShow(false); else handleShow(); }}
+      >
+        <FontAwesomeIcon icon={faAlarmExclamation} style={{ color: "var(--system-error, #FF0000)", fontSize: 16 }} />
+      </div>
+      {show && (
+        <div
+          className={`absolute right-0 rounded-xl px-4 py-3 ${flippedRef.current ? "" : "bottom-full mb-2"}`}
+          style={{
+            ...(flippedRef.current ? { top: "100%", marginTop: 8 } : {}),
+            backgroundColor: "color-mix(in srgb, var(--system-error, #FF0000) 75%, transparent)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            fontFamily: "var(--font-figtree)",
+            fontWeight: 500,
+            fontSize: 14,
+            color: "var(--system-error-contrast, #FF0000)",
+            whiteSpace: "nowrap",
+            zIndex: 30,
+            pointerEvents: "none",
+          }}
+        >
+          24-timers deadline er overskredet
+        </div>
+      )}
+    </div>
+  );
+}
+
 function QuestionItem({
   question,
   availableTags,
@@ -185,10 +281,14 @@ function QuestionItem({
   availableTags: { tagId: string; title: string }[];
   basePath: string;
 }) {
+  const { copied, handleShare } = useShareCopy(`${basePath}/q/${question.id}`, question.text);
+  const [pinHover, setPinHover] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState(false);
+  const editTextRef = useRef<HTMLTextAreaElement>(null);
   const [saving, setSaving] = useState(false);
   const [editingAnswer, setEditingAnswer] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set(question.tags));
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -221,20 +321,23 @@ function QuestionItem({
   const hasUpvotes = question.upvoteCount > 0;
 
   // Countdown timer for unanswered goal-reached questions
-  const [hoursLeft, setHoursLeft] = useState<number | null>(() => {
+  const calcTimeLeft = useCallback(() => {
     if (!question.goalReachedAt || question.answerUrl || question.deadlineMissed) return null;
     const deadline = new Date(question.goalReachedAt).getTime() + 24 * 60 * 60 * 1000;
-    return Math.max(0, Math.ceil((deadline - Date.now()) / (1000 * 60 * 60)));
-  });
+    const ms = Math.max(0, deadline - Date.now());
+    const h = Math.floor(ms / (1000 * 60 * 60));
+    const m = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    return { hours: h, minutes: m, total: ms };
+  }, [question.goalReachedAt, question.answerUrl, question.deadlineMissed]);
+
+  const [timeLeft, setTimeLeft] = useState(calcTimeLeft);
+  const hoursLeft = timeLeft ? timeLeft.hours : null;
 
   useEffect(() => {
     if (!question.goalReachedAt || question.answerUrl || question.deadlineMissed) return;
-    const interval = setInterval(() => {
-      const deadline = new Date(question.goalReachedAt!).getTime() + 24 * 60 * 60 * 1000;
-      setHoursLeft(Math.max(0, Math.ceil((deadline - Date.now()) / (1000 * 60 * 60))));
-    }, 60_000);
+    const interval = setInterval(() => setTimeLeft(calcTimeLeft()), 60_000);
     return () => clearInterval(interval);
-  }, [question.goalReachedAt, question.answerUrl, question.deadlineMissed]);
+  }, [calcTimeLeft, question.goalReachedAt, question.answerUrl, question.deadlineMissed]);
 
   async function handleFileSelect(file: File) {
     if (!file.type.startsWith("video/") && !file.type.startsWith("audio/")) {
@@ -592,13 +695,8 @@ function QuestionItem({
 
   function toggleTag(tagId: string) {
     setSelectedTags((prev) => {
-      const next = new Set(prev);
-      if (next.has(tagId)) {
-        next.delete(tagId);
-      } else {
-        next.add(tagId);
-      }
-      return next;
+      if (prev.has(tagId)) return new Set();
+      return new Set([tagId]);
     });
   }
 
@@ -606,6 +704,7 @@ function QuestionItem({
     setSaving(true);
     try {
       formData.set("questionId", question.id);
+      formData.set("text", editTextRef.current?.value ?? question.text);
       formData.set("tags", Array.from(selectedTags).join(","));
       const result = await editQuestion(formData);
       if (result.error) {
@@ -622,47 +721,34 @@ function QuestionItem({
 
   if (editing) {
     return (
-      <div className="border border-blue-300 bg-blue-50 rounded-lg p-4">
-        <form action={handleSave} className="space-y-3">
-          <div>
-            <label htmlFor={`text-${question.id}`} className="block text-sm font-medium text-gray-700 mb-1">
-              Spørgsmål
-            </label>
-            <textarea
-              id={`text-${question.id}`}
-              name="text"
-              defaultValue={question.text}
-              maxLength={300}
-              required
-              rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          {availableTags.length > 0 && (
-            <div>
-              <p className="block text-sm font-medium text-gray-700 mb-2">
-                Mærkesager (valgfrit)
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {availableTags.map((tag) => (
-                  <button
-                    key={tag.tagId}
-                    type="button"
-                    onClick={() => toggleTag(tag.tagId)}
-                    className={`text-sm px-3 py-1.5 rounded-full border cursor-pointer transition ${
-                      selectedTags.has(tag.tagId)
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-gray-700 border-gray-300 hover:border-blue-400"
-                    }`}
-                  >
-                    {tag.tagId}
-                  </button>
-                ))}
-              </div>
+      <div className="rounded-lg" style={{ backgroundColor: "var(--system-bg2, #FF0000)" }}>
+        <div style={{ padding: "20px 20px 16px" }}>
+          <textarea
+            ref={editTextRef}
+            defaultValue={question.text}
+            maxLength={300}
+            required
+            rows={3}
+            className="w-full mb-1 rounded-lg px-3 py-2 resize-none"
+            style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-form-text0, #FF0000)", backgroundColor: "var(--system-form-bg, #FF0000)", border: "none", outline: "none" }}
+          />
+          {question.suggestedBy && (
+            <div style={{ marginTop: 4 }}>
+              <span style={{
+                display: "inline-block", fontSize: 12, lineHeight: 1.3,
+                backgroundColor: "var(--system-bg0, #FF0000)",
+                padding: "2px 4px",
+                fontFamily: "var(--font-figtree)", fontWeight: 400,
+              }}>
+                <span style={{ color: "var(--system-text0, #FF0000)" }}>{question.suggestedBy}</span>
+                <span style={{ color: "var(--system-text2, #FF0000)" }}> — {new Date(question.createdAt).toLocaleDateString("da-DK", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+              </span>
             </div>
           )}
-          <div>
-            <label htmlFor={`goal-${question.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+        </div>
+        <form action={handleSave} style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }}>
+          <div style={{ padding: "12px 20px 0" }}>
+            <label htmlFor={`goal-${question.id}`} className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
               Upvote-mål
             </label>
             <input
@@ -671,23 +757,53 @@ function QuestionItem({
               type="number"
               defaultValue={question.upvoteGoal}
               min={1}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-lg px-3 py-2 text-sm"
+              style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
             />
           </div>
-          <div className="flex gap-2 justify-end">
+
+          {availableTags.length > 0 && (
+            <div style={{ padding: "12px 20px 0" }}>
+              <p className="block text-sm font-medium mb-2" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
+                Mærkesager (valgfrit)
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {availableTags.map((tag) => (
+                  <button
+                    key={tag.tagId}
+                    type="button"
+                    onClick={() => toggleTag(tag.tagId)}
+                    className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
+                    style={{
+                      fontFamily: "var(--font-figtree)", fontWeight: 500,
+                      backgroundColor: selectedTags.has(tag.tagId) ? "var(--system-bg0-contrast, #FF0000)" : "var(--system-bg0, #FF0000)",
+                      transition: "background-color 200ms ease",
+                      color: selectedTags.has(tag.tagId) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)",
+                    }}
+                  >
+                    {tag.tagId}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 justify-end" style={{ padding: "12px 20px 16px" }}>
             <button
               type="button"
-              onClick={() => setEditing(false)}
-              className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1.5 cursor-pointer"
+              onClick={() => { setSelectedTags(new Set(question.tags)); setEditing(false); }}
+              className="text-sm cursor-pointer px-3 py-1.5 hover:opacity-50 transition-opacity"
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
             >
               Annullér
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="text-sm bg-blue-600 text-white px-4 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
+              className="group text-sm px-4 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
             >
-              {saving ? "Gemmer..." : "Gem"}
+              <span className="group-hover:opacity-50 transition-opacity">{saving ? "Gemmer..." : "Gem ændringer"}</span>
             </button>
           </div>
         </form>
@@ -697,65 +813,187 @@ function QuestionItem({
 
   return (
     <div
-      className="rounded-lg p-4"
+      className="rounded-lg"
       style={{
-        backgroundColor: question.deadlineMissed
-          ? "color-mix(in srgb, var(--system-error, #FF0000) 10%, var(--system-bg1, #FF0000))"
-          : "var(--system-bg1, #FF0000)",
+        backgroundColor: "var(--system-bg1, #FF0000)",
       }}
     >
-      <div className="flex items-start justify-between gap-2">
-        <a
-          href={`${basePath}/q/${question.id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-gray-900 hover:text-blue-600 transition mb-1 block"
-        >
-          {question.text}
-        </a>
-        <button
-          onClick={async () => {
-            setPinning(true);
-            try {
-              await togglePinQuestion(question.id);
-            } catch (e) {
-              alert(e instanceof Error ? e.message : "Der opstod en fejl");
-            } finally {
-              setPinning(false);
-            }
-          }}
-          disabled={pinning}
-          className={`text-sm shrink-0 cursor-pointer disabled:opacity-50 ${
-            question.pinned
-              ? "text-amber-600 hover:text-amber-800"
-              : "text-gray-400 hover:text-amber-600"
-          }`}
-        >
-          {pinning ? "..." : question.pinned ? "Unpin" : "Pin"}
-        </button>
-      </div>
-      {question.suggestedBy && (
-        <p className="text-xs mb-1">
-          <span className="px-2 py-0.5 rounded-full" style={{ color: "#000000", backgroundColor: "#FFFFFF" }}>
-            {question.suggestedBy}
-          </span>
-        </p>
-      )}
-      <div className="flex flex-wrap items-center gap-2 mb-2">
-        {question.tags.map((tag) => (
-          <span
-            key={tag}
-            className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
+      {/* Top section — matches citizen page card layout */}
+      <div className="flex items-stretch" style={{ padding: "16px 20px", gap: 20 }}>
+        {/* Text + suggestedBy + share + tags */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          <a
+            href={`${basePath}/q/${question.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: "none" }}
           >
-            {tag}
-          </span>
-        ))}
+            <span style={{
+              fontSize: 22,
+              lineHeight: 1.3,
+              color: (question.answerUrl || question.muxAssetStatus) ? "var(--party-light, #FF0000)" : "var(--system-text0, #FF0000)",
+              fontFamily: "var(--font-figtree)",
+              fontWeight: 500,
+              ...((question.answerUrl || question.muxAssetStatus) ? {
+                backgroundColor: "var(--party-dark, #FF0000)",
+                boxDecorationBreak: "clone" as const,
+                WebkitBoxDecorationBreak: "clone" as const,
+                padding: "2px 8px",
+              } : {}),
+            }}>
+              {question.text}
+            </span>
+          </a>
+          {question.suggestedBy && (
+            <div style={{ marginTop: 4 }}>
+              <span style={{
+                display: "inline-block", fontSize: 12, lineHeight: 1.3,
+                backgroundColor: "var(--system-bg0, #FF0000)",
+                padding: (question.answerUrl || question.muxAssetStatus) ? "2px 8px" : "2px 4px",
+                fontFamily: "var(--font-figtree)", fontWeight: 400,
+              }}>
+                <span style={{ color: "var(--system-text0, #FF0000)" }}>{question.suggestedBy}</span>
+                <span style={{ color: "var(--system-text2, #FF0000)" }}> — {new Date(question.createdAt).toLocaleDateString("da-DK", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+              </span>
+            </div>
+          )}
+          {/* Share + tags row */}
+          <div className="flex items-center gap-2 mt-auto" style={{ paddingTop: 20 }}>
+            <button
+              onClick={handleShare}
+              className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative"
+              style={{ height: 24, width: 24, backgroundColor: "var(--party-primary, #FF0000)" }}
+              aria-label="Del"
+            >
+              <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 0 : 1, transition: "opacity 300ms ease" }}>
+                <FontAwesomeIcon icon={faShare} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "13.5px" }} />
+              </span>
+              <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 1 : 0, transition: "opacity 300ms ease" }}>
+                <FontAwesomeIcon icon={faCopy} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "13.5px" }} />
+              </span>
+            </button>
+            {question.tags.map((tag) => (
+              <span key={tag} className="text-xs px-2.5 py-1 rounded-full"
+                style={{ backgroundColor: "var(--party-dark, #FF0000)", color: "var(--party-light, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+        {/* Disabled upvote icon — shows state without interaction (hidden for answered) */}
+        {!(question.answerUrl || question.muxAssetStatus) && (
+          <div className="flex-shrink-0 pt-1">
+            <div
+              className="rounded-full flex items-center justify-center opacity-50"
+              style={{
+                width: 40, height: 40,
+                backgroundColor: question.goalReached
+                  ? "color-mix(in srgb, var(--system-pending, #FF0000) 50%, transparent)"
+                  : "var(--party-primary, #FF0000)",
+              }}
+            >
+              {question.goalReached ? (
+                <FontAwesomeIcon icon={faHourglass} style={{ color: "var(--system-pending-contrast, #FF0000)", fontSize: 21 }} />
+              ) : (
+                <FontAwesomeIcon icon={faArrowUp} style={{ color: "var(--party-dark, #FF0000)", fontSize: 21 }} />
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {question.goalReached && (
-        <div className="mt-2 mb-3">
+      {/* Dashboard controls — below separator */}
+      <div style={{ borderTop: "1px solid var(--system-bg2, #FF0000)", padding: "12px 10px" }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center" style={{ gap: 10 }}>
+            <button
+              onClick={async () => {
+                setPinning(true);
+                setPinHover(false);
+                try { await togglePinQuestion(question.id); }
+                catch (e) { alert(e instanceof Error ? e.message : "Der opstod en fejl"); }
+                finally { setPinning(false); }
+              }}
+              disabled={pinning}
+              onMouseEnter={() => setPinHover(true)}
+              onMouseLeave={() => setPinHover(false)}
+              className="cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-50"
+              style={{
+                height: 40, width: 40,
+                backgroundColor: "var(--system-bg0, #FF0000)",
+              }}
+              aria-label={question.pinned ? "Unpin" : "Pin"}
+            >
+              <FontAwesomeIcon
+                icon={pinHover
+                  ? (question.pinned ? faStarOfLifeRegular : faStarOfLifeSolid)
+                  : (question.pinned ? faStarOfLifeSolid : faStarOfLifeRegular)}
+                style={{
+                  color: (pinHover ? !question.pinned : question.pinned)
+                    ? "var(--system-icon0, #FF0000)"
+                    : "var(--system-icon2, #FF0000)",
+                  fontSize: 16,
+                }}
+              />
+            </button>
+            <span className="text-sm" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
+              {question.upvoteCount} / {question.upvoteGoal} {question.upvoteGoal === 1 ? "upvote" : "upvotes"}
+            </span>
+          </div>
+          <div className="flex items-center" style={{ gap: 15 }}>
+            {!hasUpvotes && (
+              <div className="flex items-center" style={{ gap: 5 }}>
+                <button
+                  onClick={() => setEditing(true)}
+                  className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ height: 40, width: 40, backgroundColor: "var(--system-bg0, #FF0000)" }}
+                  aria-label="Redigér"
+                >
+                  <FontAwesomeIcon icon={faPen} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--system-success, #FF0000)", fontSize: 16 }} />
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-50"
+                  style={{ height: 40, width: 40, backgroundColor: "var(--system-bg0, #FF0000)" }}
+                  aria-label="Slet"
+                >
+                  <FontAwesomeIcon icon={faTrash} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--system-error, #FF0000)", fontSize: 16 }} />
+                </button>
+              </div>
+            )}
+            {question.deadlineMissed && (
+              <AlarmTooltipButton />
+            )}
+            {question.goalReached && !question.answerUrl && !question.muxAssetStatus && (
+              <span style={{ color: "var(--system-success, #FF0000)", fontFamily: "var(--font-figtree)", fontSize: 14, fontWeight: 500 }}>
+                {timeLeft && timeLeft.total > 0
+                  ? <>Svar inden for <strong>{timeLeft.hours}t {timeLeft.minutes}m</strong></>
+                  : "Svartid overskredet"}
+              </span>
+            )}
+            {question.goalReached && (
+              <button
+                onClick={() => setReplyOpen((v) => !v)}
+                className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ height: 40, width: 40, backgroundColor: "var(--system-bg0, #FF0000)" }}
+                aria-label="Besvar"
+              >
+                <FontAwesomeIcon
+                  icon={replyOpen ? faXmark : ((question.answerUrl || question.muxAssetStatus) ? faPen : faReply)}
+                  className="group-hover:opacity-50 transition-opacity"
+                  style={{ color: replyOpen ? "var(--system-error, #FF0000)" : "var(--system-success, #FF0000)", fontSize: 16 }}
+                />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {question.goalReached && (replyOpen || submitStep) && (
+        <div className="flex flex-col">
           {submitStep && submitStep !== "done" ? (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="rounded-lg" style={{ backgroundColor: "var(--system-bg0, #FF0000)", margin: "0 10px 10px", padding: 16 }}>
                 <div className="space-y-3">
                   {/* Steps shown as a checklist */}
                   {(() => {
@@ -788,106 +1026,104 @@ function QuestionItem({
                     return (
                       <div key={step} className="flex items-center gap-2">
                         {isActive ? (
-                          <svg className="w-4 h-4 text-amber-600 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                          <svg className="w-4 h-4 shrink-0 animate-spin" style={{ color: "var(--system-text2, #FF0000)" }} fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
                         ) : (
-                          <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          <svg className="w-4 h-4 shrink-0" style={{ color: "var(--system-success, #FF0000)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         )}
-                        <span className={`text-sm flex-1 ${isActive ? "text-amber-800 font-medium" : "text-green-800"}`}>
+                        <span className="text-sm flex-1 font-medium" style={{ fontFamily: "var(--font-figtree)", color: isActive ? "var(--system-text0, #FF0000)" : "var(--system-success, #FF0000)" }}>
                           {isActive ? activeLabel : doneLabel}
                         </span>
                       </div>
                     );
                   })}
                   {/* Progress bar */}
-                  <div className="w-full bg-amber-200 rounded-full h-2 overflow-hidden">
-                    <div className="bg-amber-500 h-2 rounded-full transition-all" style={{
+                  <div className="w-full rounded-full h-2 overflow-hidden" style={{ backgroundColor: "var(--system-bg2, #FF0000)" }}>
+                    <div className="h-2 rounded-full transition-all" style={{
+                      backgroundColor: "var(--system-success, #FF0000)",
                       width: submitStep === "uploading" ? `${Math.round(uploadProgress)}%`
                         : submitStep === "processing" ? "100%"
                         : "100%",
                     }} />
                   </div>
                   {submitStep === "processing" ? (
-                    <div className="bg-amber-100 border border-amber-300 rounded-md px-3 py-2 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-amber-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 3a9 9 0 110 18 9 9 0 010-18z" /></svg>
-                      <p className="text-sm text-amber-800 font-medium">Din {_isAudioSubmit.get(question.id) ? "lyd" : "video"} behandles — du kan lukke browseren. Svaret offentliggøres automatisk.</p>
+                    <div className="rounded-md px-3 py-2 flex items-center gap-2" style={{ backgroundColor: "var(--system-bg1, #FF0000)" }}>
+                      <svg className="w-4 h-4 shrink-0" style={{ color: "var(--system-text2, #FF0000)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 3a9 9 0 110 18 9 9 0 010-18z" /></svg>
+                      <p className="text-sm font-medium" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>Din {_isAudioSubmit.get(question.id) ? "lyd" : "video"} behandles — du kan lukke browseren. Svaret offentliggøres automatisk.</p>
                     </div>
                   ) : (
-                    <div className="bg-amber-100 border border-amber-300 rounded-md px-3 py-2 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-amber-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 3a9 9 0 110 18 9 9 0 010-18z" /></svg>
-                      <p className="text-sm text-amber-800 font-medium">Luk ikke browseren.</p>
+                    <div className="rounded-md px-3 py-2 flex items-center gap-2" style={{ backgroundColor: "var(--system-bg1, #FF0000)" }}>
+                      <svg className="w-4 h-4 shrink-0" style={{ color: "var(--system-text2, #FF0000)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 3a9 9 0 110 18 9 9 0 010-18z" /></svg>
+                      <p className="text-sm font-medium" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>Luk ikke browseren.</p>
                     </div>
                   )}
                 </div>
               </div>
           ) : ((question.answerUrl || question.muxAssetStatus) && !editingAnswer) || submitStep === "done" ? (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm text-green-800 font-medium mb-1">Svar indsendt</p>
-                  {question.muxAssetStatus ? (
-                    <p className="text-sm text-green-700">
-                      {question.muxMediaType === "audio" ? "Lydfil" : "Video"} {question.muxAssetStatus === "ready" ? "klar" : "behandles..."}
-                      {question.answerPhotoUrl && " (med poster)"}
-                    </p>
-                  ) : question.answerUrl ? (
-                    <a
-                      href={question.answerUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
-                    >
-                      {question.answerUrl}
-                    </a>
-                  ) : (
-                    <p className="text-sm text-green-700">Video uploadet</p>
-                  )}
-                  {clipError && (
-                    <p className="text-xs text-red-500 mt-1">Forhåndsvisning fejlede: {clipError}</p>
-                  )}
+            <div style={{ padding: "0 10px 10px" }}>
+              <div className="rounded-lg p-3" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>Svar indsendt</p>
+                    {question.muxAssetStatus ? (
+                      <p className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
+                        {question.muxMediaType === "audio" ? "Lydfil" : "Video"}{question.muxAssetStatus !== "ready" && " behandles..."}
+                        {question.answerPhotoUrl && " (med poster)"}
+                      </p>
+                    ) : question.answerUrl ? (
+                      <a
+                        href={question.answerUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm underline break-all hover:opacity-50 transition-opacity"
+                        style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}
+                      >
+                        {question.answerUrl}
+                      </a>
+                    ) : (
+                      <p className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Video uploadet</p>
+                    )}
+                    {clipError && (
+                      <p className="text-xs mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-error, #FF0000)" }}>{clipError}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setEditingAnswer(true)}
+                    className="text-sm whitespace-nowrap hover:opacity-50 transition-opacity cursor-pointer"
+                    style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}
+                  >
+                    Redigér svar
+                  </button>
                 </div>
-                <button
-                  onClick={() => setEditingAnswer(true)}
-                  className="text-sm text-blue-600 hover:text-blue-800 whitespace-nowrap cursor-pointer"
-                >
-                  Redigér svar
-                </button>
               </div>
             </div>
           ) : (
-            <div className={`${question.deadlineMissed ? "bg-red-50 border border-red-200" : "bg-amber-50 border border-amber-200"} rounded-lg p-3`}>
-              <div className="flex items-center justify-between mb-2">
-                <p className={`text-sm font-medium ${question.deadlineMissed ? "text-red-800" : "text-amber-800"}`}>
-                  {editingAnswer
-                    ? "Opdatér dit svar"
-                    : question.deadlineMissed
-                    ? "Fristen er udløbet! Indsend dit svar hurtigst muligt"
-                    : hoursLeft !== null && hoursLeft > 0
-                    ? `Målet er nået! Indsend dit svar (${hoursLeft}t tilbage)`
-                    : hoursLeft === 0
-                    ? "Fristen er udløbet! Indsend dit svar hurtigst muligt"
-                    : "Målet er nået! Indsend dit svar (helst inden 24 timer)"}
-                </p>
-                {editingAnswer && (
+            <div style={{ padding: "0 10px 10px" }}>
+              {editingAnswer && (
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
+                    Opdatér dit svar
+                  </p>
                   <button
                     onClick={() => setEditingAnswer(false)}
-                    className="text-sm text-gray-600 hover:text-gray-800 cursor-pointer"
+                    className="text-sm hover:opacity-50 transition-opacity cursor-pointer"
+                    style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
                   >
                     Annullér
                   </button>
-                )}
-              </div>
+                </div>
+              )}
               {/* Edit mode: show current answer overview with granular edit options */}
               {editingAnswer && (question.answerUrl || question.muxAssetStatus) && !pendingFile ? (
                 <div className="space-y-3">
                   {/* Current video */}
-                  <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="rounded-lg p-3" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm font-medium" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>
                         {question.muxMediaType === "audio"
                           ? "Nuværende svar: Lydfil"
                           : "Nuværende svar: Video"}
                       </p>
-                      <label className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
+                      <label className="text-xs hover:opacity-50 transition-opacity cursor-pointer" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>
                         <input
                           type="file"
                           accept="video/*,audio/*,.m4a,.mp3,.wav,.ogg,.aac,.flac,.webm"
@@ -903,46 +1139,49 @@ function QuestionItem({
                   </div>
                   {/* Poster section */}
                   {posterPreviewUrl ? (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="rounded-lg p-3" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
                       <div className="flex items-center gap-2">
                         <img src={posterPreviewUrl} alt="Poster preview" className="w-12 h-12 rounded-lg object-cover" />
-                        <span className="text-xs text-green-800 flex-1">Nyt poster-billede valgt</span>
-                        <button type="button" onClick={() => clearPendingPoster()} className="text-xs text-red-600 hover:text-red-800 cursor-pointer">Fjern</button>
+                        <span className="text-sm font-medium flex-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>Nyt poster-billede valgt</span>
+                        <button type="button" onClick={() => clearPendingPoster()} className="text-xs hover:opacity-50 transition-opacity cursor-pointer" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}>Fjern</button>
                       </div>
                     </div>
                   ) : removePoster ? (
-                    <div className="flex items-center justify-between bg-red-50 rounded-lg p-3">
-                      <p className="text-sm text-red-700">Poster fjernes — auto-genereret clip bruges i stedet</p>
-                      <button type="button" onClick={() => setRemovePoster(false)} className="text-xs text-gray-600 hover:text-gray-800 cursor-pointer">Fortryd</button>
+                    <div className="flex items-center justify-between rounded-lg p-3" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
+                      <p className="text-sm font-medium" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>Poster fjernes — auto-genereret clip bruges i stedet</p>
+                      <button type="button" onClick={() => setRemovePoster(false)} className="text-xs hover:opacity-50 transition-opacity cursor-pointer" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>Fortryd</button>
                     </div>
                   ) : showPosterUpload ? (
-                    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                    <div className="rounded-lg p-3 space-y-2" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
                       <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-500">Vælg eget poster-billede (portrait-format)</p>
-                        <button type="button" onClick={() => setShowPosterUpload(false)} className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer">Luk</button>
+                        <p className="text-xs" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Vælg eget poster-billede (portrait-format)</p>
+                        <button type="button" onClick={() => setShowPosterUpload(false)} className="text-xs hover:opacity-50 transition-opacity cursor-pointer" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}>Luk</button>
                       </div>
-                      <label className="block w-full border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:border-gray-400 transition">
+                      <label
+                        className="group block w-full border-dashed rounded-lg p-3 text-center cursor-pointer"
+                        style={{ backgroundColor: "var(--system-bg0, #FF0000)", borderWidth: 2, animation: "pulse-border 2s ease-in-out infinite" }}
+                      >
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handlePosterSelect(file); }} />
-                        <span className="text-sm text-gray-600">Vælg billede</span>
+                        <span className="text-sm group-hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>Vælg billede</span>
                       </label>
                     </div>
                   ) : hasExistingCustomPoster ? (
-                    <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="rounded-lg p-3" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <img src={question.answerPhotoUrl!} alt="Current poster" className="w-12 h-12 rounded-lg object-cover" />
-                          <span className="text-xs text-gray-600">Eget poster-billede</span>
+                          <span className="text-sm font-medium" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>Eget poster-billede</span>
                         </div>
                         <div className="flex gap-2">
-                          <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">Ændre</button>
+                          <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs hover:opacity-50 transition-opacity cursor-pointer" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>Ændre</button>
                           {!isCurrentAnswerAudio && (
-                            <button type="button" onClick={() => setRemovePoster(true)} className="text-xs text-red-600 hover:text-red-800 cursor-pointer">Fjern</button>
+                            <button type="button" onClick={() => setRemovePoster(true)} className="text-xs hover:opacity-50 transition-opacity cursor-pointer" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}>Fjern</button>
                           )}
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs text-gray-500 hover:text-gray-700 underline cursor-pointer">
+                    <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs underline hover:opacity-50 transition-opacity cursor-pointer" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
                       {question.answerPhotoUrl ? "Erstat poster-billede" : "Tilføj eget poster-billede"}
                     </button>
                   )}
@@ -950,21 +1189,23 @@ function QuestionItem({
                   {(pendingPosterFile || removePoster) && (
                     <button
                       onClick={handlePosterOnlyUpdate}
-                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium cursor-pointer"
+                      className="group w-full text-sm px-4 py-2 rounded-full font-medium cursor-pointer"
+                      style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
                     >
-                      {pendingPosterFile ? "Gem poster-ændring" : "Fjern poster"}
+                      <span className="group-hover:opacity-50 transition-opacity">{pendingPosterFile ? "Gem poster-ændring" : "Fjern poster"}</span>
                     </button>
                   )}
                 </div>
               ) : pendingFile && pendingFile.type.startsWith("video/") ? (
                 <div className="space-y-3">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="rounded-lg p-3" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-green-800 font-medium">Video klar til indsendelse</p>
+                      <p className="text-sm font-medium" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>Video klar til indsendelse</p>
                       <button
                         type="button"
                         onClick={() => { clearPendingPoster(); setRemovePoster(false); setPendingFile(null); setPendingDuration(undefined); setPendingAspectRatio(undefined); }}
-                        className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+                        className="text-xs hover:opacity-50 transition-opacity cursor-pointer"
+                        style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
                       >
                         Fjern
                       </button>
@@ -972,60 +1213,67 @@ function QuestionItem({
                   </div>
                   {/* Collapsible poster upload */}
                   {posterPreviewUrl ? (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="rounded-lg p-3" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
                       <div className="flex items-center gap-2">
                         <img src={posterPreviewUrl} alt="Poster preview" className="w-12 h-12 rounded-lg object-cover" />
-                        <span className="text-xs text-green-800 flex-1">Eget poster-billede valgt</span>
-                        <button type="button" onClick={() => clearPendingPoster()} className="text-xs text-red-600 hover:text-red-800 cursor-pointer">Fjern</button>
+                        <span className="text-sm font-medium flex-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>Eget poster-billede valgt</span>
+                        <button type="button" onClick={() => clearPendingPoster()} className="text-xs hover:opacity-50 transition-opacity cursor-pointer" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}>Fjern</button>
                       </div>
                     </div>
                   ) : showPosterUpload ? (
-                    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                    <div className="rounded-lg p-3 space-y-2" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
                       <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-500">Vælg eget poster-billede (portrait-format)</p>
-                        <button type="button" onClick={() => setShowPosterUpload(false)} className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer">Luk</button>
+                        <p className="text-xs" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Vælg eget poster-billede (portrait-format)</p>
+                        <button type="button" onClick={() => setShowPosterUpload(false)} className="text-xs hover:opacity-50 transition-opacity cursor-pointer" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}>Luk</button>
                       </div>
-                      <label className="block w-full border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:border-gray-400 transition">
+                      <label
+                        className="group block w-full border-dashed rounded-lg p-3 text-center cursor-pointer"
+                        style={{ backgroundColor: "var(--system-bg0, #FF0000)", borderWidth: 2, animation: "pulse-border 2s ease-in-out infinite" }}
+                      >
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handlePosterSelect(file); }} />
-                        <span className="text-sm text-gray-600">Vælg billede</span>
+                        <span className="text-sm group-hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>Vælg billede</span>
                       </label>
                     </div>
                   ) : editingAnswer && hasExistingCustomPoster && !removePoster ? (
-                    <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="rounded-lg p-3" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <img src={question.answerPhotoUrl!} alt="Current poster" className="w-12 h-12 rounded-lg object-cover" />
-                          <span className="text-xs text-gray-600 flex-1">Beholder eksisterende poster</span>
+                          <span className="text-sm font-medium" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>Beholder eksisterende poster</span>
                         </div>
                         <div className="flex gap-2">
-                          <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">Ændre</button>
-                          <button type="button" onClick={() => setRemovePoster(true)} className="text-xs text-red-600 hover:text-red-800 cursor-pointer">Fjern</button>
+                          <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs hover:opacity-50 transition-opacity cursor-pointer" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>Ændre</button>
+                          <button type="button" onClick={() => setRemovePoster(true)} className="text-xs hover:opacity-50 transition-opacity cursor-pointer" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}>Fjern</button>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs text-gray-500 hover:text-gray-700 underline cursor-pointer">
+                    <button type="button" onClick={() => setShowPosterUpload(true)} className="text-xs underline hover:opacity-50 transition-opacity cursor-pointer" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
                       Tilføj eget poster-billede (valgfrit)
                     </button>
                   )}
                   <button
                     onClick={handleSubmitVideoAnswer}
-                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer"
+                    className="group w-full text-sm px-4 py-2 rounded-full font-medium disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                    style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
                   >
-                    {editingAnswer
-                      ? (pendingPosterFile ? "Erstat video (med ny poster)" : (hasExistingCustomPoster && !removePoster) ? "Erstat video (behold poster)" : "Erstat video")
-                      : (pendingPosterFile ? "Indsend video med poster" : "Indsend video")}
+                    <span className="group-hover:opacity-50 transition-opacity">
+                      {editingAnswer
+                        ? (pendingPosterFile ? "Erstat video (med ny poster)" : (hasExistingCustomPoster && !removePoster) ? "Erstat video (behold poster)" : "Erstat video")
+                        : (pendingPosterFile ? "Indsend video med poster" : "Indsend video")}
+                    </span>
                   </button>
                 </div>
               ) : pendingFile && pendingFile.type.startsWith("audio/") ? (
                 <div className="space-y-3">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="rounded-lg p-3" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-green-800 font-medium">Lydfil klar til indsendelse</p>
+                      <p className="text-sm font-medium" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>Lydfil klar til indsendelse</p>
                       <button
                         type="button"
                         onClick={() => { setPendingFile(null); setPendingDuration(undefined); setPendingAspectRatio(undefined); clearPendingPhoto(); }}
-                        className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+                        className="text-xs hover:opacity-50 transition-opacity cursor-pointer"
+                        style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
                       >
                         Fjern
                       </button>
@@ -1033,14 +1281,15 @@ function QuestionItem({
                   </div>
                   <div>
                     {(photoPreviewUrl || posterPreviewUrl) ? (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="rounded-lg p-3" style={{ backgroundColor: "var(--system-bg0, #FF0000)" }}>
                         <div className="flex items-center gap-2">
                           <img src={(photoPreviewUrl || posterPreviewUrl)!} alt="Preview" className="w-12 h-12 rounded-lg object-cover" />
-                          <span className="text-xs text-green-800 flex-1">Nyt poster-billede valgt</span>
+                          <span className="text-sm font-medium flex-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>Nyt poster-billede valgt</span>
                           <button
                             type="button"
                             onClick={() => { clearPendingPhoto(); clearPendingPoster(); }}
-                            className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+                            className="text-xs hover:opacity-50 transition-opacity cursor-pointer"
+                            style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
                           >
                             Fjern
                           </button>
@@ -1050,7 +1299,7 @@ function QuestionItem({
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex items-center gap-2">
                           <img src={question.answerPhotoUrl!} alt="Current poster" className="w-12 h-12 rounded-lg object-cover" />
-                          <span className="text-xs text-gray-600 flex-1">Beholder eksisterende poster</span>
+                          <span className="text-sm font-medium flex-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>Beholder eksisterende poster</span>
                           <label className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
                             Ændre
                             <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoSelect(f); }} />
@@ -1058,7 +1307,10 @@ function QuestionItem({
                         </div>
                       </div>
                     ) : (
-                      <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
+                      <label
+                        className="group block w-full border-dashed rounded-lg p-4 text-center cursor-pointer"
+                        style={{ backgroundColor: "var(--system-bg0, #FF0000)", borderWidth: 2, animation: "pulse-border 2s ease-in-out infinite" }}
+                      >
                         <input
                           type="file"
                           accept="image/*"
@@ -1068,7 +1320,7 @@ function QuestionItem({
                             if (file) handlePhotoSelect(file);
                           }}
                         />
-                        <span className="text-sm text-amber-700">
+                        <span className="text-sm group-hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>
                           Tilføj eget poster-billede (portrait-format)
                         </span>
                       </label>
@@ -1077,17 +1329,23 @@ function QuestionItem({
                   <button
                     onClick={handleSubmitAudioAnswer}
                     disabled={!pendingPhotoFile && !(editingAnswer && hasExistingCustomPoster)}
-                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 cursor-pointer"
+                    className="group w-full text-sm px-4 py-2 rounded-full font-medium disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                    style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
                   >
-                    {pendingPhotoFile
-                      ? (editingAnswer ? "Erstat med lyd (ny poster)" : "Indsend lyd med poster")
-                      : editingAnswer && hasExistingCustomPoster
-                        ? "Erstat med lyd (behold poster)"
-                        : "Tilføj en poster for at indsende"}
+                    <span className="group-hover:opacity-50 transition-opacity">
+                      {pendingPhotoFile
+                        ? (editingAnswer ? "Erstat med lyd (ny poster)" : "Indsend lyd med poster")
+                        : editingAnswer && hasExistingCustomPoster
+                          ? "Erstat med lyd (behold poster)"
+                          : "Tilføj en poster for at indsende"}
+                    </span>
                   </button>
                 </div>
               ) : (
-                <label className="block w-full border-2 border-dashed border-amber-300 rounded-lg p-4 text-center cursor-pointer hover:border-amber-400 transition">
+                <label
+                  className="group block w-full border-dashed rounded-lg p-4 text-center cursor-pointer"
+                  style={{ backgroundColor: "var(--system-bg0, #FF0000)", borderWidth: 2, animation: "pulse-border 2s ease-in-out infinite" }}
+                >
                   <input
                     type="file"
                     accept="video/*,audio/*,.m4a,.mp3,.wav,.ogg,.aac,.flac,.webm"
@@ -1097,7 +1355,7 @@ function QuestionItem({
                       if (file) handleFileSelect(file);
                     }}
                   />
-                  <span className="text-sm text-amber-700">
+                  <span className="text-sm group-hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>
                     Upload video eller lydfil
                   </span>
                 </label>
@@ -1110,35 +1368,6 @@ function QuestionItem({
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-600">
-            {question.upvoteCount} / {question.upvoteGoal} {question.upvoteGoal === 1 ? "upvote" : "upvotes"}
-          </span>
-          <CopyLinkButton
-            url={`${basePath}/q/${question.id}`}
-            title={question.text}
-            compact
-          />
-        </div>
-        {!hasUpvotes && (
-          <div className="flex gap-3">
-            <button
-              onClick={() => setEditing(true)}
-              className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
-            >
-              Redigér
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="text-sm text-red-600 hover:text-red-800 disabled:opacity-50 cursor-pointer"
-            >
-              {deleting ? "Sletter..." : "Slet"}
-            </button>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

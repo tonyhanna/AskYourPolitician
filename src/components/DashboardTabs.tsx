@@ -56,6 +56,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
         items={tabs}
         activeId={activeTab === "settings" ? "" : activeTab}
         onSelect={switchTab}
+        blurBackground
         rightContent={
           <div className="flex items-center gap-2 ml-auto">
             <button

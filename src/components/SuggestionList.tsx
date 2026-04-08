@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faThumbsUp, faThumbsDown } from "@fortawesome/pro-duotone-svg-icons";
 import { approveSuggestion, rejectSuggestion, verifyQuestionLink } from "@/app/politiker/dashboard/actions";
 
 type Suggestion = {
@@ -53,10 +55,8 @@ function SuggestionItem({
 
   function toggleTag(tagId: string) {
     setSelectedTags((prev) => {
-      const next = new Set(prev);
-      if (next.has(tagId)) next.delete(tagId);
-      else next.add(tagId);
-      return next;
+      if (prev.has(tagId)) return new Set();
+      return new Set([tagId]);
     });
   }
 
@@ -113,44 +113,58 @@ function SuggestionItem({
   }
 
   return (
-    <div className="rounded-lg p-4" style={{ backgroundColor: "var(--system-bg1, #FF0000)" }}>
-      {mode === "approve" ? (
-        <textarea
-          value={editedText}
-          onChange={(e) => setEditedText(e.target.value)}
-          rows={3}
-          className="w-full font-medium text-gray-900 mb-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-        />
-      ) : (
-        <p className="font-medium text-gray-900 mb-1">{suggestion.text}</p>
-      )}
-      <p className="text-sm text-gray-500 mb-3">
-        Foreslået af {suggestion.citizenFirstName} &middot;{" "}
-        {new Date(suggestion.createdAt).toLocaleDateString("da-DK")}
-      </p>
+    <div className="rounded-lg" style={{ backgroundColor: mode !== "idle" ? "var(--system-bg2, #FF0000)" : "var(--system-bg1, #FF0000)" }}>
+      <div style={{ padding: "20px 20px 16px" }}>
+        {mode === "approve" ? (
+          <textarea
+            value={editedText}
+            onChange={(e) => setEditedText(e.target.value)}
+            rows={3}
+            className="w-full mb-1 rounded-lg px-3 py-2 resize-none"
+            style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-form-text0, #FF0000)", backgroundColor: "var(--system-form-bg, #FF0000)", border: "none", outline: "none" }}
+          />
+        ) : (
+          <p style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text0, #FF0000)", marginBottom: 4 }}>{suggestion.text}</p>
+        )}
+        <span style={{
+          display: "inline-block", fontSize: 12, lineHeight: 1.3,
+          backgroundColor: "var(--system-bg0, #FF0000)",
+          padding: "2px 4px",
+          fontFamily: "var(--font-figtree)", fontWeight: 400,
+        }}>
+          <span style={{ color: "var(--system-text0, #FF0000)" }}>{suggestion.citizenFirstName}</span>
+          <span style={{ color: "var(--system-text2, #FF0000)" }}> — {new Date(suggestion.createdAt).toLocaleDateString("da-DK", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+        </span>
+      </div>
 
       {mode === "idle" && (
-        <div className="flex gap-3">
-          <button
-            onClick={() => setMode("approve")}
-            className="text-sm bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 cursor-pointer"
-          >
-            Godkend
-          </button>
-          <button
-            onClick={() => setMode("reject")}
-            className="text-sm bg-red-600 text-white px-4 py-1.5 rounded-lg hover:bg-red-700 cursor-pointer"
-          >
-            Afvis
-          </button>
+        <div style={{ borderTop: "1px solid var(--system-bg2, #FF0000)", padding: "12px 10px" }}>
+          <div className="flex items-center" style={{ gap: 5 }}>
+            <button
+              onClick={() => setMode("approve")}
+              className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ height: 40, width: 40, backgroundColor: "var(--system-bg0, #FF0000)" }}
+              aria-label="Godkend"
+            >
+              <FontAwesomeIcon icon={faThumbsUp} swapOpacity className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--system-success, #FF0000)", fontSize: 16, transform: "scaleX(-1)" }} />
+            </button>
+            <button
+              onClick={() => setMode("reject")}
+              className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ height: 40, width: 40, backgroundColor: "var(--system-bg0, #FF0000)" }}
+              aria-label="Afvis"
+            >
+              <FontAwesomeIcon icon={faThumbsDown} swapOpacity className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--system-error, #FF0000)", fontSize: 16 }} />
+            </button>
+          </div>
         </div>
       )}
 
       {mode === "approve" && (
-        <form action={handleApprove} className="space-y-3 mt-3 border-t border-gray-100 pt-3">
+        <form action={handleApprove} style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }}>
           {isEdited && (
-            <div>
-              <label htmlFor={`edit-reason-${suggestion.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+            <div style={{ padding: "12px 20px 0" }}>
+              <label htmlFor={`edit-reason-${suggestion.id}`} className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
                 Grund til rettelse
               </label>
               <textarea
@@ -160,13 +174,14 @@ function SuggestionItem({
                 placeholder="Forklar borgeren hvorfor du har rettet spørgsmålet..."
                 rows={2}
                 required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full rounded-lg px-3 py-2 text-sm resize-none"
+                style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
               />
             </div>
           )}
 
-          <div>
-            <label htmlFor={`goal-${suggestion.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+          <div style={{ padding: "12px 20px 0" }}>
+            <label htmlFor={`goal-${suggestion.id}`} className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
               Upvote-mål
             </label>
             <input
@@ -175,13 +190,14 @@ function SuggestionItem({
               type="number"
               defaultValue={100}
               min={1}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-lg px-3 py-2 text-sm"
+              style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
             />
           </div>
 
           {availableTags.length > 0 && (
-            <div>
-              <p className="block text-sm font-medium text-gray-700 mb-2">
+            <div style={{ padding: "12px 20px 0" }}>
+              <p className="block text-sm font-medium mb-2" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
                 Mærkesager (valgfrit)
               </p>
               <div className="flex flex-wrap gap-2">
@@ -190,11 +206,13 @@ function SuggestionItem({
                     key={tag.tagId}
                     type="button"
                     onClick={() => toggleTag(tag.tagId)}
-                    className={`text-sm px-3 py-1.5 rounded-full border cursor-pointer transition ${
-                      selectedTags.has(tag.tagId)
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-gray-700 border-gray-300 hover:border-blue-400"
-                    }`}
+                    className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
+                    style={{
+                      fontFamily: "var(--font-figtree)", fontWeight: 500,
+                      backgroundColor: selectedTags.has(tag.tagId) ? "var(--system-bg0-contrast, #FF0000)" : "var(--system-bg0, #FF0000)",
+                      transition: "background-color 200ms ease",
+                      color: selectedTags.has(tag.tagId) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)",
+                    }}
                   >
                     {tag.tagId}
                   </button>
@@ -203,36 +221,39 @@ function SuggestionItem({
             </div>
           )}
 
-          <div className="flex gap-2 justify-end">
+          <div className="flex gap-2 justify-end" style={{ padding: "12px 20px 16px" }}>
             <button
               type="button"
-              onClick={() => setMode("idle")}
-              className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1.5 cursor-pointer"
+              onClick={() => { setEditedText(suggestion.text); setEditReason(""); setSelectedTags(new Set()); setMode("idle"); }}
+              className="text-sm cursor-pointer px-3 py-1.5 hover:opacity-50 transition-opacity"
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
             >
               Annullér
             </button>
             <button
               type="submit"
               disabled={pending || (isEdited && !editReason.trim())}
-              className="text-sm bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50 cursor-pointer"
+              className="group text-sm px-4 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
             >
-              {pending ? "Godkender..." : "Godkend spørgsmål"}
+              <span className="group-hover:opacity-50 transition-opacity">{pending ? "Godkender..." : "Godkend spørgsmål"}</span>
             </button>
           </div>
         </form>
       )}
 
       {mode === "reject" && (
-        <div className="space-y-3 mt-3 border-t border-gray-100 pt-3">
-          <div>
-            <label htmlFor={`reason-${suggestion.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+        <div style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }}>
+          <div style={{ padding: "12px 20px 0" }}>
+            <label htmlFor={`reason-${suggestion.id}`} className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
               Begrundelse
             </label>
             <select
               id={`reason-${suggestion.id}`}
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-lg py-2 text-sm"
+              style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none", paddingLeft: 12, paddingRight: 36, appearance: "none", WebkitAppearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
             >
               <option value="" disabled>Vælg grund</option>
               <option value="already_answered">Jeg har allerede svaret på det spørgsmål</option>
@@ -242,8 +263,8 @@ function SuggestionItem({
           </div>
 
           {(rejectReason === "already_answered" || rejectReason === "duplicate") && (
-            <div>
-              <label htmlFor={`link-${suggestion.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+            <div style={{ padding: "12px 20px 0" }}>
+              <label htmlFor={`link-${suggestion.id}`} className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
                 Link til spørgsmål
               </label>
               <input
@@ -264,24 +285,19 @@ function SuggestionItem({
                   }
                 }}
                 placeholder="https://..."
-                className={`w-full border rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  linkStatus === "valid"
-                    ? "border-green-400"
-                    : linkStatus === "invalid"
-                      ? "border-red-400"
-                      : "border-gray-300"
-                }`}
+                className="w-full rounded-lg px-3 py-2 text-sm"
+                style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
               />
               {linkStatus === "checking" && (
-                <p className="text-sm text-gray-500 mt-1">Tjekker link...</p>
+                <p className="text-sm mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Tjekker link...</p>
               )}
               {linkStatus === "valid" && (
-                <p className="text-sm text-green-600 mt-1">
+                <p className="text-sm mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-success, #FF0000)" }}>
                   Spørgsmål fundet: &ldquo;{linkQuestionText}&rdquo;
                 </p>
               )}
               {linkStatus === "invalid" && (
-                <p className="text-sm text-red-600 mt-1">
+                <p className="text-sm mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-error, #FF0000)" }}>
                   Spørgsmålet blev ikke fundet. Tjek at linket er korrekt.
                 </p>
               )}
@@ -289,22 +305,24 @@ function SuggestionItem({
           )}
 
           {rejectReason === "custom" && (
-            <div>
+            <div style={{ padding: "12px 20px 0" }}>
               <textarea
                 value={customReason}
                 onChange={(e) => setCustomReason(e.target.value)}
                 placeholder="Skriv din begrundelse..."
                 rows={2}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full rounded-lg px-3 py-2 text-sm resize-none"
+                style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
               />
             </div>
           )}
 
-          <div className="flex gap-2 justify-end">
+          <div className="flex gap-2 justify-end" style={{ padding: "12px 20px 16px" }}>
             <button
               type="button"
-              onClick={() => setMode("idle")}
-              className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1.5 cursor-pointer"
+              onClick={() => { setRejectReason(""); setCustomReason(""); setRejectLink(""); setLinkStatus("idle"); setLinkQuestionText(""); setMode("idle"); }}
+              className="text-sm cursor-pointer px-3 py-1.5 hover:opacity-50 transition-opacity"
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
             >
               Annullér
             </button>
@@ -316,9 +334,10 @@ function SuggestionItem({
                 (rejectReason === "custom" && !customReason.trim()) ||
                 ((rejectReason === "already_answered" || rejectReason === "duplicate") && linkStatus !== "valid")
               }
-              className="text-sm bg-red-600 text-white px-4 py-1.5 rounded-lg hover:bg-red-700 disabled:opacity-50 cursor-pointer"
+              className="group text-sm px-4 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-error, #FF0000)", color: "var(--system-error-contrast, #FF0000)" }}
             >
-              {pending ? "Afviser..." : "Afvis spørgsmål"}
+              <span className="group-hover:opacity-50 transition-opacity">{pending ? "Afviser..." : "Afvis spørgsmål"}</span>
             </button>
           </div>
         </div>

@@ -32,6 +32,7 @@ export async function GET(request: Request) {
       and(
         eq(questions.goalReachedEmailSent, true),
         isNull(questions.answerUrl),
+        isNull(questions.muxAssetStatus),
         eq(questions.deadlineMissed, false),
         sql`${questions.goalReachedAt} IS NOT NULL`,
         sql`${questions.goalReachedAt} + interval '24 hours' <= now()`
@@ -90,7 +91,8 @@ export async function GET(request: Request) {
     .where(
       and(
         eq(questions.deadlineMissed, true),
-        isNull(questions.answerUrl)
+        isNull(questions.answerUrl),
+        isNull(questions.muxAssetStatus)
       )
     );
 

@@ -73,6 +73,7 @@ export default async function Dashboard() {
     muxPlaybackId: string | null;
     muxAssetStatus: string | null;
     muxMediaType: string | null;
+    createdAt: string;
   }[] = [];
 
   let politicianCauses: {
@@ -151,6 +152,7 @@ export default async function Dashboard() {
       muxPlaybackId: q.muxPlaybackId ?? null,
       muxAssetStatus: q.muxAssetStatus ?? null,
       muxMediaType: q.muxMediaType ?? null,
+      createdAt: q.createdAt.toISOString(),
     }));
 
     // Fetch causes

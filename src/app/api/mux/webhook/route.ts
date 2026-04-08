@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
         muxMediaType: mediaType,
         answerDuration: duration,
         answerAspectRatio: aspectRatio,
+        deadlineMissed: false,
       })
       .where(eq(questions.id, questionId))
       .returning({

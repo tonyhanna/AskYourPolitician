@@ -111,7 +111,6 @@ export function QuestionDetailCard({
                         color: "var(--system-text0, #FF0000)",
                         backgroundColor: "var(--system-bg1, #FF0000)",
                         padding: "2px 4px",
-                        borderRadius: 3,
                         fontFamily: "var(--font-figtree)",
                         fontWeight: 400,
                       }}
