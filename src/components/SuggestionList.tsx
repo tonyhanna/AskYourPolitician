@@ -113,7 +113,7 @@ function SuggestionItem({
   }
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4">
+    <div className="rounded-lg p-4" style={{ backgroundColor: "var(--system-bg1, #FF0000)" }}>
       {mode === "approve" ? (
         <textarea
           value={editedText}

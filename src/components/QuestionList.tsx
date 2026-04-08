@@ -107,51 +107,71 @@ export function QuestionList({
   const unanswered = questions.filter((q) => q.goalReached && !hasAnswer(q) && !q.deadlineMissed);
   const answered = questions.filter((q) => hasAnswer(q));
 
+  // Sort pinned to top within each group
+  const allUnanswered = [...missed, ...unanswered, ...forUpvoting];
+  const unansweredPinned = allUnanswered.filter((q) => q.pinned);
+  const unansweredNotPinned = allUnanswered.filter((q) => !q.pinned);
+  const answeredPinned = answered.filter((q) => q.pinned);
+  const answeredNotPinned = answered.filter((q) => !q.pinned);
+
+  const hasCol1Content = pendingSuggestions.length > 0 || allUnanswered.length > 0;
+
   return (
-    <div className="space-y-6">
-      {pendingSuggestions.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-700">
-            Spørgsmål til godkendelse
-            <span className="ml-2 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-full font-medium align-middle">
-              {pendingSuggestions.length}
-            </span>
-          </h3>
-          <SuggestionList suggestions={pendingSuggestions} availableTags={availableTags} />
-        </div>
-      )}
-      {missed.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-red-700">Missede spørgsmål</h3>
-          {missed.map((q) => (
-            <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
-          ))}
-        </div>
-      )}
-      {unanswered.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-amber-800">Ubesvarede spørgsmål</h3>
-          {unanswered.map((q) => (
-            <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
-          ))}
-        </div>
-      )}
-      {forUpvoting.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-700">Spørgsmål til upvoting</h3>
-          {forUpvoting.map((q) => (
-            <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
-          ))}
-        </div>
-      )}
-      {answered.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-green-800">Besvarede spørgsmål</h3>
-          {answered.map((q) => (
-            <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
-          ))}
-        </div>
-      )}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Column 1: Suggestions + Unanswered */}
+      <div className="space-y-6">
+        {pendingSuggestions.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-700">
+              Spørgsmål til godkendelse
+              <span className="ml-2 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-full font-medium align-middle">
+                {pendingSuggestions.length}
+              </span>
+            </h3>
+            <SuggestionList suggestions={pendingSuggestions} availableTags={availableTags} />
+          </div>
+        )}
+        {allUnanswered.length > 0 ? (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-700">Ubesvaret</h3>
+            {unansweredPinned.map((q) => (
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+            ))}
+            {unansweredPinned.length > 0 && unansweredNotPinned.length > 0 && (
+              <hr style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }} />
+            )}
+            {unansweredNotPinned.map((q) => (
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+            ))}
+          </div>
+        ) : !hasCol1Content && (
+          <div className="py-12 text-center" style={{ color: "var(--system-text2, #FF0000)" }}>
+            <p className="text-sm" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500 }}>Ingen ubesvarede spørgsmål</p>
+          </div>
+        )}
+      </div>
+
+      {/* Column 2: Answered */}
+      <div className="space-y-4">
+        {answered.length > 0 ? (
+          <>
+            <h3 className="text-lg font-semibold text-gray-700">Besvaret</h3>
+            {answeredPinned.map((q) => (
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+            ))}
+            {answeredPinned.length > 0 && answeredNotPinned.length > 0 && (
+              <hr style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }} />
+            )}
+            {answeredNotPinned.map((q) => (
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+            ))}
+          </>
+        ) : (
+          <div className="py-12 text-center" style={{ color: "var(--system-text2, #FF0000)" }}>
+            <p className="text-sm" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500 }}>Ingen besvarede spørgsmål</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -676,7 +696,14 @@ function QuestionItem({
   }
 
   return (
-    <div className={`border rounded-lg p-4 ${question.deadlineMissed ? "border-red-300 bg-red-50" : question.pinned ? "border-amber-300 bg-amber-50" : "border-gray-200"}`}>
+    <div
+      className="rounded-lg p-4"
+      style={{
+        backgroundColor: question.deadlineMissed
+          ? "color-mix(in srgb, var(--system-error, #FF0000) 10%, var(--system-bg1, #FF0000))"
+          : "var(--system-bg1, #FF0000)",
+      }}
+    >
       <div className="flex items-start justify-between gap-2">
         <a
           href={`${basePath}/q/${question.id}`}
@@ -686,28 +713,26 @@ function QuestionItem({
         >
           {question.text}
         </a>
-        {(question.answerUrl || question.muxAssetStatus === "ready") && (
-          <button
-            onClick={async () => {
-              setPinning(true);
-              try {
-                await togglePinQuestion(question.id);
-              } catch (e) {
-                alert(e instanceof Error ? e.message : "Der opstod en fejl");
-              } finally {
-                setPinning(false);
-              }
-            }}
-            disabled={pinning}
-            className={`text-sm shrink-0 cursor-pointer disabled:opacity-50 ${
-              question.pinned
-                ? "text-amber-600 hover:text-amber-800"
-                : "text-gray-400 hover:text-amber-600"
-            }`}
-          >
-            {pinning ? "..." : question.pinned ? "Unpin" : "Pin"}
-          </button>
-        )}
+        <button
+          onClick={async () => {
+            setPinning(true);
+            try {
+              await togglePinQuestion(question.id);
+            } catch (e) {
+              alert(e instanceof Error ? e.message : "Der opstod en fejl");
+            } finally {
+              setPinning(false);
+            }
+          }}
+          disabled={pinning}
+          className={`text-sm shrink-0 cursor-pointer disabled:opacity-50 ${
+            question.pinned
+              ? "text-amber-600 hover:text-amber-800"
+              : "text-gray-400 hover:text-amber-600"
+          }`}
+        >
+          {pinning ? "..." : question.pinned ? "Unpin" : "Pin"}
+        </button>
       </div>
       {question.suggestedBy && (
         <p className="text-xs mb-1">
