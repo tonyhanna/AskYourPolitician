@@ -21,6 +21,7 @@ type PlayableMediaCardProps = {
   setPlayingId?: (id: string | null) => void;
   className?: string;
   style?: React.CSSProperties;
+  autoPlay?: boolean;
 };
 
 export function PlayableMediaCard({
@@ -30,6 +31,7 @@ export function PlayableMediaCard({
   setPlayingId,
   className = "",
   style,
+  autoPlay,
 }: PlayableMediaCardProps) {
   const mediaInfo = getAnswerMediaInfo(question);
   const isReady = mediaInfo?.status === "ready";
@@ -58,7 +60,7 @@ export function PlayableMediaCard({
   const bufferingRef = useRef<HTMLDivElement>(null);
 
   // State
-  const [isWatching, setIsWatching] = useState(false);
+  const [isWatching, setIsWatching] = useState(!!autoPlay);
   const [isHovering, setIsHovering] = useState(false);
   const isWatchingRef = useRef(false);
 
@@ -148,6 +150,23 @@ export function PlayableMediaCard({
       }
     });
   }, [setPlayingId]);
+
+  // Auto-play on mount when autoPlay prop is set
+  const autoPlayTriggered = useRef(false);
+  useEffect(() => {
+    if (!autoPlay || autoPlayTriggered.current || !hasPlayableMedia) return;
+    autoPlayTriggered.current = true;
+    if (hasVideoAnswer) {
+      if (clipRef.current) { clipRef.current.pause(); clipRef.current.currentTime = 0; }
+      setIsWatching(true);
+      hlsPlay();
+      setPlayingId?.(question.id);
+    } else if (hasAudioAnswer && audioRef.current) {
+      setIsWatching(true);
+      audioRef.current.play().catch(() => {});
+      setPlayingId?.(question.id);
+    }
+  }, [autoPlay, hasPlayableMedia, hasVideoAnswer, hasAudioAnswer, hlsPlay, question.id, setPlayingId]);
 
   // Click thumbnail to play/pause
   const handleThumbnailClick = useCallback((e: React.MouseEvent) => {
@@ -255,8 +274,8 @@ export function PlayableMediaCard({
             className="absolute bottom-3 left-3 flex items-center justify-center rounded-full"
             style={{
               zIndex: 2, pointerEvents: "none", width: 48, height: 48,
-              opacity: isWatching ? 0 : 1, transform: isWatching ? "translateY(-20px)" : "translateY(0)",
-              transition: "opacity 300ms ease, transform 300ms ease",
+              opacity: isWatching ? 0 : 1, transform: isWatching && !autoPlay ? "translateY(-20px)" : "translateY(0)",
+              transition: autoPlay ? "opacity 100ms ease" : "opacity 300ms ease, transform 300ms ease",
             }}
           >
             <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ backgroundColor: "var(--party-primary, #FF0000)", opacity: isHovering ? 1 : 0.75 }} />

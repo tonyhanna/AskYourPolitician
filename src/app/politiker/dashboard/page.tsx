@@ -73,6 +73,7 @@ export default async function Dashboard() {
     muxPlaybackId: string | null;
     muxAssetStatus: string | null;
     muxMediaType: string | null;
+    answerDuration: number | null;
     createdAt: string;
   }[] = [];
 
@@ -152,6 +153,7 @@ export default async function Dashboard() {
       muxPlaybackId: q.muxPlaybackId ?? null,
       muxAssetStatus: q.muxAssetStatus ?? null,
       muxMediaType: q.muxMediaType ?? null,
+      answerDuration: q.answerDuration ?? null,
       createdAt: q.createdAt.toISOString(),
     }));
 

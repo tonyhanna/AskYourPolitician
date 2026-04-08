@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster, getMuxUploadUrl, submitMuxAnswer, checkMuxAnswerStatus } from "@/app/politiker/dashboard/actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUp, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUp, faXmark, faPlay } from "@fortawesome/free-solid-svg-icons";
 import { faHourglass, faShare, faPen, faTrash, faAlarmExclamation } from "@fortawesome/pro-duotone-svg-icons";
 import { faStarOfLife as faStarOfLifeSolid, faReply } from "@fortawesome/pro-solid-svg-icons";
 import { faStarOfLifeRegular } from "@/lib/custom-icons";
@@ -13,6 +13,8 @@ import { faCopy } from "@fortawesome/free-solid-svg-icons";
 import { useShareCopy } from "@/hooks/useShareCopy";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { SuggestionList } from "./SuggestionList";
+import { PlayableMediaCard } from "./PlayableMediaCard";
+import { getMuxThumbnailUrl } from "@/lib/mux";
 import { isBlobUrl } from "@/lib/answer-utils";
 
 // ── Module-level store for submit steps ──────────────────────────────
@@ -88,6 +90,7 @@ type Question = {
   muxPlaybackId?: string | null;
   muxAssetStatus?: string | null;
   muxMediaType?: string | null;
+  answerDuration?: number | null;
 };
 
 type PendingSuggestion = {
@@ -108,6 +111,7 @@ export function QuestionList({
   basePath: string;
   pendingSuggestions?: PendingSuggestion[];
 }) {
+  const [playingId, setPlayingId] = useState<string | null>(null);
   const hasAnswer = (q: typeof questions[number]) => !!q.answerUrl || !!q.muxAssetStatus;
   const missed = questions.filter((q) => q.goalReached && !hasAnswer(q) && q.deadlineMissed);
   const forUpvoting = questions.filter((q) => !q.goalReached && !hasAnswer(q));
@@ -149,13 +153,13 @@ export function QuestionList({
               </span>
             </h3>
             {unansweredPinned.map((q) => (
-              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
             ))}
             {unansweredPinned.length > 0 && unansweredNotPinned.length > 0 && (
               <hr style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }} />
             )}
             {unansweredNotPinned.map((q) => (
-              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
             ))}
           </div>
         ) : null}
@@ -168,13 +172,13 @@ export function QuestionList({
               </span>
             </h3>
             {forUpvotingPinned.map((q) => (
-              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
             ))}
             {forUpvotingPinned.length > 0 && forUpvotingNotPinned.length > 0 && (
               <hr style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }} />
             )}
             {forUpvotingNotPinned.map((q) => (
-              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
             ))}
           </div>
         )}
@@ -191,13 +195,13 @@ export function QuestionList({
           <>
             <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>Besvaret</h3>
             {answeredPinned.map((q) => (
-              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
             ))}
             {answeredPinned.length > 0 && answeredNotPinned.length > 0 && (
               <hr style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }} />
             )}
             {answeredNotPinned.map((q) => (
-              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} />
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
             ))}
           </>
         ) : (
@@ -272,14 +276,52 @@ function AlarmTooltipButton() {
   );
 }
 
+function MiniVideoThumb({ photoUrl, muxPlaybackId, onClick }: { photoUrl: string | null; muxPlaybackId: string; onClick: () => void }) {
+  const [hovering, setHovering] = useState(false);
+  const canHover = useRef(false);
+  useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
+
+  return (
+    <div
+      className="flex-shrink-0 pt-1 relative cursor-pointer"
+      style={{ width: 60 }}
+      onClick={onClick}
+      onPointerEnter={() => { if (canHover.current) setHovering(true); }}
+      onPointerLeave={() => { if (canHover.current) setHovering(false); }}
+    >
+      <div style={{ aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", position: "relative" }}>
+        <img
+          src={photoUrl || getMuxThumbnailUrl(muxPlaybackId, { width: 200 })}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        {/* Dark hover overlay */}
+        <div
+          className="absolute inset-0 transition-opacity duration-200"
+          style={{ zIndex: 1, opacity: hovering ? 0.2 : 0, backgroundColor: "var(--system-overlay, #FF0000)", pointerEvents: "none" }}
+        />
+        {/* Centered play button */}
+        <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 2, pointerEvents: "none" }}>
+          <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ width: 40, height: 40, margin: "auto", backgroundColor: "var(--party-primary, #FF0000)", opacity: hovering ? 1 : 0.75 }} />
+          <FontAwesomeIcon icon={faPlay} className="relative" style={{ color: "var(--party-dark, #FF0000)", fontSize: 14, marginLeft: 1 }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function QuestionItem({
   question,
   availableTags,
   basePath,
+  playingId,
+  setPlayingId,
 }: {
   question: Question;
   availableTags: { tagId: string; title: string }[];
   basePath: string;
+  playingId: string | null;
+  setPlayingId: (id: string | null) => void;
 }) {
   const { copied, handleShare } = useShareCopy(`${basePath}/q/${question.id}`, question.text);
   const [pinHover, setPinHover] = useState(false);
@@ -819,14 +861,14 @@ function QuestionItem({
       }}
     >
       {/* Top section — matches citizen page card layout */}
-      <div className="flex items-stretch" style={{ padding: "16px 20px", gap: 20 }}>
+      <div className="flex items-stretch" style={{ padding: "16px 20px", gap: (question.answerUrl || question.muxAssetStatus) && question.muxPlaybackId ? 40 : 20 }}>
         {/* Text + suggestedBy + share + tags */}
         <div className="flex-1 min-w-0 flex flex-col">
           <a
             href={`${basePath}/q/${question.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ textDecoration: "none" }}
+            style={{ textDecoration: "none", ...((question.answerUrl || question.muxAssetStatus) ? { marginTop: 4, display: "block" } : {}) }}
           >
             <span style={{
               fontSize: 22,
@@ -879,9 +921,57 @@ function QuestionItem({
               </span>
             ))}
           </div>
+          {/* Mobile: expanded player below share row */}
+          {playingId === question.id && question.muxPlaybackId && (
+            <div className="md:hidden" style={{ paddingTop: 16 }}>
+              <PlayableMediaCard
+                question={{
+                  id: question.id,
+                  answerPhotoUrl: question.answerPhotoUrl,
+                  answerDuration: question.answerDuration ?? null,
+                  muxPlaybackId: question.muxPlaybackId,
+                  muxAssetStatus: question.muxAssetStatus ?? null,
+                  muxMediaType: question.muxMediaType ?? null,
+                }}
+                bufferingColor="var(--party-light, #FF0000)"
+                playingId={playingId}
+                setPlayingId={setPlayingId}
+                className="w-full"
+                autoPlay
+              />
+            </div>
+          )}
         </div>
-        {/* Disabled upvote icon — shows state without interaction (hidden for answered) */}
-        {!(question.answerUrl || question.muxAssetStatus) && (
+        {/* Right side: mini thumbnail / expanded player for answered, upvote icon for unanswered */}
+        {(question.answerUrl || question.muxAssetStatus) && question.muxPlaybackId ? (
+          playingId === question.id ? (
+            /* Desktop: expanded player in right column */
+            <div className="flex-shrink-0 hidden md:block pt-1">
+              <PlayableMediaCard
+                question={{
+                  id: question.id,
+                  answerPhotoUrl: question.answerPhotoUrl,
+                  answerDuration: question.answerDuration ?? null,
+                  muxPlaybackId: question.muxPlaybackId,
+                  muxAssetStatus: question.muxAssetStatus ?? null,
+                  muxMediaType: question.muxMediaType ?? null,
+                }}
+                bufferingColor="var(--party-light, #FF0000)"
+                playingId={playingId}
+                setPlayingId={setPlayingId}
+                className="w-[337px]"
+                autoPlay
+              />
+            </div>
+          ) : (
+            /* Mini thumbnail */
+            <MiniVideoThumb
+              photoUrl={question.answerPhotoUrl}
+              muxPlaybackId={question.muxPlaybackId!}
+              onClick={() => setPlayingId(question.id)}
+            />
+          )
+        ) : (
           <div className="flex-shrink-0 pt-1">
             <div
               className="rounded-full flex items-center justify-center opacity-50"
