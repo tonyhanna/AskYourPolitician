@@ -9,6 +9,11 @@ html {
   background-color: var(--system-bg0, #FF0000);
 }
 
+input::placeholder, textarea::placeholder {
+  color: var(--system-form-text1, #FF0000);
+  opacity: 1;
+}
+
 @keyframes pulse-border {
   0%, 100% { border-color: color-mix(in srgb, var(--system-success, #FF0000) 10%, transparent); }
   50% { border-color: color-mix(in srgb, var(--system-success, #FF0000) 50%, transparent); }

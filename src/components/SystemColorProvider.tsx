@@ -53,8 +53,10 @@ type SystemColors = {
   colorErrorContrastDark: string;
   colorOverlay: string;
   colorOverlayDark: string;
-  colorFormBg: string;
-  colorFormBgDark: string;
+  colorFormBg0: string;
+  colorFormBg0Dark: string;
+  colorFormBg1: string;
+  colorFormBg1Dark: string;
   colorFormText0: string;
   colorFormText0Dark: string;
   colorFormText1: string;
@@ -88,7 +90,8 @@ export type ResolvedColors = {
   error: string;
   errorContrast: string;
   overlay: string;
-  formBg: string;
+  formBg0: string;
+  formBg1: string;
   formText0: string;
   formText1: string;
 };
@@ -130,7 +133,8 @@ const DEFAULT_COLORS: ResolvedColors = {
   error: "#FF4105",
   errorContrast: "#FFFFFF",
   overlay: "#000000",
-  formBg: "#FFFFFF",
+  formBg0: "#FFFFFF",
+  formBg1: "#F3F4F6",
   formText0: "#000000",
   formText1: "#6B7280",
 };
@@ -193,7 +197,8 @@ function resolve(isDark: boolean, colors: SystemColors): ResolvedColors {
     error: isDark ? colors.colorErrorDark : colors.colorError,
     errorContrast: isDark ? colors.colorErrorContrastDark : colors.colorErrorContrast,
     overlay: isDark ? colors.colorOverlayDark : colors.colorOverlay,
-    formBg: isDark ? colors.colorFormBgDark : colors.colorFormBg,
+    formBg0: isDark ? colors.colorFormBg0Dark : colors.colorFormBg0,
+    formBg1: isDark ? colors.colorFormBg1Dark : colors.colorFormBg1,
     formText0: isDark ? colors.colorFormText0Dark : colors.colorFormText0,
     formText1: isDark ? colors.colorFormText1Dark : colors.colorFormText1,
   };
@@ -226,7 +231,8 @@ function applyCSS(resolved: ResolvedColors) {
   root.style.setProperty("--system-error", resolved.error);
   root.style.setProperty("--system-error-contrast", resolved.errorContrast);
   root.style.setProperty("--system-overlay", resolved.overlay);
-  root.style.setProperty("--system-form-bg", resolved.formBg);
+  root.style.setProperty("--system-form-bg0", resolved.formBg0);
+  root.style.setProperty("--system-form-bg1", resolved.formBg1);
   root.style.setProperty("--system-form-text0", resolved.formText0);
   root.style.setProperty("--system-form-text1", resolved.formText1);
 }

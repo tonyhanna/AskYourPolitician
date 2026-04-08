@@ -121,7 +121,7 @@ function SuggestionItem({
             onChange={(e) => setEditedText(e.target.value)}
             rows={3}
             className="w-full mb-1 rounded-lg px-3 py-2 resize-none"
-            style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-form-text0, #FF0000)", backgroundColor: "var(--system-form-bg, #FF0000)", border: "none", outline: "none" }}
+            style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-form-text0, #FF0000)", backgroundColor: "var(--system-form-bg0, #FF0000)", border: "none", outline: "none" }}
           />
         ) : (
           <p style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text0, #FF0000)", marginBottom: 4 }}>{suggestion.text}</p>
@@ -175,7 +175,7 @@ function SuggestionItem({
                 rows={2}
                 required
                 className="w-full rounded-lg px-3 py-2 text-sm resize-none"
-                style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
+                style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
               />
             </div>
           )}
@@ -191,7 +191,7 @@ function SuggestionItem({
               defaultValue={100}
               min={1}
               className="w-full rounded-lg px-3 py-2 text-sm"
-              style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
+              style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
             />
           </div>
 
@@ -253,7 +253,7 @@ function SuggestionItem({
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               className="w-full rounded-lg py-2 text-sm"
-              style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none", paddingLeft: 12, paddingRight: 36, appearance: "none", WebkitAppearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
+              style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none", paddingLeft: 12, paddingRight: 36, appearance: "none", WebkitAppearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
             >
               <option value="" disabled>Vælg grund</option>
               <option value="already_answered">Jeg har allerede svaret på det spørgsmål</option>
@@ -286,7 +286,7 @@ function SuggestionItem({
                 }}
                 placeholder="https://..."
                 className="w-full rounded-lg px-3 py-2 text-sm"
-                style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
+                style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
               />
               {linkStatus === "checking" && (
                 <p className="text-sm mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Tjekker link...</p>
@@ -312,7 +312,7 @@ function SuggestionItem({
                 placeholder="Skriv din begrundelse..."
                 rows={2}
                 className="w-full rounded-lg px-3 py-2 text-sm resize-none"
-                style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
+                style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
               />
             </div>
           )}

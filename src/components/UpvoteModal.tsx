@@ -99,7 +99,7 @@ export function UpvoteModal({
 
   const inputStyle: React.CSSProperties = {
     color: "var(--system-form-text0, #FF0000)",
-    backgroundColor: "var(--system-form-bg, #FF0000)",
+    backgroundColor: "var(--system-form-bg0, #FF0000)",
     borderRadius: 9999,
     padding: "8px 20px",
     fontSize: "16px",

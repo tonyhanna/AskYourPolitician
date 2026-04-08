@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUpload, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { upload } from "@vercel/blob/client";
 import { updateSettings } from "@/app/politiker/dashboard/actions";
+import { generateSlug } from "@/lib/utils";
 
 type PoliticianData = {
   name: string;
@@ -58,418 +61,763 @@ export function SettingsForm({
   allParties,
   googleEmail,
   googleName,
+  appUrl,
+  partySlug,
 }: {
   politician: PoliticianData;
   allParties: PartyOption[];
   googleEmail: string;
   googleName: string;
+  appUrl?: string | null;
+  partySlug?: string | null;
 }) {
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
+  // Committed URLs (already uploaded / from DB)
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(politician?.profilePhotoUrl ?? "");
-  const [uploadingProfile, setUploadingProfile] = useState(false);
   const [bannerUrl, setBannerUrl] = useState(politician?.bannerUrl ?? "");
   const [ogImageUrl, setOgImageUrl] = useState(politician?.ogImageUrl ?? "");
   const [bannerBgColor, setBannerBgColor] = useState(politician?.bannerBgColor ?? "");
-  const [uploadingBanner, setUploadingBanner] = useState(false);
-  const [uploadingOg, setUploadingOg] = useState(false);
+  // Pending files (not yet uploaded — deferred to submit)
+  const [pendingProfileFile, setPendingProfileFile] = useState<File | null>(null);
+  const [pendingBannerFile, setPendingBannerFile] = useState<File | null>(null);
+  const [pendingOgFile, setPendingOgFile] = useState<File | null>(null);
+  // Local preview URLs
+  const [profilePreview, setProfilePreview] = useState("");
+  const [bannerPreview, setBannerPreview] = useState("");
+  const [ogPreview, setOgPreview] = useState("");
   const [heroLine1Color, setHeroLine1Color] = useState(politician?.heroLine1Color ?? "");
   const [heroLine2Color, setHeroLine2Color] = useState(politician?.heroLine2Color ?? "");
   const [chatbaseId, setChatbaseId] = useState(politician?.chatbaseId ?? "");
+  const [chatbaseRemoved, setChatbaseRemoved] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [bannerError, setBannerError] = useState("");
+  const [ogError, setOgError] = useState("");
+  const [profileRemoved, setProfileRemoved] = useState(false);
+  const [bannerRemoved, setBannerRemoved] = useState(false);
+  const [ogRemoved, setOgRemoved] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [profileSelectHover, setProfileSelectHover] = useState(false);
+  const [bannerSelectHover, setBannerSelectHover] = useState(false);
+  const [ogSelectHover, setOgSelectHover] = useState(false);
+  const [firstName, setFirstName] = useState(politician?.firstName ?? googleName.split(" ")[0] ?? "");
+  const [middleName, setMiddleName] = useState(politician?.middleName ?? "");
+  const [lastName, setLastName] = useState(politician?.lastName ?? (googleName.split(" ").length > 1 ? googleName.split(" ").slice(-1)[0] : "") ?? "");
+  const fullName = [firstName, middleName, lastName].filter(Boolean).join(" ");
+  const computedSlug = generateSlug(fullName);
+  const uniqueUrl = appUrl && partySlug && computedSlug ? `${appUrl}/${partySlug}/${computedSlug}` : null;
+  const [heroLine1Text, setHeroLine1Text] = useState(politician?.heroLine1 ?? "");
+  const [heroLine2Text, setHeroLine2Text] = useState(politician?.heroLine2 ?? "");
 
-  async function handleImageUpload(
+  // Hero text preview auto-scale (mirrors BannerHero logic)
+  const heroTextRef = useRef<HTMLDivElement>(null);
+  const heroContainerRef = useRef<HTMLDivElement>(null);
+  const [heroScale, setHeroScale] = useState(1);
+
+  const computeHeroScale = useCallback(() => {
+    const text = heroTextRef.current;
+    const container = heroContainerRef.current;
+    if (!text || !container) return;
+    text.style.transform = "scale(1)";
+    const naturalWidth = text.scrollWidth;
+    const cs = getComputedStyle(container);
+    const availableWidth = container.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const newScale = naturalWidth > availableWidth ? availableWidth / naturalWidth : 1;
+    text.style.transform = `scale(${newScale})`;
+    setHeroScale(newScale);
+  }, []);
+
+  useEffect(() => {
+    if (!bannerUrl || (!heroLine1Text && !heroLine2Text)) return;
+    computeHeroScale();
+    window.addEventListener("resize", computeHeroScale);
+    return () => window.removeEventListener("resize", computeHeroScale);
+  }, [bannerUrl, heroLine1Text, heroLine2Text, heroLine1Color, heroLine2Color, computeHeroScale]);
+
+  // Resolve color key ("primary"/"light"/"dark") to hex
+  const selectedParty = allParties.find((p) => p.id === (politician?.partyId ?? ""));
+  function resolveHeroColor(colorKey: string): string {
+    if (!colorKey || !selectedParty) return "#FF0000";
+    if (colorKey === "primary") return selectedParty.color || "#FF0000";
+    if (colorKey === "light") return selectedParty.colorLight || "#FF0000";
+    if (colorKey === "dark") return selectedParty.colorDark || "#FF0000";
+    return "#FF0000";
+  }
+
+  function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  async function handleImageSelect(
     file: File,
-    setUrl: (url: string) => void,
-    setUploading: (v: boolean) => void,
-    crop = true,
-    folder = "politicians",
+    setPendingFile: (f: File | null) => void,
+    setPreview: (url: string) => void,
+    opts?: { minWidth?: number; minHeight?: number; exactRatio?: [number, number]; setError?: (msg: string) => void; errorMessage?: string },
   ) {
+    const { minWidth, minHeight, exactRatio, setError, errorMessage } = opts ?? {};
+    const showError = (msg: string) => setError ? setError(msg) : undefined;
+    const clearError = () => setError ? setError("") : undefined;
     if (!file.type.startsWith("image/")) return;
     if (file.size > 10 * 1024 * 1024) {
-      alert("Billedet er for stort (maks 10 MB)");
+      showError("Billedet er for stort (maks 10 MB)");
       return;
     }
-    setUploading(true);
-    try {
-      const toUpload = crop ? await cropToSquare(file) : file;
-      const blob = await upload(`${folder}/${toUpload.name}`, toUpload, {
-        access: "public",
-        handleUploadUrl: "/api/upload",
-      });
-      setUrl(blob.url);
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Upload fejlede");
-    } finally {
-      setUploading(false);
+    // Validate dimensions + ratio
+    if (minWidth || minHeight || exactRatio) {
+      const dims = await getImageDimensions(file);
+      let invalid = false;
+      if (minWidth && dims.width < minWidth) invalid = true;
+      if (minHeight && dims.height < minHeight) invalid = true;
+      if (exactRatio) {
+        const expectedRatio = exactRatio[0] / exactRatio[1];
+        const actualRatio = dims.width / dims.height;
+        if (Math.abs(actualRatio - expectedRatio) > 0.02) invalid = true;
+      }
+      if (invalid) {
+        showError(errorMessage || `Billedet skal minimum være ${minWidth} x ${minHeight}px.`);
+        return;
+      }
     }
+    clearError();
+    setPendingFile(file);
+    setPreview(URL.createObjectURL(file));
+  }
+
+  async function uploadFile(file: File, crop: boolean, folder: string): Promise<string> {
+    const toUpload = crop ? await cropToSquare(file) : file;
+    const blob = await upload(`${folder}/${toUpload.name}`, toUpload, {
+      access: "public",
+      handleUploadUrl: "/api/upload",
+    });
+    return blob.url;
   }
 
   async function handleSubmit(formData: FormData) {
+    // Client-side validation
+    const errors: string[] = [];
+    if (!firstName.trim()) errors.push("Fornavn er påkrævet");
+    if (!lastName.trim()) errors.push("Efternavn er påkrævet");
+    if (!(formData.get("email") as string)?.trim()) errors.push("E-mail er påkrævet");
+    if (errors.length > 0) {
+      setSubmitError(errors.join("\n"));
+      return;
+    }
     setPending(true);
     try {
+      // Upload pending files now
+      let finalProfileUrl = profilePhotoUrl;
+      let finalBannerUrl = bannerUrl;
+      let finalOgUrl = ogImageUrl;
+      if (pendingProfileFile) {
+        finalProfileUrl = await uploadFile(pendingProfileFile, true, "politicians");
+        setProfilePhotoUrl(finalProfileUrl);
+        setPendingProfileFile(null);
+        setProfilePreview("");
+      }
+      if (pendingBannerFile) {
+        finalBannerUrl = await uploadFile(pendingBannerFile, false, "politicians");
+        setBannerUrl(finalBannerUrl);
+        setPendingBannerFile(null);
+        setBannerPreview("");
+      }
+      if (pendingOgFile) {
+        finalOgUrl = await uploadFile(pendingOgFile, false, "politicians");
+        setOgImageUrl(finalOgUrl);
+        setPendingOgFile(null);
+        setOgPreview("");
+      }
+      // Override hidden field values with final URLs
+      formData.set("profilePhotoUrl", finalProfileUrl);
+      formData.set("bannerUrl", finalBannerUrl);
+      formData.set("ogImageUrl", finalOgUrl);
+      setSubmitError("");
       await updateSettings(formData);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Der opstod en fejl");
+      setSubmitError(e instanceof Error ? e.message : "Der opstod en fejl");
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <form action={handleSubmit} className="space-y-6">
-      <input type="hidden" name="profilePhotoUrl" value={profilePhotoUrl} />
-      <input type="hidden" name="bannerUrl" value={bannerUrl} />
-      <input type="hidden" name="ogImageUrl" value={ogImageUrl} />
+    <form action={handleSubmit}>
+      <input type="hidden" name="profilePhotoUrl" value={profileRemoved ? "" : profilePhotoUrl} />
+      <input type="hidden" name="bannerUrl" value={bannerRemoved ? "" : bannerUrl} />
+      <input type="hidden" name="ogImageUrl" value={ogRemoved ? "" : ogImageUrl} />
       <input type="hidden" name="bannerBgColor" value={bannerBgColor} />
       <input type="hidden" name="heroLine1Color" value={heroLine1Color} />
       <input type="hidden" name="heroLine2Color" value={heroLine2Color} />
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Navn</label>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <div>
-            <input
-              name="firstName"
-              type="text"
-              required
-              placeholder="Fornavn(e)"
-              defaultValue={politician?.firstName ?? googleName.split(" ")[0] ?? ""}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <div>
-            <input
-              name="middleName"
-              type="text"
-              placeholder="Mellemnavn(e)"
-              defaultValue={politician?.middleName ?? ""}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <div>
-            <input
-              name="lastName"
-              type="text"
-              required
-              placeholder="Efternavn(e)"
-              defaultValue={politician?.lastName ?? (googleName.split(" ").length > 1 ? googleName.split(" ").slice(-1)[0] : "") ?? ""}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-      </div>
       {/* Party is managed by admin only — pass as hidden field */}
       <input type="hidden" name="partyId" value={politician?.partyId ?? ""} />
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-          E-mail
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          required
-          defaultValue={politician?.email ?? googleEmail}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
-      <div>
-        <label htmlFor="constituency" className="block text-sm font-medium text-gray-700 mb-1">
-          Kreds
-        </label>
-        <input
-          id="constituency"
-          name="constituency"
-          type="text"
-          defaultValue={politician?.constituency ?? ""}
-          placeholder="F.eks. Københavns Storkreds"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
 
-      <hr className="border-gray-200" />
-
-      {/* Profilbillede */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Profilbillede
-        </label>
-        <div className="flex items-center gap-4">
-          {profilePhotoUrl ? (
-            <img
-              src={profilePhotoUrl}
-              alt="Profilbillede"
-              className="w-20 h-20 rounded-lg object-cover border border-gray-200"
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs">
-              Intet foto
-            </div>
-          )}
-          <div className="flex flex-col gap-2">
-            <label className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer">
-              {uploadingProfile ? "Uploader..." : "Vælg billede"}
-              <input
-                type="file"
-                accept="image/*"
-                capture="user"
-                className="hidden"
-                disabled={uploadingProfile}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleImageUpload(file, setProfilePhotoUrl, setUploadingProfile);
-                }}
-              />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* ── Column 1: Profile, Name, Email, Constituency, Upvote Goal, Chatbase ── */}
+        <div className="space-y-6">
+          {/* Profilbillede */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
+              Profilbillede
             </label>
-            {profilePhotoUrl && (
-              <button
-                type="button"
-                onClick={() => setProfilePhotoUrl("")}
-                className="text-xs text-red-600 hover:text-red-800 cursor-pointer text-left"
-              >
-                Fjern
-              </button>
+            <div className="flex items-center gap-4">
+              {(profilePreview || (profilePhotoUrl && !profileRemoved)) ? (
+                <img
+                  src={profilePreview || profilePhotoUrl}
+                  alt="Profilbillede"
+                  className="w-20 h-20 rounded-lg object-cover"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-lg flex items-center justify-center text-center text-xs" style={{ backgroundColor: "var(--system-bg1, #FF0000)", color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
+                  Intet<br />billede
+                </div>
+              )}
+              <div>
+                {pendingProfileFile ? (
+                  <div className="flex items-center gap-3">
+                    <label
+                      className="text-sm cursor-pointer"
+                      style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}
+                      onMouseEnter={() => setProfileSelectHover(true)}
+                      onMouseLeave={() => setProfileSelectHover(false)}
+                    >
+                      <FontAwesomeIcon icon={profileSelectHover ? faUpload : faCheck} style={{ fontSize: profileSelectHover ? 15 : 14, marginRight: 4, ...(profileSelectHover ? { position: "relative" as const, top: 1 } : {}) }} />{profileSelectHover ? "Vælg nyt billede" : "Nyt billede valgt"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="user"
+                        className="hidden"
+                        disabled={pending}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageSelect(file, setPendingProfileFile, setProfilePreview, { minWidth: 512, minHeight: 512, setError: setProfileError });
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => { setPendingProfileFile(null); setProfilePreview(""); setProfileError(""); }}
+                      className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                    >
+                      Fortryd
+                    </button>
+                  </div>
+                ) : profileRemoved ? (
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Profilbillede fjernet</span>
+                    <button
+                      type="button"
+                      onClick={() => setProfileRemoved(false)}
+                      className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                    >
+                      Fortryd
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>
+                      <FontAwesomeIcon icon={faUpload} style={{ fontSize: 15, marginRight: 4, position: "relative" as const, top: 1 }} />Vælg billede
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="user"
+                        className="hidden"
+                        disabled={pending}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageSelect(file, setPendingProfileFile, setProfilePreview, { minWidth: 512, minHeight: 512, setError: setProfileError });
+                        }}
+                      />
+                    </label>
+                    {profilePhotoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => { setProfileRemoved(true); setProfileError(""); }}
+                        className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                      >
+                        Fjern
+                      </button>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Mindst 512 x 512 px. Auto-croppes til firkantet.</p>
+                {profileError && profileError.split("\n").map((line, i) => <p key={i} className="text-xs mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-error, #FF0000)" }}>{line}</p>)}
+              </div>
+            </div>
+          </div>
+
+          {/* Navn */}
+          <div>
+            <label className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Navn</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div>
+                <input
+                  name="firstName"
+                  type="text"
+                  placeholder="Fornavn(e)"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="w-full rounded-lg px-3 py-2 text-sm placeholder:opacity-100"
+                  style={{ backgroundColor: "var(--system-form-bg1, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none", fontFamily: "var(--font-figtree)" }}
+                />
+              </div>
+              <div>
+                <input
+                  name="middleName"
+                  type="text"
+                  placeholder="Mellemnavn(e)"
+                  value={middleName}
+                  onChange={(e) => setMiddleName(e.target.value)}
+                  className="w-full rounded-lg px-3 py-2 text-sm placeholder:opacity-100"
+                  style={{ backgroundColor: "var(--system-form-bg1, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none", fontFamily: "var(--font-figtree)" }}
+                />
+              </div>
+              <div>
+                <input
+                  name="lastName"
+                  type="text"
+                  placeholder="Efternavn(e)"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="w-full rounded-lg px-3 py-2 text-sm placeholder:opacity-100"
+                  style={{ backgroundColor: "var(--system-form-bg1, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none", fontFamily: "var(--font-figtree)" }}
+                />
+              </div>
+            </div>
+            {/* Din unikke adresse */}
+            {uniqueUrl && (
+              <p className="text-xs mt-2" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
+                Din unikke adresse:{" "}
+                <a
+                  href={uniqueUrl}
+                  className="underline"
+                  style={{ color: "var(--system-success, #FF0000)" }}
+                  target="_blank"
+                >
+                  {uniqueUrl}
+                </a>
+              </p>
             )}
           </div>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Anbefalet: mindst 512 x 512 px. Auto-croppes til firkantet.</p>
-      </div>
 
-      {/* Hero banner */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Hero banner
-        </label>
-        {bannerUrl ? (
-          <img
-            src={bannerUrl}
-            alt="Hero banner"
-            className="w-full rounded-lg border border-gray-200 mb-2"
-          />
-        ) : (
-          <div className="w-full aspect-[4/1] rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs mb-2">
-            Intet banner
-          </div>
-        )}
-        <div className="flex items-center gap-3">
-          <label className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer">
-            {uploadingBanner ? "Uploader..." : "Vælg banner"}
+          {/* E-mail */}
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
+              E-mail
+            </label>
             <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              disabled={uploadingBanner}
+              id="email"
+              name="email"
+              type="email"
+              defaultValue={politician?.email ?? googleEmail}
+              className="w-full rounded-lg px-3 py-2 text-sm placeholder:opacity-100"
+                  style={{ backgroundColor: "var(--system-form-bg1, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none", fontFamily: "var(--font-figtree)" }}
+            />
+          </div>
+
+          {/* Kreds */}
+          <div>
+            <label htmlFor="constituency" className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
+              Kreds
+            </label>
+            <input
+              id="constituency"
+              name="constituency"
+              type="text"
+              defaultValue={politician?.constituency ?? ""}
+              placeholder="F.eks. Københavns Storkreds"
+              className="w-full rounded-lg px-3 py-2 text-sm placeholder:opacity-100"
+                  style={{ backgroundColor: "var(--system-form-bg1, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none", fontFamily: "var(--font-figtree)" }}
+            />
+          </div>
+
+          {/* Standard upvote-mål */}
+          <div>
+            <label htmlFor="defaultUpvoteGoal" className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
+              Standard upvote-mål
+            </label>
+            <input
+              id="defaultUpvoteGoal"
+              name="defaultUpvoteGoal"
+              type="number"
+              min={1}
+              defaultValue={politician?.defaultUpvoteGoal ?? 1000}
+              className="w-full rounded-lg px-3 py-2 text-sm placeholder:opacity-100"
+                  style={{ backgroundColor: "var(--system-form-bg1, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none", fontFamily: "var(--font-figtree)" }}
+            />
+            <p className="text-xs mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Standard antal upvotes der kræves, når du opretter nye spørgsmål.</p>
+          </div>
+
+          {/* Chatbase */}
+          <div>
+            <label htmlFor="chatbaseEmbed" className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
+              Chatbase embed-kode
+            </label>
+            <input type="hidden" name="chatbaseId" value={chatbaseRemoved ? "" : chatbaseId} />
+            <textarea
+              id="chatbaseEmbed"
+              rows={4}
+              defaultValue=""
+              placeholder={chatbaseId && !chatbaseRemoved ? "Allerede konfigureret. Paste ny embed-kode her for at opdatere." : "Gå til Chatbase › Deploy › Embed, og paste hele script-koden her."}
+              className="w-full rounded-lg px-3 py-2 text-sm font-mono placeholder:opacity-100"
+              style={{ backgroundColor: "var(--system-form-bg1, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
               onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleImageUpload(file, setBannerUrl, setUploadingBanner, false);
+                const val = e.target.value;
+                const match = val.match(/script\.id\s*=\s*"([^"]+)"/);
+                if (match) {
+                  setChatbaseId(match[1]);
+                  setChatbaseRemoved(false);
+                }
               }}
             />
-          </label>
-          {bannerUrl && (
-            <button
-              type="button"
-              onClick={() => setBannerUrl("")}
-              className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
-            >
-              Fjern
-            </button>
-          )}
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Anbefalet minimum: 1584 × 396 px. Vises øverst på borgersiden.</p>
-      </div>
-
-      {/* Hero banner baggrundsfarve */}
-      {bannerUrl && (
-        <div>
-          <label htmlFor="bannerBgColor" className="block text-sm font-medium text-gray-700 mb-1">
-            Hero banner baggrundsfarve (valgfrit)
-          </label>
-          <div className="flex items-center gap-3">
-            <input
-              id="bannerBgColor"
-              type="color"
-              value={bannerBgColor || "#ffffff"}
-              onChange={(e) => setBannerBgColor(e.target.value)}
-              className="w-10 h-10 rounded border border-gray-300 cursor-pointer p-0.5"
-            />
-            <span className="text-sm text-gray-600">{bannerBgColor || "Ingen (auto-detect)"}</span>
-            {bannerBgColor && (
-              <button
-                type="button"
-                onClick={() => setBannerBgColor("")}
-                className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
-              >
-                Nulstil til auto
-              </button>
+            {chatbaseId && !chatbaseRemoved ? (
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Chatbot-ID fundet: <span style={{ color: "var(--system-success, #FF0000)" }}>{chatbaseId}</span></span>
+                <button
+                  type="button"
+                  onClick={() => setChatbaseRemoved(true)}
+                  className="text-xs cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                >
+                  Fjern
+                </button>
+              </div>
+            ) : chatbaseRemoved ? (
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Chatbot fjernet</span>
+                <button
+                  type="button"
+                  onClick={() => setChatbaseRemoved(false)}
+                  className="text-xs cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                >
+                  Fortryd
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Vi udtrækker selv dit Chatbot-ID fra koden</p>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Farven forlænger banneret til skærmens kanter. Lad stå tom for automatisk at matche billedets hjørnefarve.
-          </p>
+        </div>
+
+        {/* ── Column 2: Welcome text, Hero banner, Banner bg color, OG image ── */}
+        <div className="space-y-6">
+          {/* Velkomsttekst */}
+          <div>
+            <label className="block font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", fontSize: 18, color: "var(--system-text2, #FF0000)" }}>
+              Velkomstbanner (valgfrit)
+            </label>
+            <p className="text-xs mb-2" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Disse tekster vises ovenpå et banner øverst på borgersiden. Vælg en partifarve for hver linje.</p>
+            {[
+              { name: "heroLine1", colorState: heroLine1Color, setColor: setHeroLine1Color, value: heroLine1Text, setValue: setHeroLine1Text, placeholder: "Linje 1" },
+              { name: "heroLine2", colorState: heroLine2Color, setColor: setHeroLine2Color, value: heroLine2Text, setValue: setHeroLine2Text, placeholder: "Linje 2" },
+            ].map((line) => {
+              const partyColorOptions = selectedParty
+                ? [
+                    { key: "primary", hex: selectedParty.color },
+                    { key: "light", hex: selectedParty.colorLight },
+                    { key: "dark", hex: selectedParty.colorDark },
+                  ].filter((c) => c.hex) as { key: string; hex: string }[]
+                : [];
+              return (
+                <div key={line.name} className="flex items-center gap-2 mb-2">
+                  <input
+                    name={line.name}
+                    type="text"
+                    value={line.value}
+                    onChange={(e) => line.setValue(e.target.value)}
+                    placeholder={line.placeholder}
+                    className="flex-1 rounded-lg px-3 py-2 text-sm placeholder:opacity-100"
+                    style={{ backgroundColor: "var(--system-form-bg1, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none", fontFamily: "var(--font-figtree)" }}
+                  />
+                  <div className="flex items-center gap-1">
+                    {partyColorOptions.map(({ key, hex }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => line.setColor(line.colorState === key ? "" : key)}
+                        className={`w-7 h-7 rounded-full border-2 cursor-pointer transition ${
+                          line.colorState === key ? "border-gray-900 scale-110" : "border-gray-300 hover:border-gray-400"
+                        }`}
+                        style={{ backgroundColor: hex }}
+                        title={key}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Hero banner */}
+          <div>
+            {(bannerPreview || (bannerUrl && !bannerRemoved)) ? (
+              <div className="relative rounded-lg overflow-hidden mb-2">
+                <img
+                  src={bannerPreview || bannerUrl}
+                  alt="Hero banner"
+                  className="w-full block"
+                />
+                {/* Live hero text preview — mirrors BannerHero layout */}
+                {(heroLine1Text || heroLine2Text) && (
+                  <div
+                    ref={heroContainerRef}
+                    className="absolute top-0 bottom-0 right-0 w-[60%] flex items-center justify-end pr-[48px] sm:pr-6 pointer-events-none"
+                  >
+                    <div
+                      ref={heroTextRef}
+                      className="flex flex-col items-end whitespace-nowrap"
+                      style={{ transform: `scale(${heroScale})`, transformOrigin: "right center" }}
+                    >
+                      {heroLine1Text && (
+                        <span
+                          className="leading-tight text-[18px] sm:text-[30px]"
+                          style={{
+                            fontFamily: "var(--font-figtree)",
+                            fontWeight: 500,
+                            color: resolveHeroColor(heroLine1Color),
+                          }}
+                        >
+                          {heroLine1Text}
+                        </span>
+                      )}
+                      {heroLine2Text && (
+                        <span
+                          className="leading-tight text-[18px] sm:text-[30px]"
+                          style={{
+                            fontFamily: "var(--font-figtree)",
+                            fontWeight: 500,
+                            color: resolveHeroColor(heroLine2Color),
+                          }}
+                        >
+                          {heroLine2Text}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="w-full aspect-[4/1] rounded-lg flex items-center justify-center text-xs mb-2" style={{ backgroundColor: "var(--system-bg1, #FF0000)", color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
+                Intet velkomstbanner baggrundsbillede
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              {pendingBannerFile ? (
+                <>
+                  <label
+                    className="text-sm cursor-pointer"
+                    style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}
+                    onMouseEnter={() => setBannerSelectHover(true)}
+                    onMouseLeave={() => setBannerSelectHover(false)}
+                  >
+                    <FontAwesomeIcon icon={bannerSelectHover ? faUpload : faCheck} style={{ fontSize: bannerSelectHover ? 15 : 14, marginRight: 4, ...(bannerSelectHover ? { position: "relative" as const, top: 1 } : {}) }} />{bannerSelectHover ? "Vælg nyt banner" : "Nyt banner valgt"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={pending}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageSelect(file, setPendingBannerFile, setBannerPreview, { minWidth: 1584, minHeight: 396, exactRatio: [4, 1], setError: setBannerError, errorMessage: "Billedet er ikke stort nok eller har forkerte proportioner\n— skal minimum være 1584 x 396 px, eller det dobbelte, tredobbelte eller mere." });
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setPendingBannerFile(null); setBannerPreview(""); setBannerError(""); }}
+                    className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                  >
+                    Fortryd
+                  </button>
+                </>
+              ) : bannerRemoved ? (
+                <>
+                  <span className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Baggrundsbillede fjernet</span>
+                  <button
+                    type="button"
+                    onClick={() => setBannerRemoved(false)}
+                    className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                  >
+                    Fortryd
+                  </button>
+                </>
+              ) : (
+                <>
+                  <label className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>
+                    <FontAwesomeIcon icon={faUpload} style={{ fontSize: 15, marginRight: 4, position: "relative" as const, top: 1 }} />Vælg banner baggrundsbillede
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={pending}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageSelect(file, setPendingBannerFile, setBannerPreview, { minWidth: 1584, minHeight: 396, exactRatio: [4, 1], setError: setBannerError, errorMessage: "Billedet er ikke stort nok eller har forkerte proportioner\n— skal minimum være 1584 x 396 px, eller det dobbelte, tredobbelte eller mere." });
+                      }}
+                    />
+                  </label>
+                  {bannerUrl && (
+                    <button
+                      type="button"
+                      onClick={() => { setBannerRemoved(true); setBannerError(""); }}
+                      className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                    >
+                      Fjern
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+            <p className="text-xs mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Minimum: 1584 × 396 px.</p>
+            {bannerError && bannerError.split("\n").map((line, i) => <p key={i} className="text-xs mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-error, #FF0000)" }}>{line}</p>)}
+          </div>
+
+          {/* Hero banner baggrundsfarve */}
+          {((bannerUrl && !bannerRemoved) || bannerPreview) && (
+            <div>
+              <label htmlFor="bannerBgColor" className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
+                Banner baggrundsfarve (valgfrit)
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  id="bannerBgColor"
+                  type="color"
+                  value={bannerBgColor || "#ffffff"}
+                  onChange={(e) => setBannerBgColor(e.target.value)}
+                  className="w-10 h-10 rounded border border-gray-300 cursor-pointer p-0.5"
+                />
+                <span className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>{bannerBgColor || "Ingen (auto-detect)"}</span>
+                {bannerBgColor && (
+                  <button
+                    type="button"
+                    onClick={() => setBannerBgColor("")}
+                    className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                  >
+                    Nulstil til auto
+                  </button>
+                )}
+              </div>
+              <p className="text-xs mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
+                Farven forlænger banneret til skærmens kanter. Lad stå tom for automatisk at matche billedets hjørnefarve.
+              </p>
+            </div>
+          )}
+
+          {/* Socialt delingsbillede (OpenGraph) */}
+          <div>
+            <label className="block font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", fontSize: 18, color: "var(--system-text2, #FF0000)" }}>
+              Socialt delingsbillede (OpenGraph)
+            </label>
+            <p className="text-xs mb-2" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Vises når dit link deles på sociale medier.</p>
+            {(ogPreview || (ogImageUrl && !ogRemoved)) ? (
+              <img
+                src={ogPreview || ogImageUrl}
+                alt="OpenGraph billede"
+                className="w-full rounded-lg mb-2"
+              />
+            ) : (
+              <div className="w-full rounded-lg flex items-center justify-center text-xs mb-2" style={{ aspectRatio: "1200/630", backgroundColor: "var(--system-bg1, #FF0000)", color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
+                Intet delingsbillede
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              {pendingOgFile ? (
+                <>
+                  <label
+                    className="text-sm cursor-pointer"
+                    style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}
+                    onMouseEnter={() => setOgSelectHover(true)}
+                    onMouseLeave={() => setOgSelectHover(false)}
+                  >
+                    <FontAwesomeIcon icon={ogSelectHover ? faUpload : faCheck} style={{ fontSize: ogSelectHover ? 15 : 14, marginRight: 4, ...(ogSelectHover ? { position: "relative" as const, top: 1 } : {}) }} />{ogSelectHover ? "Vælg nyt billede" : "Nyt billede valgt"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={pending}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageSelect(file, setPendingOgFile, setOgPreview, { minWidth: 1200, minHeight: 630, exactRatio: [1200, 630], setError: setOgError, errorMessage: "Billedet er ikke stort nok eller har forkerte proportioner\n— skal minimum være 1200 x 630 px, eller det dobbelte, tredobbelte eller mere." });
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setPendingOgFile(null); setOgPreview(""); setOgError(""); }}
+                    className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                  >
+                    Fortryd
+                  </button>
+                </>
+              ) : ogRemoved ? (
+                <>
+                  <span className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Delingsbillede fjernet</span>
+                  <button
+                    type="button"
+                    onClick={() => setOgRemoved(false)}
+                    className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                  >
+                    Fortryd
+                  </button>
+                </>
+              ) : (
+                <>
+                  <label className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>
+                    <FontAwesomeIcon icon={faUpload} style={{ fontSize: 15, marginRight: 4, position: "relative" as const, top: 1 }} />Vælg billede
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={pending}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageSelect(file, setPendingOgFile, setOgPreview, { minWidth: 1200, minHeight: 630, exactRatio: [1200, 630], setError: setOgError, errorMessage: "Billedet er ikke stort nok eller har forkerte proportioner\n— skal minimum være 1200 x 630 px, eller det dobbelte, tredobbelte eller mere." });
+                      }}
+                    />
+                  </label>
+                  {ogImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => { setOgRemoved(true); setOgError(""); }}
+                      className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                    >
+                      Fjern
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+            <p className="text-xs mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Minimum: 1200 × 630 px.</p>
+            {ogError && ogError.split("\n").map((line, i) => <p key={i} className="text-xs mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-error, #FF0000)" }}>{line}</p>)}
+          </div>
+        </div>
+      </div>
+
+      {/* Submit error */}
+      {submitError && (
+        <div className="mt-6 flex justify-end">
+          <div>
+            {submitError.split("\n").map((line, i) => (
+              <p key={i} className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-error, #FF0000)" }}>{line}</p>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Socialt delingsbillede (OpenGraph) */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Socialt delingsbillede (OpenGraph)
-        </label>
-        {ogImageUrl ? (
-          <img
-            src={ogImageUrl}
-            alt="OpenGraph billede"
-            className="max-w-md rounded-lg border border-gray-200 mb-2"
-          />
-        ) : (
-          <div className="w-full max-w-md rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs mb-2" style={{ aspectRatio: "1200/630" }}>
-            Intet delingsbillede
-          </div>
-        )}
-        <div className="flex items-center gap-3">
-          <label className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer">
-            {uploadingOg ? "Uploader..." : "Vælg billede"}
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              disabled={uploadingOg}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleImageUpload(file, setOgImageUrl, setUploadingOg, false);
-              }}
-            />
-          </label>
-          {ogImageUrl && (
-            <button
-              type="button"
-              onClick={() => setOgImageUrl("")}
-              className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
-            >
-              Fjern
-            </button>
-          )}
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Anbefalet: 1200 × 630 px. Vises når dit link deles på sociale medier.</p>
+      {/* Submit button — right-aligned below both columns */}
+      <div className="mt-4 flex justify-end">
+        <button
+          type="submit"
+          disabled={pending}
+          className="group text-sm px-6 py-2 rounded-full disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+          style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
+        >
+          <span className="group-hover:opacity-50 transition-opacity">{pending ? "Gemmer..." : saved ? <>Gemt <FontAwesomeIcon icon={faCheck} style={{ marginLeft: 4 }} /></> : "Gem indstillinger"}</span>
+        </button>
       </div>
-
-      {/* Velkomsttekst */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Velkomsttekst (valgfrit)
-        </label>
-        <p className="text-xs text-gray-500 mb-2">Vises på hero banneret. Vælg en partifarve for hver linje.</p>
-        {[
-          { name: "heroLine1", colorState: heroLine1Color, setColor: setHeroLine1Color, defaultValue: politician?.heroLine1 ?? "", placeholder: "Linje 1" },
-          { name: "heroLine2", colorState: heroLine2Color, setColor: setHeroLine2Color, defaultValue: politician?.heroLine2 ?? "", placeholder: "Linje 2" },
-        ].map((line) => {
-          const selectedParty = allParties.find((p) => p.id === (politician?.partyId ?? ""));
-          const partyColorOptions = selectedParty
-            ? [
-                { key: "primary", hex: selectedParty.color },
-                { key: "light", hex: selectedParty.colorLight },
-                { key: "dark", hex: selectedParty.colorDark },
-              ].filter((c) => c.hex) as { key: string; hex: string }[]
-            : [];
-          return (
-            <div key={line.name} className="flex items-center gap-2 mb-2">
-              <input
-                name={line.name}
-                type="text"
-                defaultValue={line.defaultValue}
-                placeholder={line.placeholder}
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <div className="flex items-center gap-1">
-                {partyColorOptions.map(({ key, hex }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => line.setColor(line.colorState === key ? "" : key)}
-                    className={`w-7 h-7 rounded-full border-2 cursor-pointer transition ${
-                      line.colorState === key ? "border-gray-900 scale-110" : "border-gray-300 hover:border-gray-400"
-                    }`}
-                    style={{ backgroundColor: hex }}
-                    title={key}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <hr className="border-gray-200" />
-
-      {/* Standard upvote-mål */}
-      <div>
-        <label htmlFor="defaultUpvoteGoal" className="block text-sm font-medium text-gray-700 mb-1">
-          Standard upvote-mål
-        </label>
-        <input
-          id="defaultUpvoteGoal"
-          name="defaultUpvoteGoal"
-          type="number"
-          min={1}
-          required
-          defaultValue={politician?.defaultUpvoteGoal ?? 1000}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-        <p className="text-xs text-gray-500 mt-1">Standard antal upvotes der kræves, når du opretter nye spørgsmål.</p>
-      </div>
-
-      <hr className="border-gray-200" />
-
-      {/* Chatbase */}
-      <div>
-        <label htmlFor="chatbaseEmbed" className="block text-sm font-medium text-gray-700 mb-1">
-          Chatbase embed-kode
-        </label>
-        <input type="hidden" name="chatbaseId" value={chatbaseId} />
-        <textarea
-          id="chatbaseEmbed"
-          rows={4}
-          defaultValue={politician?.chatbaseId ? `(allerede konfigureret: ${politician.chatbaseId})` : ""}
-          placeholder='Paste hele embed-koden fra Chatbase her...'
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          onChange={(e) => {
-            const val = e.target.value;
-            const match = val.match(/script\.id\s*=\s*"([^"]+)"/);
-            if (match) {
-              setChatbaseId(match[1]);
-            } else if (!val.trim()) {
-              setChatbaseId("");
-            }
-          }}
-        />
-        {chatbaseId ? (
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-green-600">Chatbot-ID fundet: {chatbaseId}</span>
-            <button
-              type="button"
-              onClick={() => setChatbaseId("")}
-              className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
-            >
-              Fjern
-            </button>
-          </div>
-        ) : (
-          <p className="text-xs text-gray-500 mt-1">Gå til Chatbase &rarr; Deploy &rarr; Embed, og paste hele script-koden her. Lad feltet stå tomt for at deaktivere.</p>
-        )}
-      </div>
-
-      <button
-        type="submit"
-        disabled={pending || uploadingProfile || uploadingBanner || uploadingOg}
-        className={`px-6 py-2 rounded-lg transition font-medium disabled:opacity-50 cursor-pointer ${
-          saved
-            ? "bg-green-600 text-white"
-            : "bg-blue-600 text-white hover:bg-blue-700"
-        }`}
-      >
-        {pending ? "Gemmer..." : saved ? "Gemt" : "Gem indstillinger"}
-      </button>
     </form>
   );
 }

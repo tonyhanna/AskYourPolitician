@@ -52,8 +52,10 @@ const DEFAULTS: Record<string, string> = {
   colorErrorContrastDark: "#000000",
   colorOverlay: "#000000",
   colorOverlayDark: "#000000",
-  colorFormBg: "#FFFFFF",
-  colorFormBgDark: "#202020",
+  colorFormBg0: "#FFFFFF",
+  colorFormBg0Dark: "#202020",
+  colorFormBg1: "#F3F4F6",
+  colorFormBg1Dark: "#2A2A2A",
   colorFormText0: "#000000",
   colorFormText0Dark: "#FFFFFF",
   colorFormText1: "#6B7280",
@@ -111,8 +113,10 @@ export type AppSettings = {
   colorErrorContrastDark: string;
   colorOverlay: string;
   colorOverlayDark: string;
-  colorFormBg: string;
-  colorFormBgDark: string;
+  colorFormBg0: string;
+  colorFormBg0Dark: string;
+  colorFormBg1: string;
+  colorFormBg1Dark: string;
   colorFormText0: string;
   colorFormText0Dark: string;
   colorFormText1: string;
@@ -174,8 +178,10 @@ export async function getAppSettings(): Promise<AppSettings> {
     colorErrorContrastDark: map.get("colorErrorContrastDark") || DEFAULTS.colorErrorContrastDark,
     colorOverlay: map.get("colorOverlay") || DEFAULTS.colorOverlay,
     colorOverlayDark: map.get("colorOverlayDark") || DEFAULTS.colorOverlayDark,
-    colorFormBg: map.get("colorFormBg") || DEFAULTS.colorFormBg,
-    colorFormBgDark: map.get("colorFormBgDark") || DEFAULTS.colorFormBgDark,
+    colorFormBg0: map.get("colorFormBg0") || DEFAULTS.colorFormBg0,
+    colorFormBg0Dark: map.get("colorFormBg0Dark") || DEFAULTS.colorFormBg0Dark,
+    colorFormBg1: map.get("colorFormBg1") || DEFAULTS.colorFormBg1,
+    colorFormBg1Dark: map.get("colorFormBg1Dark") || DEFAULTS.colorFormBg1Dark,
     colorFormText0: map.get("colorFormText0") || DEFAULTS.colorFormText0,
     colorFormText0Dark: map.get("colorFormText0Dark") || DEFAULTS.colorFormText0Dark,
     colorFormText1: map.get("colorFormText1") || DEFAULTS.colorFormText1,

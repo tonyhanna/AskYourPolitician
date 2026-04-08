@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster, getMuxUploadUrl, submitMuxAnswer, checkMuxAnswerStatus } from "@/app/politiker/dashboard/actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUp, faXmark, faPlay } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUp, faXmark, faPlay, faUpload } from "@fortawesome/free-solid-svg-icons";
 import { faHourglass, faShare, faPen, faTrash, faAlarmExclamation } from "@fortawesome/pro-duotone-svg-icons";
 import { faStarOfLife as faStarOfLifeSolid, faReply } from "@fortawesome/pro-solid-svg-icons";
 import { faStarOfLifeRegular } from "@/lib/custom-icons";
@@ -138,7 +138,7 @@ export function QuestionList({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
               Til godkendelse
-              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: "var(--system-pending, #FF0000)", color: "var(--system-pending-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 600, position: "relative", top: -1 }}>
+              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: "var(--system-error, #FF0000)", color: "var(--system-error-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 700, position: "relative", top: -1 }}>
                 {pendingSuggestions.length}
               </span>
             </h3>
@@ -149,7 +149,7 @@ export function QuestionList({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
               Ubesvaret
-              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: "var(--system-error, #FF0000)", color: "var(--system-error-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 600, position: "relative", top: -1 }}>
+              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: "var(--system-pending, #FF0000)", color: "var(--system-pending-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 700, position: "relative", top: -1 }}>
                 {allUnanswered.length}
               </span>
             </h3>
@@ -168,7 +168,7 @@ export function QuestionList({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
               Til upvote
-              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 600, position: "relative", top: -1 }}>
+              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 700, position: "relative", top: -1 }}>
                 {forUpvoting.length}
               </span>
             </h3>
@@ -381,10 +381,11 @@ function QuestionItem({
     return { hours: h, minutes: m, total: ms };
   }, [question.goalReachedAt, question.answerUrl, question.deadlineMissed]);
 
-  const [timeLeft, setTimeLeft] = useState(calcTimeLeft);
+  const [timeLeft, setTimeLeft] = useState<ReturnType<typeof calcTimeLeft>>(null);
   const hoursLeft = timeLeft ? timeLeft.hours : null;
 
   useEffect(() => {
+    setTimeLeft(calcTimeLeft());
     if (!question.goalReachedAt || question.answerUrl || question.deadlineMissed) return;
     const interval = setInterval(() => setTimeLeft(calcTimeLeft()), 60_000);
     return () => clearInterval(interval);
@@ -781,7 +782,7 @@ function QuestionItem({
             required
             rows={3}
             className="w-full mb-1 rounded-lg px-3 py-2 resize-none"
-            style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-form-text0, #FF0000)", backgroundColor: "var(--system-form-bg, #FF0000)", border: "none", outline: "none" }}
+            style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-form-text0, #FF0000)", backgroundColor: "var(--system-form-bg0, #FF0000)", border: "none", outline: "none" }}
           />
           {question.suggestedBy && (
             <div style={{ marginTop: 4 }}>
@@ -809,7 +810,7 @@ function QuestionItem({
               defaultValue={question.upvoteGoal}
               min={1}
               className="w-full rounded-lg px-3 py-2 text-sm"
-              style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
+              style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
             />
           </div>
 
@@ -930,26 +931,6 @@ function QuestionItem({
               </span>
             ))}
           </div>
-          {/* Mobile: expanded player below share row (only rendered on mobile) */}
-          {playingId === question.id && question.muxPlaybackId && isMobile && (
-            <div style={{ paddingTop: 16 }}>
-              <PlayableMediaCard
-                question={{
-                  id: question.id,
-                  answerPhotoUrl: question.answerPhotoUrl,
-                  answerDuration: question.answerDuration ?? null,
-                  muxPlaybackId: question.muxPlaybackId,
-                  muxAssetStatus: question.muxAssetStatus ?? null,
-                  muxMediaType: question.muxMediaType ?? null,
-                }}
-                bufferingColor="var(--party-light, #FF0000)"
-                playingId={playingId}
-                setPlayingId={setPlayingId}
-                className="w-full"
-                autoPlay
-              />
-            </div>
-          )}
         </div>
         {/* Right side: mini thumbnail / expanded player for answered, upvote icon for unanswered */}
         {(question.answerUrl || question.muxAssetStatus) && question.muxPlaybackId ? (
@@ -1000,6 +981,27 @@ function QuestionItem({
           </div>
         )}
       </div>
+
+      {/* Mobile: expanded player full-width (only rendered on mobile) */}
+      {playingId === question.id && question.muxPlaybackId && isMobile && (
+        <div style={{ padding: "0 20px 16px" }}>
+          <PlayableMediaCard
+            question={{
+              id: question.id,
+              answerPhotoUrl: question.answerPhotoUrl,
+              answerDuration: question.answerDuration ?? null,
+              muxPlaybackId: question.muxPlaybackId,
+              muxAssetStatus: question.muxAssetStatus ?? null,
+              muxMediaType: question.muxMediaType ?? null,
+            }}
+            bufferingColor="var(--party-light, #FF0000)"
+            playingId={playingId}
+            setPlayingId={setPlayingId}
+            className="w-full"
+            autoPlay
+          />
+        </div>
+      )}
 
       {/* Dashboard controls — below separator */}
       <div style={{ borderTop: "1px solid var(--system-bg2, #FF0000)", padding: "12px 10px" }}>
@@ -1065,7 +1067,7 @@ function QuestionItem({
               <AlarmTooltipButton />
             )}
             {question.goalReached && !question.answerUrl && !question.muxAssetStatus && (
-              <span style={{ color: "var(--system-success, #FF0000)", fontFamily: "var(--font-figtree)", fontSize: 14, fontWeight: 500 }}>
+              <span style={{ color: timeLeft && timeLeft.hours < 2 ? "var(--system-error, #FF0000)" : "var(--system-success, #FF0000)", fontFamily: "var(--font-figtree)", fontSize: 14, fontWeight: 500 }}>
                 {timeLeft && timeLeft.total > 0
                   ? <>Svar inden for <strong>{timeLeft.hours}t {timeLeft.minutes}m</strong></>
                   : "Svartid overskredet"}
@@ -1261,7 +1263,7 @@ function QuestionItem({
                         style={{ backgroundColor: "var(--system-bg0, #FF0000)", borderWidth: 2, animation: "pulse-border 2s ease-in-out infinite" }}
                       >
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handlePosterSelect(file); }} />
-                        <span className="text-sm group-hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>Vælg billede</span>
+                        <span className="text-sm group-hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}><FontAwesomeIcon icon={faUpload} style={{ fontSize: 15, marginRight: 4, position: "relative", top: 1 }} />Vælg billede</span>
                       </label>
                     </div>
                   ) : hasExistingCustomPoster ? (
@@ -1330,7 +1332,7 @@ function QuestionItem({
                         style={{ backgroundColor: "var(--system-bg0, #FF0000)", borderWidth: 2, animation: "pulse-border 2s ease-in-out infinite" }}
                       >
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handlePosterSelect(file); }} />
-                        <span className="text-sm group-hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>Vælg billede</span>
+                        <span className="text-sm group-hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}><FontAwesomeIcon icon={faUpload} style={{ fontSize: 15, marginRight: 4, position: "relative", top: 1 }} />Vælg billede</span>
                       </label>
                     </div>
                   ) : editingAnswer && hasExistingCustomPoster && !removePoster ? (
@@ -1420,7 +1422,7 @@ function QuestionItem({
                           }}
                         />
                         <span className="text-sm group-hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>
-                          Tilføj eget poster-billede (portrait-format)
+                          <FontAwesomeIcon icon={faUpload} style={{ fontSize: 15, marginRight: 4, position: "relative", top: 1 }} />Tilføj eget poster-billede (portrait-format)
                         </span>
                       </label>
                     )}
@@ -1455,7 +1457,7 @@ function QuestionItem({
                     }}
                   />
                   <span className="text-sm group-hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>
-                    Upload video eller lydfil
+                    <FontAwesomeIcon icon={faUpload} style={{ fontSize: 15, marginRight: 4, position: "relative", top: 1 }} />Upload video eller lydfil
                   </span>
                 </label>
               )}

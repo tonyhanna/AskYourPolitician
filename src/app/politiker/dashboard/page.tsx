@@ -290,20 +290,6 @@ export default async function Dashboard() {
           }
           settingsTab={
             <div key="settings" className="space-y-6">
-              {uniqueUrl && (
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">
-                    Din unikke URL:{" "}
-                    <a
-                      href={uniqueUrl}
-                      className="text-blue-600 underline font-medium"
-                      target="_blank"
-                    >
-                      {uniqueUrl}
-                    </a>
-                  </p>
-                </div>
-              )}
               <SettingsForm
                 politician={{
                   name: politician.name,
@@ -328,6 +314,8 @@ export default async function Dashboard() {
                 allParties={allParties}
                 googleEmail={session.user.email!}
                 googleName={session.user.name ?? ""}
+                appUrl={appUrl}
+                partySlug={politician.partySlug}
               />
             </div>
           }

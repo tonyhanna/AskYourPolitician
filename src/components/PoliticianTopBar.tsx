@@ -406,7 +406,7 @@ export function PoliticianTopBar({
                 type="button"
                 onClick={() => setModalOpen(true)}
                 className="cursor-pointer transition-opacity rounded-full flex items-center justify-center"
-                style={{ width: 40, height: 40, backgroundColor: "var(--system-form-bg, #FF0000)" }}
+                style={{ width: 40, height: 40, backgroundColor: "var(--system-form-bg0, #FF0000)" }}
                 aria-label="Foreslå et spørgsmål"
               >
                 <FontAwesomeIcon icon={faCommentPlus} style={{ color: "var(--system-icon0, #FF0000)", fontSize: 20 }} />
@@ -429,7 +429,7 @@ export function PoliticianTopBar({
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   className="topbar-suggest-input w-full rounded-full px-5 pr-10 py-2 text-base focus:outline-none"
-                  style={{ backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", "--placeholder-color": "var(--system-form-text1, #FF0000)" } as React.CSSProperties}
+                  style={{ backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", "--placeholder-color": "var(--system-form-text1, #FF0000)" } as React.CSSProperties}
                 />
                 {text.length > 0 && (
                   <button
@@ -506,7 +506,7 @@ export function PoliticianTopBar({
                 type="button"
                 onClick={() => setFormActive(true)}
                 className="text-base px-5 py-2 rounded-full whitespace-nowrap cursor-pointer"
-                style={{ backgroundColor: "var(--system-form-bg, #FF0000)", color: "var(--system-form-text0, #FF0000)", opacity: mailboxPhase === "fadeIn" ? 0 : 1, transition: mailboxPhase === null ? "opacity 300ms ease-out" : "none" }}
+                style={{ backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", opacity: mailboxPhase === "fadeIn" ? 0 : 1, transition: mailboxPhase === null ? "opacity 300ms ease-out" : "none" }}
               >
                 Foreslå et spørgsmål...
               </button>
