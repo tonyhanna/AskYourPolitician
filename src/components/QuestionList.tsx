@@ -91,6 +91,7 @@ type Question = {
   muxAssetStatus?: string | null;
   muxMediaType?: string | null;
   answerDuration?: number | null;
+  createdAt: string;
 };
 
 type PendingSuggestion = {
