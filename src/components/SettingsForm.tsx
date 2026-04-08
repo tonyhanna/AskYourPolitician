@@ -94,6 +94,7 @@ export function SettingsForm({
   const [bannerError, setBannerError] = useState("");
   const [ogError, setOgError] = useState("");
   const [profileRemoved, setProfileRemoved] = useState(false);
+  const [bannerBgColorPrev, setBannerBgColorPrev] = useState("");
   const [bannerRemoved, setBannerRemoved] = useState(false);
   const [ogRemoved, setOgRemoved] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -537,7 +538,7 @@ export function SettingsForm({
                       <button
                         key={key}
                         type="button"
-                        onClick={() => line.setColor(line.colorState === key ? "" : key)}
+                        onClick={() => line.setColor(key)}
                         className={`w-7 h-7 rounded-full border-2 cursor-pointer transition ${
                           line.colorState === key ? "border-gray-900 scale-110" : "border-gray-300 hover:border-gray-400"
                         }`}
@@ -690,15 +691,23 @@ export function SettingsForm({
                   className="w-10 h-10 rounded border border-gray-300 cursor-pointer p-0.5"
                 />
                 <span className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>{bannerBgColor || "Ingen (auto-detect)"}</span>
-                {bannerBgColor && (
+                {bannerBgColor ? (
                   <button
                     type="button"
-                    onClick={() => setBannerBgColor("")}
+                    onClick={() => { setBannerBgColorPrev(bannerBgColor); setBannerBgColor(""); }}
                     className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
                   >
                     Nulstil til auto
                   </button>
-                )}
+                ) : bannerBgColorPrev ? (
+                  <button
+                    type="button"
+                    onClick={() => { setBannerBgColor(bannerBgColorPrev); setBannerBgColorPrev(""); }}
+                    className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                  >
+                    Fortryd
+                  </button>
+                ) : null}
               </div>
               <p className="text-xs mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
                 Farven forlænger banneret til skærmens kanter. Lad stå tom for automatisk at matche billedets hjørnefarve.
