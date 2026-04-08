@@ -456,7 +456,7 @@ export function SettingsForm({
           {/* Chatbase */}
           <div>
             <label htmlFor="chatbaseEmbed" className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
-              Chatbase embed-kode
+              Chatbase bot embed-kode
             </label>
             <input type="hidden" name="chatbaseId" value={chatbaseRemoved ? "" : chatbaseId} />
             <textarea
