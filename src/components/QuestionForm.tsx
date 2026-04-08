@@ -141,7 +141,7 @@ export function QuestionForm({
           </button>
           <button
             type="submit"
-            disabled={disabled || pending}
+            disabled={disabled || pending || charCount === 0}
             className="group text-sm px-4 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
             style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
           >
