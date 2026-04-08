@@ -324,6 +324,14 @@ function QuestionItem({
   playingId: string | null;
   setPlayingId: (id: string | null) => void;
 }) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
   const { copied, handleShare } = useShareCopy(`${basePath}/q/${question.id}`, question.text);
   const [pinHover, setPinHover] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -922,9 +930,9 @@ function QuestionItem({
               </span>
             ))}
           </div>
-          {/* Mobile: expanded player below share row */}
-          {playingId === question.id && question.muxPlaybackId && (
-            <div className="md:hidden" style={{ paddingTop: 16 }}>
+          {/* Mobile: expanded player below share row (only rendered on mobile) */}
+          {playingId === question.id && question.muxPlaybackId && isMobile && (
+            <div style={{ paddingTop: 16 }}>
               <PlayableMediaCard
                 question={{
                   id: question.id,
@@ -945,9 +953,9 @@ function QuestionItem({
         </div>
         {/* Right side: mini thumbnail / expanded player for answered, upvote icon for unanswered */}
         {(question.answerUrl || question.muxAssetStatus) && question.muxPlaybackId ? (
-          playingId === question.id ? (
+          playingId === question.id && !isMobile ? (
             /* Desktop: expanded player in right column */
-            <div className="flex-shrink-0 hidden md:block pt-1">
+            <div className="flex-shrink-0 pt-1">
               <PlayableMediaCard
                 question={{
                   id: question.id,
