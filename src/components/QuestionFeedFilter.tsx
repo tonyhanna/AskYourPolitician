@@ -424,10 +424,10 @@ function PinnedQuestionCard({
             style={{
               fontSize: "clamp(28px, 8vw, 40px)",
               lineHeight: 1.3,
-              color: "var(--party-light, #FF0000)",
+              color: "var(--party-highlight-text, #FF0000)",
               fontFamily: "var(--font-figtree)",
               fontWeight: 400,
-              backgroundColor: "var(--party-dark, #FF0000)",
+              backgroundColor: "var(--party-highlight-bg, #FF0000)",
               boxDecorationBreak: "clone",
               WebkitBoxDecorationBreak: "clone",
               padding: "2px 8px",
@@ -480,7 +480,7 @@ function PinnedQuestionCard({
             <span
               key={tag}
               className="text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1"
-              style={{ backgroundColor: "var(--party-dark, #FF0000)", color: "var(--party-light, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+              style={{ backgroundColor: "var(--party-highlight-bg, #FF0000)", color: "var(--party-highlight-text, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
             >
               {tag}
             </span>
@@ -748,7 +748,7 @@ function UnansweredQuestionCard({
             <span
               key={tag}
               className="text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1"
-              style={{ backgroundColor: "var(--party-dark, #FF0000)", color: "var(--party-light, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+              style={{ backgroundColor: "var(--party-highlight-bg, #FF0000)", color: "var(--party-highlight-text, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}
             >
               {tag}
             </span>

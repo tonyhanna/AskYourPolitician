@@ -9,6 +9,17 @@ html {
   background-color: var(--system-bg0, #FF0000);
 }
 
+/* Party highlight colors: swap dark/light in dark mode.
+   These must be set on an element that also has --party-dark and --party-light. */
+[style*="--party-dark"] {
+  --party-highlight-bg: var(--party-dark);
+  --party-highlight-text: var(--party-light);
+}
+html[data-theme="dark"] [style*="--party-dark"] {
+  --party-highlight-bg: var(--party-light);
+  --party-highlight-text: var(--party-dark);
+}
+
 input::placeholder, textarea::placeholder {
   color: var(--system-form-text1, #FF0000);
   opacity: 1;

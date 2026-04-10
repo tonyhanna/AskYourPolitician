@@ -74,6 +74,7 @@ export default async function Dashboard() {
     muxAssetStatus: string | null;
     muxMediaType: string | null;
     answerDuration: number | null;
+    archived: boolean;
     createdAt: string;
   }[] = [];
 
@@ -154,6 +155,7 @@ export default async function Dashboard() {
       muxAssetStatus: q.muxAssetStatus ?? null,
       muxMediaType: q.muxMediaType ?? null,
       answerDuration: q.answerDuration ?? null,
+      archived: q.archived,
       createdAt: q.createdAt.toISOString(),
     }));
 
@@ -272,7 +274,8 @@ export default async function Dashboard() {
               />
               {(politicianQuestions.length > 0 || pendingSuggestions.length > 0) && (
                   <QuestionList
-                    questions={politicianQuestions}
+                    questions={politicianQuestions.filter(q => !q.archived)}
+                    archivedQuestions={politicianQuestions.filter(q => q.archived)}
                     availableTags={availableTags}
                     basePath={uniqueUrl!}
                     pendingSuggestions={pendingSuggestions}

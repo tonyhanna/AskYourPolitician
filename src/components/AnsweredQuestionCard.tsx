@@ -301,7 +301,7 @@ export function AnsweredQuestionCard({
 
       {/* Bottom: highlighted text + share + tags */}
       <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-20" style={{ zIndex: 3, pointerEvents: "none", opacity: isWatching ? 0 : 1, transform: isWatching ? "translateY(-20px)" : "translateZ(0)", transition: "opacity 300ms ease, transform 300ms ease", backfaceVisibility: "hidden", willChange: "opacity, transform" }}>
-        <span style={{ fontSize: "22px", lineHeight: 1.3, color: "var(--party-light, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 400, backgroundColor: "var(--party-dark, #FF0000)", boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone", padding: "2px 8px" }}>
+        <span style={{ fontSize: "22px", lineHeight: 1.3, color: "var(--party-highlight-text, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 400, backgroundColor: "var(--party-highlight-bg, #FF0000)", boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone", padding: "2px 8px" }}>
           {question.text}
         </span>
 
@@ -322,7 +322,7 @@ export function AnsweredQuestionCard({
           )}
           <div className="ml-auto flex items-center gap-2">
             {question.tags.map((tag) => (
-              <span key={tag} className="text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1" style={{ backgroundColor: "var(--party-dark, #FF0000)", color: "var(--party-light, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}>
+              <span key={tag} className="text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1" style={{ backgroundColor: "var(--party-highlight-bg, #FF0000)", color: "var(--party-highlight-text, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}>
                 {tag}
               </span>
             ))}

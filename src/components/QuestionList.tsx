@@ -3,10 +3,10 @@
 import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
-import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster, getMuxUploadUrl, submitMuxAnswer, checkMuxAnswerStatus } from "@/app/politiker/dashboard/actions";
+import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster, getMuxUploadUrl, submitMuxAnswer, checkMuxAnswerStatus, archiveQuestion, unarchiveQuestion } from "@/app/politiker/dashboard/actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUp, faXmark, faPlay, faUpload } from "@fortawesome/free-solid-svg-icons";
-import { faHourglass, faShare, faPen, faTrash, faAlarmExclamation } from "@fortawesome/pro-duotone-svg-icons";
+import { faHourglass, faShare, faPen, faTrash, faAlarmExclamation, faThumbsUp, faArchive, faCommentCheck } from "@fortawesome/pro-duotone-svg-icons";
 import { faStarOfLife as faStarOfLifeSolid, faReply } from "@fortawesome/pro-solid-svg-icons";
 import { faStarOfLifeRegular } from "@/lib/custom-icons";
 import { faCopy } from "@fortawesome/free-solid-svg-icons";
@@ -91,6 +91,7 @@ type Question = {
   muxAssetStatus?: string | null;
   muxMediaType?: string | null;
   answerDuration?: number | null;
+  archived: boolean;
   createdAt: string;
 };
 
@@ -103,17 +104,25 @@ type PendingSuggestion = {
 
 export function QuestionList({
   questions,
+  archivedQuestions = [],
   availableTags,
   basePath,
   pendingSuggestions = [],
 }: {
   questions: Question[];
+  archivedQuestions?: Question[];
   availableTags: { tagId: string; title: string }[];
   basePath: string;
   pendingSuggestions?: PendingSuggestion[];
 }) {
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [showArchivedCol1, setShowArchivedCol1] = useState(false);
+  const [showArchivedCol2, setShowArchivedCol2] = useState(false);
+  useEffect(() => { if (archivedQuestions.filter(q => !hasAnswer(q)).length === 0) setShowArchivedCol1(false); }, [archivedQuestions]);
+  useEffect(() => { if (archivedQuestions.filter(q => hasAnswer(q)).length === 0) setShowArchivedCol2(false); }, [archivedQuestions]);
   const hasAnswer = (q: typeof questions[number]) => !!q.answerUrl || !!q.muxAssetStatus;
+  const archivedUnanswered = archivedQuestions.filter((q) => !hasAnswer(q));
+  const archivedAnswered = archivedQuestions.filter((q) => hasAnswer(q));
   const missed = questions.filter((q) => q.goalReached && !hasAnswer(q) && q.deadlineMissed);
   const forUpvoting = questions.filter((q) => !q.goalReached && !hasAnswer(q));
   const unanswered = questions.filter((q) => q.goalReached && !hasAnswer(q) && !q.deadlineMissed);
@@ -131,6 +140,7 @@ export function QuestionList({
   const hasCol1Content = pendingSuggestions.length > 0 || allUnanswered.length > 0 || forUpvoting.length > 0;
 
   return (
+    <>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Column 1: Suggestions + Unanswered */}
       <div className="space-y-6">
@@ -184,14 +194,34 @@ export function QuestionList({
           </div>
         )}
         {!hasCol1Content && (
-          <div className="py-12 text-center" style={{ color: "var(--system-text2, #FF0000)" }}>
+          <div className="py-6" style={{ color: "var(--system-text2, #FF0000)" }}>
             <p className="text-sm" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500 }}>Ingen spørgsmål endnu</p>
+          </div>
+        )}
+        {archivedUnanswered.length > 0 && (
+          <div className="pt-4" style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }}>
+            <button
+              type="button"
+              onClick={() => setShowArchivedCol1((v) => !v)}
+              className={`cursor-pointer hover:opacity-50 transition-opacity ${showArchivedCol1 ? "text-lg font-semibold" : "text-sm"}`}
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: showArchivedCol1 ? 600 : 500, color: "var(--system-text2, #FF0000)" }}
+            >
+              <FontAwesomeIcon icon={showArchivedCol1 ? faXmark : faArchive} style={{ fontSize: showArchivedCol1 ? 18 : 14, marginRight: 6 }} />
+              {showArchivedCol1 ? "Arkiverede spørgsmål" : "Vis arkiverede spørgsmål"}
+            </button>
+            {showArchivedCol1 && (
+              <div className="space-y-4 mt-4">
+                {archivedUnanswered.map((q) => (
+                  <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Column 2: Answered */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {answered.length > 0 ? (
           <>
             <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>Besvaret</h3>
@@ -206,16 +236,36 @@ export function QuestionList({
             ))}
           </>
         ) : (
-          <div className="py-12 text-center" style={{ color: "var(--system-text2, #FF0000)" }}>
-            <p className="text-sm" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500 }}>Ingen besvarede spørgsmål</p>
+          <p className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>Ingen besvarede spørgsmål</p>
+        )}
+        {archivedAnswered.length > 0 && (
+          <div className="pt-4" style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }}>
+            <button
+              type="button"
+              onClick={() => setShowArchivedCol2((v) => !v)}
+              className={`cursor-pointer hover:opacity-50 transition-opacity ${showArchivedCol2 ? "text-lg font-semibold" : "text-sm"}`}
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: showArchivedCol2 ? 600 : 500, color: "var(--system-text2, #FF0000)" }}
+            >
+              <FontAwesomeIcon icon={showArchivedCol2 ? faXmark : faArchive} style={{ fontSize: showArchivedCol2 ? 18 : 14, marginRight: 6 }} />
+              {showArchivedCol2 ? "Arkiverede spørgsmål" : "Vis arkiverede spørgsmål"}
+            </button>
+            {showArchivedCol2 && (
+              <div className="space-y-4 mt-4">
+                {archivedAnswered.map((q) => (
+                  <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
     </div>
+
+    </>
   );
 }
 
-function AlarmTooltipButton() {
+function AlarmTooltipButton({ label }: { label?: string }) {
   const [show, setShow] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const flippedRef = useRef(false);
@@ -243,16 +293,20 @@ function AlarmTooltipButton() {
   };
 
   return (
-    <div ref={wrapperRef} className="relative">
-      <div
-        className="rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer"
-        style={{ height: 40, width: 40, backgroundColor: "var(--system-bg0, #FF0000)" }}
-        onMouseEnter={handleShow}
-        onMouseLeave={() => setShow(false)}
-        onClick={() => { if (show) setShow(false); else handleShow(); }}
-      >
-        <FontAwesomeIcon icon={faAlarmExclamation} style={{ color: "var(--system-error, #FF0000)", fontSize: 16 }} />
-      </div>
+    <div
+      ref={wrapperRef}
+      className="relative flex items-center cursor-pointer"
+      style={{ gap: 10 }}
+      onMouseEnter={handleShow}
+      onMouseLeave={() => setShow(false)}
+      onClick={() => { if (show) setShow(false); else handleShow(); }}
+    >
+      {label && (
+        <span style={{ color: "var(--system-error, #FF0000)", fontFamily: "var(--font-figtree)", fontSize: 14, fontWeight: 500 }}>
+          {label}
+        </span>
+      )}
+      <FontAwesomeIcon icon={faAlarmExclamation} style={{ color: "var(--system-error, #FF0000)", fontSize: 16 }} />
       {show && (
         <div
           className={`absolute right-0 rounded-xl px-4 py-3 ${flippedRef.current ? "" : "bottom-full mb-2"}`}
@@ -332,9 +386,34 @@ function QuestionItem({
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, []);
+  // Highlight/tag colors swap in dark mode via CSS vars set in globals.css
+  const highlightBg = "var(--party-highlight-bg, #FF0000)";
+  const highlightText = "var(--party-highlight-text, #FF0000)";
+  const tagBg = highlightBg;
+  const tagText = highlightText;
   const { copied, handleShare } = useShareCopy(`${basePath}/q/${question.id}`, question.text);
   const [pinHover, setPinHover] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteArmed, setDeleteArmed] = useState(false);
+  const [deleteHover, setDeleteHover] = useState(false);
+  const deleteTouchRef = useRef(false);
+  const deleteBtnRef = useRef<HTMLButtonElement>(null);
+  const deleteCanHover = useRef(false);
+  const deleteFlippedRef = useRef(false);
+  useEffect(() => { deleteCanHover.current = window.matchMedia("(hover: hover)").matches; }, []);
+  // Dismiss delete armed on outside tap
+  useEffect(() => {
+    if (!deleteArmed) return;
+    const handler = (e: TouchEvent | MouseEvent) => {
+      if (deleteBtnRef.current && !deleteBtnRef.current.contains(e.target as Node)) setDeleteArmed(false);
+    };
+    document.addEventListener("touchstart", handler, { capture: true });
+    document.addEventListener("mousedown", handler, { capture: true });
+    return () => {
+      document.removeEventListener("touchstart", handler, { capture: true });
+      document.removeEventListener("mousedown", handler, { capture: true });
+    };
+  }, [deleteArmed]);
   const [editing, setEditing] = useState(false);
   const editTextRef = useRef<HTMLTextAreaElement>(null);
   const [saving, setSaving] = useState(false);
@@ -731,8 +810,9 @@ function QuestionItem({
   }, [question.muxAssetStatus, question.id, router]);
 
   async function handleDelete() {
-    if (!confirm("Er du sikker på at du vil slette dette spørgsmål?")) return;
     setDeleting(true);
+    setDeleteArmed(false);
+    setDeleteHover(false);
     try {
       const result = await deleteQuestion(question.id);
       if (result.error) {
@@ -883,11 +963,11 @@ function QuestionItem({
             <span style={{
               fontSize: 22,
               lineHeight: 1.3,
-              color: (question.answerUrl || question.muxAssetStatus) ? "var(--party-light, #FF0000)" : "var(--system-text0, #FF0000)",
+              color: (question.answerUrl || question.muxAssetStatus) ? highlightText : "var(--system-text0, #FF0000)",
               fontFamily: "var(--font-figtree)",
               fontWeight: 500,
               ...((question.answerUrl || question.muxAssetStatus) ? {
-                backgroundColor: "var(--party-dark, #FF0000)",
+                backgroundColor: highlightBg,
                 boxDecorationBreak: "clone" as const,
                 WebkitBoxDecorationBreak: "clone" as const,
                 padding: "2px 8px",
@@ -926,7 +1006,7 @@ function QuestionItem({
             </button>
             {question.tags.map((tag) => (
               <span key={tag} className="text-xs px-2.5 py-1 rounded-full"
-                style={{ backgroundColor: "var(--party-dark, #FF0000)", color: "var(--party-light, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}>
+                style={{ backgroundColor: tagBg, color: tagText, fontFamily: "var(--font-figtree)", fontWeight: 500 }}>
                 {tag}
               </span>
             ))}
@@ -1052,28 +1132,117 @@ function QuestionItem({
                 >
                   <FontAwesomeIcon icon={faPen} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--system-success, #FF0000)", fontSize: 16 }} />
                 </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-50"
-                  style={{ height: 40, width: 40, backgroundColor: "var(--system-bg0, #FF0000)" }}
-                  aria-label="Slet"
-                >
-                  <FontAwesomeIcon icon={faTrash} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--system-error, #FF0000)", fontSize: 16 }} />
-                </button>
+                <div className="relative">
+                  <button
+                    ref={deleteBtnRef}
+                    onPointerDown={(e) => { deleteTouchRef.current = e.pointerType === "touch"; }}
+                    onClick={() => {
+                      if (deleteTouchRef.current && !deleteArmed) {
+                        if (deleteBtnRef.current) deleteFlippedRef.current = deleteBtnRef.current.getBoundingClientRect().top < 200;
+                        setDeleteArmed(true);
+                        return;
+                      }
+                      if (deleteArmed || deleteHover) handleDelete();
+                    }}
+                    disabled={deleting}
+                    onPointerEnter={() => {
+                      if (!deleteCanHover.current) return;
+                      if (deleteBtnRef.current) deleteFlippedRef.current = deleteBtnRef.current.getBoundingClientRect().top < 200;
+                      setDeleteHover(true);
+                    }}
+                    onPointerLeave={() => { if (deleteCanHover.current) setDeleteHover(false); }}
+                    className="cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-50"
+                    style={{
+                      height: 40, width: 40,
+                      backgroundColor: (deleteArmed || deleteHover) ? "var(--system-error, #FF0000)" : "var(--system-bg0, #FF0000)",
+                    }}
+                    aria-label={(deleteArmed || deleteHover) ? "Bekræft slet" : "Slet"}
+                  >
+                    <FontAwesomeIcon
+                      icon={(deleteArmed || deleteHover) ? faThumbsUp : faTrash}
+                      swapOpacity={(deleteArmed || deleteHover)}
+                      style={{
+                        color: (deleteArmed || deleteHover) ? "var(--system-error-contrast, #FF0000)" : "var(--system-error, #FF0000)",
+                        fontSize: 16,
+                      }}
+                    />
+                  </button>
+                  {(deleteArmed || deleteHover) && (
+                    <div
+                      className={`absolute right-0 rounded-xl px-4 py-3 ${deleteFlippedRef.current ? "" : "bottom-full mb-2"}`}
+                      style={{
+                        ...(deleteFlippedRef.current ? { top: "100%", marginTop: 8 } : {}),
+                        backgroundColor: "color-mix(in srgb, var(--system-error, #FF0000) 75%, transparent)",
+                        backdropFilter: "blur(12px)",
+                        WebkitBackdropFilter: "blur(12px)",
+                        fontFamily: "var(--font-figtree)",
+                        fontWeight: 500,
+                        fontSize: 14,
+                        color: "var(--system-error-contrast, #FF0000)",
+                        whiteSpace: "nowrap",
+                        zIndex: 30,
+                        pointerEvents: "none",
+                      }}
+                    >
+                      Er du sikker?
+                    </div>
+                  )}
+                </div>
               </div>
             )}
-            {question.deadlineMissed && (
-              <AlarmTooltipButton />
-            )}
-            {question.goalReached && !question.answerUrl && !question.muxAssetStatus && (
-              <span style={{ color: timeLeft && timeLeft.hours < 2 ? "var(--system-error, #FF0000)" : "var(--system-success, #FF0000)", fontFamily: "var(--font-figtree)", fontSize: 14, fontWeight: 500 }}>
+            {question.goalReached && !question.answerUrl && !question.muxAssetStatus && !question.deadlineMissed && (
+              <span style={{ color: (timeLeft && timeLeft.hours < 2) ? "var(--system-error, #FF0000)" : "var(--system-success, #FF0000)", fontFamily: "var(--font-figtree)", fontSize: 14, fontWeight: 500 }}>
                 {timeLeft && timeLeft.total > 0
                   ? <>Svar inden for <strong>{timeLeft.hours}t {timeLeft.minutes}m</strong></>
                   : "Svartid overskredet"}
               </span>
             )}
-            {question.goalReached && (
+            {question.deadlineMissed && (
+              <AlarmTooltipButton label="Svartid overskredet" />
+            )}
+            {hasUpvotes && !question.archived && (
+              <div className="flex items-center" style={{ gap: 5 }}>
+                {question.goalReached && (
+                  <button
+                    onClick={() => setReplyOpen((v) => !v)}
+                    className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ height: 40, width: 40, backgroundColor: "var(--system-bg0, #FF0000)" }}
+                    aria-label="Besvar"
+                  >
+                    <FontAwesomeIcon
+                      icon={replyOpen ? faXmark : ((question.answerUrl || question.muxAssetStatus) ? faPen : faReply)}
+                      className="group-hover:opacity-50 transition-opacity"
+                      style={{ color: replyOpen ? "var(--system-error, #FF0000)" : "var(--system-success, #FF0000)", fontSize: 16 }}
+                    />
+                  </button>
+                )}
+                <button
+                  onClick={async () => {
+                    try { await archiveQuestion(question.id); }
+                    catch (e) { alert(e instanceof Error ? e.message : "Der opstod en fejl"); }
+                  }}
+                  className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ height: 40, width: 40, backgroundColor: "var(--system-bg0, #FF0000)" }}
+                  aria-label="Arkivér"
+                >
+                  <FontAwesomeIcon icon={faArchive} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--system-icon0, #FF0000)", fontSize: 16 }} />
+                </button>
+              </div>
+            )}
+            {question.archived && (
+              <button
+                onClick={async () => {
+                  try { await unarchiveQuestion(question.id); }
+                  catch (e) { alert(e instanceof Error ? e.message : "Der opstod en fejl"); }
+                }}
+                className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ height: 40, width: 40, backgroundColor: "var(--system-bg0, #FF0000)" }}
+                aria-label="Genaktivér"
+              >
+                <FontAwesomeIcon icon={faCommentCheck} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--system-icon0, #FF0000)", fontSize: 20 }} />
+              </button>
+            )}
+            {question.goalReached && !hasUpvotes && (
               <button
                 onClick={() => setReplyOpen((v) => !v)}
                 className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0"

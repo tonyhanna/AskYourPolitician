@@ -135,7 +135,7 @@ export default async function BorgerFeed({
   for (const c of politicianCauses) allTagsSet.add(c.tagId);
 
   const feedQuestions = allQuestions
-    .filter((q) => !(q.deadlineMissed && !q.answerUrl && !q.muxAssetStatus)) // Hide missed unanswered questions from citizens
+    .filter((q) => !q.archived && !(q.deadlineMissed && !q.answerUrl && !q.muxAssetStatus)) // Hide archived + missed unanswered from citizens
     .map((q) => ({
       id: q.id,
       text: q.text,

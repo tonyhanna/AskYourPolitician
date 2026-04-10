@@ -543,6 +543,64 @@ export async function togglePinQuestion(questionId: string) {
   revalidatePath(`/${politician.partySlug}/${politician.slug}`);
 }
 
+export async function archiveQuestion(questionId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const politician = await getActivePolitician();
+  if (!politician) throw new Error("Politician not found");
+
+  const [question] = await db
+    .select({ id: questions.id })
+    .from(questions)
+    .where(
+      and(
+        eq(questions.id, questionId),
+        eq(questions.politicianId, politician.id)
+      )
+    )
+    .limit(1);
+
+  if (!question) throw new Error("Spørgsmål ikke fundet");
+
+  await db
+    .update(questions)
+    .set({ archived: true, pinned: false })
+    .where(eq(questions.id, questionId));
+
+  revalidatePath("/politiker/dashboard");
+  revalidatePath(`/${politician.partySlug}/${politician.slug}`);
+}
+
+export async function unarchiveQuestion(questionId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const politician = await getActivePolitician();
+  if (!politician) throw new Error("Politician not found");
+
+  const [question] = await db
+    .select({ id: questions.id })
+    .from(questions)
+    .where(
+      and(
+        eq(questions.id, questionId),
+        eq(questions.politicianId, politician.id)
+      )
+    )
+    .limit(1);
+
+  if (!question) throw new Error("Spørgsmål ikke fundet");
+
+  await db
+    .update(questions)
+    .set({ archived: false })
+    .where(eq(questions.id, questionId));
+
+  revalidatePath("/politiker/dashboard");
+  revalidatePath(`/${politician.partySlug}/${politician.slug}`);
+}
+
 export async function createCause(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
