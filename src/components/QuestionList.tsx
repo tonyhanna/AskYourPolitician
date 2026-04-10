@@ -1130,7 +1130,7 @@ function QuestionItem({
                   style={{ height: 40, width: 40, backgroundColor: "var(--system-bg0, #FF0000)" }}
                   aria-label="Redigér"
                 >
-                  <FontAwesomeIcon icon={faPen} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--system-success, #FF0000)", fontSize: 16 }} />
+                  <FontAwesomeIcon icon={faPen} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--system-icon0, #FF0000)", fontSize: 16 }} />
                 </button>
                 <div className="relative">
                   <button
@@ -1212,7 +1212,7 @@ function QuestionItem({
                     <FontAwesomeIcon
                       icon={replyOpen ? faXmark : ((question.answerUrl || question.muxAssetStatus) ? faPen : faReply)}
                       className="group-hover:opacity-50 transition-opacity"
-                      style={{ color: replyOpen ? "var(--system-error, #FF0000)" : "var(--system-success, #FF0000)", fontSize: 16 }}
+                      style={{ color: replyOpen ? "var(--system-error, #FF0000)" : (question.answerUrl || question.muxAssetStatus) ? "var(--system-icon0, #FF0000)" : "var(--system-success, #FF0000)", fontSize: 16 }}
                     />
                   </button>
                 )}
@@ -1252,7 +1252,7 @@ function QuestionItem({
                 <FontAwesomeIcon
                   icon={replyOpen ? faXmark : ((question.answerUrl || question.muxAssetStatus) ? faPen : faReply)}
                   className="group-hover:opacity-50 transition-opacity"
-                  style={{ color: replyOpen ? "var(--system-error, #FF0000)" : "var(--system-success, #FF0000)", fontSize: 16 }}
+                  style={{ color: replyOpen ? "var(--system-error, #FF0000)" : (question.answerUrl || question.muxAssetStatus) ? "var(--system-icon0, #FF0000)" : "var(--system-success, #FF0000)", fontSize: 16 }}
                 />
               </button>
             )}

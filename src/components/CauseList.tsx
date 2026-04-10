@@ -373,7 +373,7 @@ function CauseItem({
               style={{ height: 40, width: 40, backgroundColor: "var(--system-bg0, #FF0000)" }}
               aria-label="Redigér"
             >
-              <FontAwesomeIcon icon={faPen} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--system-success, #FF0000)", fontSize: 16 }} />
+              <FontAwesomeIcon icon={faPen} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--system-icon0, #FF0000)", fontSize: 16 }} />
             </button>
             {!cause.inUse && (
               <div className="relative">
