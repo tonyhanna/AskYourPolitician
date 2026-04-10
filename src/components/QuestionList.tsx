@@ -159,7 +159,7 @@ export function QuestionList({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
               Ubesvaret
-              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: "var(--system-pending, #FF0000)", color: "var(--system-pending-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 700, position: "relative", top: -1 }}>
+              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: missed.length > 0 ? "var(--system-error, #FF0000)" : "var(--system-pending, #FF0000)", color: missed.length > 0 ? "var(--system-error-contrast, #FF0000)" : "var(--system-pending-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 700, position: "relative", top: -1 }}>
                 {allUnanswered.length}
               </span>
             </h3>
