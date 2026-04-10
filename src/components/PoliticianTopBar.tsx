@@ -385,6 +385,7 @@ export function PoliticianTopBar({
                 onClick={() => {
                   if (introDismissed) {
                     setIntroDismissed(false);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
                     window.dispatchEvent(new Event("show-intro"));
                   } else {
                     setIntroDismissed(true);
@@ -503,7 +504,8 @@ export function PoliticianTopBar({
                   onClick={() => {
                     if (introDismissed) {
                       setIntroDismissed(false);
-                      window.dispatchEvent(new Event("show-intro"));
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    window.dispatchEvent(new Event("show-intro"));
                     } else {
                       setIntroDismissed(true);
                       window.dispatchEvent(new Event("intro-dismissed"));

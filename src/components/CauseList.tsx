@@ -325,8 +325,8 @@ function CauseItem({
         <div className="flex-1" style={{ paddingLeft: 24 }}>
           <div>
             <div>
-              <p className="font-medium" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>{cause.title}</p>
-              <p className="text-sm mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text1, #FF0000)" }}>
+              <p className="font-medium" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text1, #FF0000)" }}>{cause.title}</p>
+              <p className="text-sm mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>
                 {viewLongDesc && cause.longDescription ? cause.longDescription : cause.shortDescription}
               </p>
               <div className="flex flex-wrap gap-2 mt-2">

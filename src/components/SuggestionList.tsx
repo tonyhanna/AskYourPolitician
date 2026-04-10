@@ -114,18 +114,36 @@ function SuggestionItem({
 
   return (
     <div className="rounded-lg" style={{ backgroundColor: mode !== "idle" ? "var(--system-bg2, #FF0000)" : "var(--system-bg1, #FF0000)" }}>
-      <div style={{ padding: "20px 20px 16px" }}>
+      <div style={{ padding: mode === "approve" ? "24px 20px 0" : "20px 20px 16px" }}>
         {mode === "approve" ? (
-          <textarea
-            value={editedText}
-            onChange={(e) => setEditedText(e.target.value)}
-            rows={3}
-            className="w-full mb-1 rounded-lg px-3 py-2 resize-none"
-            style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-form-text0, #FF0000)", backgroundColor: "var(--system-form-bg0, #FF0000)", border: "none", outline: "none" }}
-          />
+          <>
+            <textarea
+              value={editedText}
+              onChange={(e) => setEditedText(e.target.value)}
+              maxLength={300}
+              rows={2}
+              className="w-full mb-1 rounded-lg px-3 py-2 resize-none overflow-hidden"
+              style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-form-text0, #FF0000)", backgroundColor: "var(--system-form-bg0, #FF0000)", border: "none", outline: "none" }}
+              onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
+              ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } }}
+            />
+            <div className="flex items-center justify-between">
+              <span style={{
+                display: "inline-block", fontSize: 12, lineHeight: 1.3,
+                backgroundColor: "var(--system-bg0, #FF0000)",
+                padding: "2px 4px",
+                fontFamily: "var(--font-figtree)", fontWeight: 400,
+              }}>
+                <span style={{ color: "var(--system-text0, #FF0000)" }}>{suggestion.citizenFirstName}</span>
+                <span style={{ color: "var(--system-text2, #FF0000)" }}> — {new Date(suggestion.createdAt).toLocaleDateString("da-DK", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+              </span>
+              <span className="text-xs" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>{editedText.length}/300</span>
+            </div>
+          </>
         ) : (
           <p style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text0, #FF0000)", marginBottom: 4 }}>{suggestion.text}</p>
         )}
+        {mode !== "approve" && (
         <span style={{
           display: "inline-block", fontSize: 12, lineHeight: 1.3,
           backgroundColor: "var(--system-bg0, #FF0000)",
@@ -135,6 +153,7 @@ function SuggestionItem({
           <span style={{ color: "var(--system-text0, #FF0000)" }}>{suggestion.citizenFirstName}</span>
           <span style={{ color: "var(--system-text2, #FF0000)" }}> — {new Date(suggestion.createdAt).toLocaleDateString("da-DK", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
         </span>
+        )}
       </div>
 
       {mode === "idle" && (

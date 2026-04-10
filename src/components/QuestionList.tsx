@@ -415,6 +415,7 @@ function QuestionItem({
     };
   }, [deleteArmed]);
   const [editing, setEditing] = useState(false);
+  const [editCharCount, setEditCharCount] = useState(question.text.length);
   const editTextRef = useRef<HTMLTextAreaElement>(null);
   const [saving, setSaving] = useState(false);
   const [editingAnswer, setEditingAnswer] = useState(false);
@@ -854,16 +855,18 @@ function QuestionItem({
   if (editing) {
     return (
       <div className="rounded-lg" style={{ backgroundColor: "var(--system-bg2, #FF0000)" }}>
-        <div style={{ padding: "20px 20px 16px" }}>
+        <div style={{ padding: "24px 20px 0" }}>
           <textarea
-            ref={editTextRef}
+            ref={(el) => { (editTextRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el; if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } }}
             defaultValue={question.text}
             maxLength={300}
             required
-            rows={3}
-            className="w-full mb-1 rounded-lg px-3 py-2 resize-none"
+            rows={2}
+            className="w-full mb-1 rounded-lg px-3 py-2 resize-none overflow-hidden"
             style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-form-text0, #FF0000)", backgroundColor: "var(--system-form-bg0, #FF0000)", border: "none", outline: "none" }}
+            onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; setEditCharCount(t.value.length); }}
           />
+          <p className="text-xs text-right" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>{editCharCount}/300</p>
           {question.suggestedBy && (
             <div style={{ marginTop: 4 }}>
               <span style={{
@@ -879,7 +882,7 @@ function QuestionItem({
           )}
         </div>
         <form action={handleSave} style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }}>
-          <div style={{ padding: "12px 20px 0" }}>
+          <div style={{ padding: "0 20px" }}>
             <label htmlFor={`goal-${question.id}`} className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
               Upvote-mål
             </label>
