@@ -212,7 +212,10 @@ function CauseItem({
               required
               rows={2}
               defaultValue={cause.shortDescription}
-              className="w-full rounded-lg px-3 py-2 text-sm" style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
+              className="w-full rounded-lg px-3 py-2 text-sm resize-none overflow-hidden"
+              style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
+              onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
+              ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } }}
             />
           </div>
 
@@ -224,9 +227,12 @@ function CauseItem({
               <textarea
                 id={`long-${cause.id}`}
                 name="longDescription"
-                rows={5}
+                rows={3}
                 defaultValue={cause.longDescription ?? ""}
-                className="w-full rounded-lg px-3 py-2 text-sm" style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
+                className="w-full rounded-lg px-3 py-2 text-sm resize-none overflow-hidden"
+                style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
+                onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
+                ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } }}
               />
             </div>
           ) : (

@@ -138,12 +138,17 @@ function SortablePoint({
       >
         <FontAwesomeIcon icon={faGripDots} style={{ color: "var(--system-icon2, #FF0000)", fontSize: 12 }} />
       </button>
-      <input
-        type="text"
+      <textarea
+        rows={1}
         value={item.text}
-        onChange={(e) => onUpdate(item.id, e.target.value)}
+        onChange={(e) => {
+          onUpdate(item.id, e.target.value);
+          e.target.style.height = "auto";
+          e.target.style.height = e.target.scrollHeight + "px";
+        }}
+        ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } }}
         placeholder="Skriv et handlingspunkt..."
-        className="flex-1 rounded-lg px-3 py-1.5 text-sm"
+        className="flex-1 rounded-lg px-3 py-1.5 text-sm resize-none overflow-hidden"
         style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
       />
       <button

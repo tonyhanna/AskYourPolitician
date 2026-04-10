@@ -100,9 +100,10 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
             name="shortDescription"
             required
             rows={2}
-            className="w-full rounded-lg px-3 py-2 text-sm resize-none"
+            className="w-full rounded-lg px-3 py-2 text-sm resize-none overflow-hidden"
             style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
             placeholder="En kort beskrivelse af mærkesagen"
+            onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
           />
         </div>
 
@@ -114,10 +115,11 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
             <textarea
               id="cause-long"
               name="longDescription"
-              rows={5}
-              className="w-full rounded-lg px-3 py-2 text-sm resize-none"
+              rows={3}
+              className="w-full rounded-lg px-3 py-2 text-sm resize-none overflow-hidden"
               style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
               placeholder="En detaljeret beskrivelse af din holdning til denne mærkesag"
+              onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
             />
           </div>
         ) : (
