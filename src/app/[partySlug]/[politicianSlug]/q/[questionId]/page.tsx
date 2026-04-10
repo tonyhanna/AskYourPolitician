@@ -62,7 +62,7 @@ async function getQuestionData(partySlug: string, politicianSlug: string, questi
   }
 
   // Fetch party data for TopBar
-  let party: { color: string | null; colorDark: string | null; colorLight: string | null; logoUrl: string | null; topbarLeft1Color: string | null; topbarLeft1Opacity: number | null; topbarLeft2Color: string | null; topbarLeft2Opacity: number | null; topbarRightColor: string | null; topbarRightOpacity: number | null } | null = null;
+  let party: { color: string | null; colorDark: string | null; colorLight: string | null; logoUrl: string | null; topbarLeft1Color: string | null; topbarLeft1Opacity: number | null; topbarLeft2Color: string | null; topbarLeft2Opacity: number | null; topbarRightColor: string | null; topbarRightOpacity: number | null; topbarBgColor: string | null; topbarBtnBg: string | null; topbarBtnIcon: string | null; topbarAccentBtnBg: string | null; topbarAccentBtnIcon: string | null; fabBtnBg: string | null; fabBtnIcon: string | null; inlineBtnBg: string | null; inlineBtnIcon: string | null } | null = null;
   if (politician.partyId) {
     const [p] = await db
       .select({
