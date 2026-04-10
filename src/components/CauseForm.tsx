@@ -78,16 +78,17 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
           <label htmlFor="cause-title" className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
             Overskrift
           </label>
-          <input
-            ref={textareaRef}
+          <textarea
+            ref={textareaRef as React.RefObject<HTMLTextAreaElement>}
             id="cause-title"
             name="title"
-            type="text"
+            rows={1}
             maxLength={300}
             required
-            className="w-full rounded-lg px-3 py-2 text-sm"
+            className="w-full rounded-lg px-3 py-2 text-sm resize-none overflow-hidden"
             style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
             placeholder="fx Grøn omstilling"
+            onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
           />
         </div>
 

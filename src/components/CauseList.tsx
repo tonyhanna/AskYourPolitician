@@ -192,14 +192,17 @@ function CauseItem({
             <label htmlFor={`title-${cause.id}`} className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
               Overskrift
             </label>
-            <input
+            <textarea
               id={`title-${cause.id}`}
               name="title"
-              type="text"
+              rows={1}
               maxLength={300}
               required
               defaultValue={cause.title}
-              className="w-full rounded-lg px-3 py-2 text-sm" style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
+              className="w-full rounded-lg px-3 py-2 text-sm resize-none overflow-hidden"
+              style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
+              onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
+              ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } }}
             />
           </div>
           <div>
@@ -320,8 +323,8 @@ function CauseItem({
           <p className="font-semibold" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text1, #FF0000)" }}>#{index + 1}</p>
         </div>
         <div className="flex-1" style={{ paddingLeft: 24 }}>
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1">
+          <div>
+            <div>
               <p className="font-medium" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>{cause.title}</p>
               <p className="text-sm mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text1, #FF0000)" }}>
                 {viewLongDesc && cause.longDescription ? cause.longDescription : cause.shortDescription}
@@ -367,12 +370,13 @@ function CauseItem({
                 </ul>
               )}
             </div>
+          </div>
+          <div className="flex items-center justify-between" style={{ gap: 5, marginTop: 12 }}>
             <span className="text-xs px-2.5 py-1 rounded-full whitespace-nowrap"
               style={{ backgroundColor: "var(--party-highlight-bg, #FF0000)", color: "var(--party-highlight-text, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}>
               {cause.tagId}
             </span>
-          </div>
-          <div className="flex items-center justify-end" style={{ gap: 5, marginTop: 12 }}>
+            <div className="flex items-center" style={{ gap: 5 }}>
             <button
               onClick={() => setEditing(true)}
               className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0"
@@ -439,6 +443,7 @@ function CauseItem({
                 )}
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>
