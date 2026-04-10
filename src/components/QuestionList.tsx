@@ -265,7 +265,7 @@ export function QuestionList({
   );
 }
 
-function AlarmTooltipButton({ label }: { label?: string }) {
+function AlarmTooltipButton({ label }: { label?: React.ReactNode }) {
   const [show, setShow] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const flippedRef = useRef(false);
@@ -1194,11 +1194,11 @@ function QuestionItem({
               <span style={{ color: (timeLeft && timeLeft.hours < 2) ? "var(--system-error, #FF0000)" : "var(--system-success, #FF0000)", fontFamily: "var(--font-figtree)", fontSize: 14, fontWeight: 500 }}>
                 {timeLeft && timeLeft.total > 0
                   ? <>Svar inden for <strong>{timeLeft.hours}t {timeLeft.minutes}m</strong></>
-                  : "Svartid overskredet"}
+                  : <><span className="hidden md:inline">Svartid overskredet</span><span className="md:hidden">Overskredet</span></>}
               </span>
             )}
             {question.deadlineMissed && (
-              <AlarmTooltipButton label="Svartid overskredet" />
+              <AlarmTooltipButton label={<><span className="hidden md:inline">Svartid overskredet</span><span className="md:hidden">Overskredet</span></>} />
             )}
             {hasUpvotes && !question.archived && (
               <div className="flex items-center" style={{ gap: 5 }}>
