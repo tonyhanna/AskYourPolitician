@@ -316,8 +316,8 @@ export function AnsweredQuestionCard({
         <div className="flex items-center gap-2 mt-3" style={{ pointerEvents: "auto" }}>
           {hasPlayableMedia && (
             <div className="flex items-center justify-center rounded-full flex-shrink-0 relative transition-opacity duration-300" style={{ width: 48, height: 48, opacity: isWatching ? 0 : 1, backfaceVisibility: "hidden", transform: "translateZ(0)" }}>
-              <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ backgroundColor: "var(--party-primary, #FF0000)", opacity: isHovering ? 1 : 0.75 }} />
-              <FontAwesomeIcon icon={faPlay} className="relative" style={{ color: "var(--party-dark, #FF0000)", fontSize: 20, marginLeft: 2 }} />
+              <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ backgroundColor: "var(--inline-btn-bg, #FF0000)", opacity: isHovering ? 1 : 0.75 }} />
+              <FontAwesomeIcon icon={faPlay} className="relative" style={{ color: "var(--inline-btn-icon, #FF0000)", fontSize: 20, marginLeft: 2 }} />
             </div>
           )}
           <div className="ml-auto flex items-center gap-2">
@@ -326,16 +326,16 @@ export function AnsweredQuestionCard({
                 {tag}
               </span>
             ))}
-            <button onClick={handleShare} className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative" style={{ height: 24, width: 24, backgroundColor: "var(--party-primary, #FF0000)" }} aria-label="Del">
+            <button onClick={handleShare} className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative" style={{ height: 24, width: 24, backgroundColor: "var(--inline-btn-bg, #FF0000)" }} aria-label="Del">
               <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 0 : 1, transition: "opacity 300ms ease" }}>
-                <FontAwesomeIcon icon={faShare} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "13.5px" }} />
+                <FontAwesomeIcon icon={faShare} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--inline-btn-icon, #FF0000)", fontSize: "13.5px" }} />
               </span>
               <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 1 : 0, transition: "opacity 300ms ease" }}>
-                <FontAwesomeIcon icon={faCopy} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "13.5px" }} />
+                <FontAwesomeIcon icon={faCopy} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--inline-btn-icon, #FF0000)", fontSize: "13.5px" }} />
               </span>
             </button>
-            <a href={`${basePath}/q/${question.id}`} onClick={(e) => e.stopPropagation()} className="group rounded-full flex items-center justify-center flex-shrink-0" style={{ width: 24, height: 24, backgroundColor: "var(--party-primary, #FF0000)" }} aria-label="Se detaljer">
-              <FontAwesomeIcon icon={faMaximize} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "13.5px" }} />
+            <a href={`${basePath}/q/${question.id}`} onClick={(e) => e.stopPropagation()} className="group rounded-full flex items-center justify-center flex-shrink-0" style={{ width: 24, height: 24, backgroundColor: "var(--inline-btn-bg, #FF0000)" }} aria-label="Se detaljer">
+              <FontAwesomeIcon icon={faMaximize} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--inline-btn-icon, #FF0000)", fontSize: "13.5px" }} />
             </a>
           </div>
         </div>

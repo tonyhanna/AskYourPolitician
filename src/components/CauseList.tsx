@@ -297,7 +297,7 @@ function CauseItem({
               type="submit"
               disabled={saving}
               className="group text-sm px-4 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-bg0-contrast, #FF0000)", color: "var(--system-text0-contrast, #FF0000)" }}
             >
               <span className="group-hover:opacity-50 transition-opacity">{saving ? "Gemmer..." : "Gem ændringer"}</span>
             </button>

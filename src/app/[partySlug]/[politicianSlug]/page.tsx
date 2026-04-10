@@ -181,18 +181,46 @@ export default async function BorgerFeed({
     resolvedHeroLine2Color = colorMap[politician.heroLine2Color ?? ""] ?? politician.heroLine2Color;
   }
 
+  // Resolve topbar bg color for theme-color meta + rubber-band
+  const resolvePartyColor = (key: string | null | undefined, fb: string) => {
+    if (!key) return fb;
+    if (key === "primary") return party?.color || fb;
+    if (key === "light") return party?.colorLight || fb;
+    if (key === "dark") return party?.colorDark || fb;
+    return key;
+  };
+  const topbarBgColor = resolvePartyColor(party?.topbarBgColor, "#FF0000");
+
   return (
     <>
       {/* SSR theme-color meta tag for Safari/Chrome mobile toolbar */}
-      {party?.color && <meta name="theme-color" content={party.color} />}
-      {/* SSR style: paint body bg to party color for overscroll rubber-band.
-           Only body (not html) so canvas propagates from body and can be toggled via scroll. */}
+      {party?.color && <meta name="theme-color" content={topbarBgColor} />}
+      {/* SSR style: paint body bg to topbar color for overscroll rubber-band */}
       {party?.color && (
-        <style precedence="theme" href={`theme-${partySlug}`}>{`html body{background-color:${party.color}}`}</style>
+        <style precedence="theme" href={`theme-${partySlug}`}>{`html body{background-color:${topbarBgColor}}`}</style>
       )}
-      {/* Client-side: toggle body bg based on scroll (green at top, white when scrolled) */}
-      {party?.color && <ThemeColorSetter color={party.color} />}
-      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": party?.color || "#FF0000", "--party-dark": party?.colorDark || "#FF0000", "--party-light": party?.colorLight || "#FF0000" } as React.CSSProperties}>
+      {/* Client-side: toggle body bg based on scroll (topbar color at top, system bg when scrolled) */}
+      {party?.color && <ThemeColorSetter color={topbarBgColor} />}
+      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": party?.color || "#FF0000", "--party-dark": party?.colorDark || "#FF0000", "--party-light": party?.colorLight || "#FF0000", ...(() => {
+        const rc = (key: string | null | undefined, fb: string) => {
+          if (!key) return fb;
+          if (key === "primary") return party?.color || fb;
+          if (key === "light") return party?.colorLight || fb;
+          if (key === "dark") return party?.colorDark || fb;
+          return key;
+        };
+        return {
+          "--topbar-bg": rc(party?.topbarBgColor, "#FF0000"),
+          "--topbar-btn-bg": rc(party?.topbarBtnBg, "#FF0000"),
+          "--topbar-btn-icon": rc(party?.topbarBtnIcon, "#FF0000"),
+          "--topbar-accent-btn-bg": rc(party?.topbarAccentBtnBg, "#FF0000"),
+          "--topbar-accent-btn-icon": rc(party?.topbarAccentBtnIcon, "#FF0000"),
+          "--fab-btn-bg": rc(party?.fabBtnBg, "#FF0000"),
+          "--fab-btn-icon": rc(party?.fabBtnIcon, "#FF0000"),
+          "--inline-btn-bg": rc(party?.inlineBtnBg, "#FF0000"),
+          "--inline-btn-icon": rc(party?.inlineBtnIcon, "#FF0000"),
+        };
+      })() } as React.CSSProperties}>
       <PoliticianTopBar
         politicianName={politician.name}
         partyName={politician.party}

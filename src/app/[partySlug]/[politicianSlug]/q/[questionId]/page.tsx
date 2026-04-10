@@ -76,6 +76,15 @@ async function getQuestionData(partySlug: string, politicianSlug: string, questi
         topbarLeft2Opacity: parties.topbarLeft2Opacity,
         topbarRightColor: parties.topbarRightColor,
         topbarRightOpacity: parties.topbarRightOpacity,
+        topbarBgColor: parties.topbarBgColor,
+        topbarBtnBg: parties.topbarBtnBg,
+        topbarBtnIcon: parties.topbarBtnIcon,
+        topbarAccentBtnBg: parties.topbarAccentBtnBg,
+        topbarAccentBtnIcon: parties.topbarAccentBtnIcon,
+        fabBtnBg: parties.fabBtnBg,
+        fabBtnIcon: parties.fabBtnIcon,
+        inlineBtnBg: parties.inlineBtnBg,
+        inlineBtnIcon: parties.inlineBtnIcon,
       })
       .from(parties)
       .where(eq(parties.id, politician.partyId))
@@ -139,19 +148,48 @@ export default async function QuestionLandingPage({ params }: Props) {
 
   const appSettings = await getAppSettings();
 
+  // Resolve topbar bg color for theme-color meta + rubber-band
+  const resolvePartyColor = (key: string | null | undefined, fb: string) => {
+    if (!key) return fb;
+    if (key === "primary") return party?.color || fb;
+    if (key === "light") return party?.colorLight || fb;
+    if (key === "dark") return party?.colorDark || fb;
+    return key;
+  };
+  const topbarBgColor = resolvePartyColor(party?.topbarBgColor, "#FF0000");
+
   return (
     <>
       {/* Theme color meta tag */}
       {party?.color && (
-        <meta name="theme-color" content={party.color} />
+        <meta name="theme-color" content={topbarBgColor} />
       )}
       {party?.color && (
-        <style precedence="theme" href={`theme-detail-${partySlug}`}>{`html body{background-color:${party.color}}`}</style>
+        <style precedence="theme" href={`theme-detail-${partySlug}`}>{`html body{background-color:${topbarBgColor}}`}</style>
       )}
 
-      {party?.color && <ThemeColorSetter color={party.color} />}
+      {party?.color && <ThemeColorSetter color={topbarBgColor} />}
 
-      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": party?.color || "#FF0000", "--party-dark": party?.colorDark || "#FF0000", "--party-light": party?.colorLight || "#FF0000" } as React.CSSProperties}>
+      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": party?.color || "#FF0000", "--party-dark": party?.colorDark || "#FF0000", "--party-light": party?.colorLight || "#FF0000", ...(() => {
+        const rc = (key: string | null | undefined, fb: string) => {
+          if (!key) return fb;
+          if (key === "primary") return party?.color || fb;
+          if (key === "light") return party?.colorLight || fb;
+          if (key === "dark") return party?.colorDark || fb;
+          return key;
+        };
+        return {
+          "--topbar-bg": rc(party?.topbarBgColor, "#FF0000"),
+          "--topbar-btn-bg": rc(party?.topbarBtnBg, "#FF0000"),
+          "--topbar-btn-icon": rc(party?.topbarBtnIcon, "#FF0000"),
+          "--topbar-accent-btn-bg": rc(party?.topbarAccentBtnBg, "#FF0000"),
+          "--topbar-accent-btn-icon": rc(party?.topbarAccentBtnIcon, "#FF0000"),
+          "--fab-btn-bg": rc(party?.fabBtnBg, "#FF0000"),
+          "--fab-btn-icon": rc(party?.fabBtnIcon, "#FF0000"),
+          "--inline-btn-bg": rc(party?.inlineBtnBg, "#FF0000"),
+          "--inline-btn-icon": rc(party?.inlineBtnIcon, "#FF0000"),
+        };
+      })() } as React.CSSProperties}>
       {/* PoliticianTopBar */}
       <PoliticianTopBar
         politicianName={politician.name}

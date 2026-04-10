@@ -357,8 +357,8 @@ function MiniVideoThumb({ photoUrl, muxPlaybackId, onClick }: { photoUrl: string
         />
         {/* Centered play button */}
         <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 2, pointerEvents: "none" }}>
-          <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ width: 40, height: 40, margin: "auto", backgroundColor: "var(--party-primary, #FF0000)", opacity: hovering ? 1 : 0.75 }} />
-          <FontAwesomeIcon icon={faPlay} className="relative" style={{ color: "var(--party-dark, #FF0000)", fontSize: 14, marginLeft: 1 }} />
+          <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ width: 40, height: 40, margin: "auto", backgroundColor: "var(--inline-btn-bg, #FF0000)", opacity: hovering ? 1 : 0.75 }} />
+          <FontAwesomeIcon icon={faPlay} className="relative" style={{ color: "var(--inline-btn-icon, #FF0000)", fontSize: 14, marginLeft: 1 }} />
         </div>
       </div>
     </div>
@@ -912,6 +912,8 @@ function QuestionItem({
                       transition: "background-color 200ms ease",
                       color: selectedTags.has(tag.tagId) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)",
                     }}
+                    onPointerEnter={(e) => { e.currentTarget.style.color = "var(--system-text2, #FF0000)"; }}
+                    onPointerLeave={(e) => { e.currentTarget.style.color = selectedTags.has(tag.tagId) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)"; }}
                   >
                     {tag.tagId}
                   </button>
@@ -933,7 +935,7 @@ function QuestionItem({
               type="submit"
               disabled={saving}
               className="group text-sm px-4 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-bg0-contrast, #FF0000)", color: "var(--system-text0-contrast, #FF0000)" }}
             >
               <span className="group-hover:opacity-50 transition-opacity">{saving ? "Gemmer..." : "Gem ændringer"}</span>
             </button>
@@ -994,14 +996,14 @@ function QuestionItem({
             <button
               onClick={handleShare}
               className="group cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 relative"
-              style={{ height: 24, width: 24, backgroundColor: "var(--party-primary, #FF0000)" }}
+              style={{ height: 24, width: 24, backgroundColor: "var(--inline-btn-bg, #FF0000)" }}
               aria-label="Del"
             >
               <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 0 : 1, transition: "opacity 300ms ease" }}>
-                <FontAwesomeIcon icon={faShare} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "13.5px" }} />
+                <FontAwesomeIcon icon={faShare} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--inline-btn-icon, #FF0000)", fontSize: "13.5px" }} />
               </span>
               <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 1 : 0, transition: "opacity 300ms ease" }}>
-                <FontAwesomeIcon icon={faCopy} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "13.5px" }} />
+                <FontAwesomeIcon icon={faCopy} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--inline-btn-icon, #FF0000)", fontSize: "13.5px" }} />
               </span>
             </button>
             {question.tags.map((tag) => (
@@ -1049,13 +1051,13 @@ function QuestionItem({
                 width: 40, height: 40,
                 backgroundColor: question.goalReached
                   ? "color-mix(in srgb, var(--system-pending, #FF0000) 50%, transparent)"
-                  : "var(--party-primary, #FF0000)",
+                  : "var(--inline-btn-bg, #FF0000)",
               }}
             >
               {question.goalReached ? (
                 <FontAwesomeIcon icon={faHourglass} style={{ color: "var(--system-pending-contrast, #FF0000)", fontSize: 21 }} />
               ) : (
-                <FontAwesomeIcon icon={faArrowUp} style={{ color: "var(--party-dark, #FF0000)", fontSize: 21 }} />
+                <FontAwesomeIcon icon={faArrowUp} style={{ color: "var(--inline-btn-icon, #FF0000)", fontSize: 21 }} />
               )}
             </div>
           </div>
@@ -1460,7 +1462,7 @@ function QuestionItem({
                     <button
                       onClick={handlePosterOnlyUpdate}
                       className="group w-full text-sm px-4 py-2 rounded-full font-medium cursor-pointer"
-                      style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
+                      style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-bg0-contrast, #FF0000)", color: "var(--system-text0-contrast, #FF0000)" }}
                     >
                       <span className="group-hover:opacity-50 transition-opacity">{pendingPosterFile ? "Gem poster-ændring" : "Fjern poster"}</span>
                     </button>
@@ -1525,7 +1527,7 @@ function QuestionItem({
                   <button
                     onClick={handleSubmitVideoAnswer}
                     className="group w-full text-sm px-4 py-2 rounded-full font-medium disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-                    style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
+                    style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-bg0-contrast, #FF0000)", color: "var(--system-text0-contrast, #FF0000)" }}
                   >
                     <span className="group-hover:opacity-50 transition-opacity">
                       {editingAnswer
@@ -1600,7 +1602,7 @@ function QuestionItem({
                     onClick={handleSubmitAudioAnswer}
                     disabled={!pendingPhotoFile && !(editingAnswer && hasExistingCustomPoster)}
                     className="group w-full text-sm px-4 py-2 rounded-full font-medium disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-                    style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
+                    style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-bg0-contrast, #FF0000)", color: "var(--system-text0-contrast, #FF0000)" }}
                   >
                     <span className="group-hover:opacity-50 transition-opacity">
                       {pendingPhotoFile

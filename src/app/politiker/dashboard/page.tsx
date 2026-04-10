@@ -51,7 +51,7 @@ export default async function Dashboard() {
 
   // Fetch all parties for dropdown
   const allParties = await db
-    .select({ id: parties.id, name: parties.name, color: parties.color, colorLight: parties.colorLight, colorDark: parties.colorDark, logoUrl: parties.logoUrl, topbarLeft1Color: parties.topbarLeft1Color, topbarLeft1Opacity: parties.topbarLeft1Opacity, topbarLeft2Color: parties.topbarLeft2Color, topbarLeft2Opacity: parties.topbarLeft2Opacity, topbarRightColor: parties.topbarRightColor, topbarRightOpacity: parties.topbarRightOpacity })
+    .select({ id: parties.id, name: parties.name, color: parties.color, colorLight: parties.colorLight, colorDark: parties.colorDark, logoUrl: parties.logoUrl, topbarLeft1Color: parties.topbarLeft1Color, topbarLeft1Opacity: parties.topbarLeft1Opacity, topbarLeft2Color: parties.topbarLeft2Color, topbarLeft2Opacity: parties.topbarLeft2Opacity, topbarRightColor: parties.topbarRightColor, topbarRightOpacity: parties.topbarRightOpacity, topbarBgColor: parties.topbarBgColor, topbarBtnBg: parties.topbarBtnBg, topbarBtnIcon: parties.topbarBtnIcon, topbarAccentBtnBg: parties.topbarAccentBtnBg, topbarAccentBtnIcon: parties.topbarAccentBtnIcon, fabBtnBg: parties.fabBtnBg, fabBtnIcon: parties.fabBtnIcon, inlineBtnBg: parties.inlineBtnBg, inlineBtnIcon: parties.inlineBtnIcon })
     .from(parties)
     .orderBy(parties.name);
 
@@ -226,17 +226,46 @@ export default async function Dashboard() {
   const uniqueUrl = politician ? `${appUrl}/${politician.partySlug}/${politician.slug}` : null;
   const party = politician ? allParties.find((p) => p.id === politician.partyId) : null;
 
+  // Resolve topbar bg color for theme-color meta + rubber-band
+  const resolvePartyColor = (key: string | null | undefined, fb: string) => {
+    if (!key) return fb;
+    if (key === "primary") return party?.color || fb;
+    if (key === "light") return party?.colorLight || fb;
+    if (key === "dark") return party?.colorDark || fb;
+    return key;
+  };
+  const topbarBgColor = resolvePartyColor(party?.topbarBgColor, "#FF0000");
+
   return (
     <>
       {/* SSR theme-color meta tag for Safari/Chrome mobile toolbar */}
-      {party?.color && <meta name="theme-color" content={party.color} />}
-      {/* SSR style: paint body bg to party color for overscroll rubber-band */}
+      {party?.color && <meta name="theme-color" content={topbarBgColor} />}
+      {/* SSR style: paint body bg to topbar color for overscroll rubber-band */}
       {party?.color && politician && (
-        <style precedence="theme" href={`theme-dashboard-${politician.partySlug}`}>{`html body{background-color:${party.color}}`}</style>
+        <style precedence="theme" href={`theme-dashboard-${politician.partySlug}`}>{`html body{background-color:${topbarBgColor}}`}</style>
       )}
-      {/* Client-side: toggle body bg based on scroll (party color at top, system bg when scrolled) */}
-      {party?.color && <ThemeColorSetter color={party.color} />}
-      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": party?.color || "#FF0000", "--party-dark": party?.colorDark || "#FF0000", "--party-light": party?.colorLight || "#FF0000" } as React.CSSProperties}>
+      {/* Client-side: toggle body bg based on scroll (topbar color at top, system bg when scrolled) */}
+      {party?.color && <ThemeColorSetter color={topbarBgColor} />}
+      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": party?.color || "#FF0000", "--party-dark": party?.colorDark || "#FF0000", "--party-light": party?.colorLight || "#FF0000", ...(() => {
+        const rc = (key: string | null | undefined, fb: string) => {
+          if (!key) return fb;
+          if (key === "primary") return party?.color || fb;
+          if (key === "light") return party?.colorLight || fb;
+          if (key === "dark") return party?.colorDark || fb;
+          return key;
+        };
+        return {
+          "--topbar-bg": rc(party?.topbarBgColor, "#FF0000"),
+          "--topbar-btn-bg": rc(party?.topbarBtnBg, "#FF0000"),
+          "--topbar-btn-icon": rc(party?.topbarBtnIcon, "#FF0000"),
+          "--topbar-accent-btn-bg": rc(party?.topbarAccentBtnBg, "#FF0000"),
+          "--topbar-accent-btn-icon": rc(party?.topbarAccentBtnIcon, "#FF0000"),
+          "--fab-btn-bg": rc(party?.fabBtnBg, "#FF0000"),
+          "--fab-btn-icon": rc(party?.fabBtnIcon, "#FF0000"),
+          "--inline-btn-bg": rc(party?.inlineBtnBg, "#FF0000"),
+          "--inline-btn-icon": rc(party?.inlineBtnIcon, "#FF0000"),
+        };
+      })() } as React.CSSProperties}>
       {politician && party && (
         <PoliticianTopBar
           mode="dashboard"

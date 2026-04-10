@@ -42,6 +42,15 @@ export default async function EditPartyPage({ params }: { params: Promise<{ part
           topbarLeft2Opacity: party.topbarLeft2Opacity,
           topbarRightColor: party.topbarRightColor,
           topbarRightOpacity: party.topbarRightOpacity,
+          topbarBgColor: party.topbarBgColor,
+          topbarBtnBg: party.topbarBtnBg,
+          topbarBtnIcon: party.topbarBtnIcon,
+          topbarAccentBtnBg: party.topbarAccentBtnBg,
+          topbarAccentBtnIcon: party.topbarAccentBtnIcon,
+          fabBtnBg: party.fabBtnBg,
+          fabBtnIcon: party.fabBtnIcon,
+          inlineBtnBg: party.inlineBtnBg,
+          inlineBtnIcon: party.inlineBtnIcon,
         }} />
       </section>
     </main>

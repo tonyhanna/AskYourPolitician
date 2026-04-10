@@ -278,8 +278,8 @@ export function PlayableMediaCard({
               transition: autoPlay ? "opacity 100ms ease" : "opacity 300ms ease, transform 300ms ease",
             }}
           >
-            <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ backgroundColor: "var(--party-primary, #FF0000)", opacity: isHovering ? 1 : 0.75 }} />
-            <FontAwesomeIcon icon={faPlay} className="relative" style={{ color: "var(--party-dark, #FF0000)", fontSize: 20, marginLeft: 2 }} />
+            <div className="absolute inset-0 rounded-full transition-opacity duration-200" style={{ backgroundColor: "var(--inline-btn-bg, #FF0000)", opacity: isHovering ? 1 : 0.75 }} />
+            <FontAwesomeIcon icon={faPlay} className="relative" style={{ color: "var(--inline-btn-icon, #FF0000)", fontSize: 20, marginLeft: 2 }} />
           </div>
         </>
       )}

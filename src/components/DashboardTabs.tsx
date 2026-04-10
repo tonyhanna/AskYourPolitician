@@ -72,7 +72,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
               onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-icon2, #FF0000)"; }}
               onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = activeTab === "settings" ? "var(--system-icon0-contrast, #FF0000)" : "var(--system-icon0, #FF0000)"; }}
             >
-              <FontAwesomeIcon icon={faUserGear} swapOpacity style={{ color: activeTab === "settings" ? "var(--system-icon0-contrast, #FF0000)" : "var(--system-icon0, #FF0000)", fontSize: 15 }} />
+              <FontAwesomeIcon icon={faUserGear} swapOpacity style={{ color: activeTab === "settings" ? "var(--system-icon0-contrast, #FF0000)" : "var(--system-icon0, #FF0000)", fontSize: 15, transition: "color 150ms ease" }} />
             </button>
             <form action={logoutAction}>
               <button
@@ -114,8 +114,9 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
           style={{
             width: 56,
             height: 56,
-            backgroundColor: "var(--party-primary, #FF0000)",
-            color: "var(--party-dark, #FF0000)",
+            backgroundColor: "var(--fab-btn-bg, #FF0000)",
+            color: "var(--fab-btn-icon, #FF0000)",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
           }}
           onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.querySelectorAll("svg").forEach((svg) => { svg.style.opacity = svg.classList.contains("opacity-50") ? "0.25" : "0.5"; }); }}
           onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.querySelectorAll("svg").forEach((svg) => { svg.style.opacity = svg.classList.contains("opacity-50") ? "0.5" : "1"; }); }}

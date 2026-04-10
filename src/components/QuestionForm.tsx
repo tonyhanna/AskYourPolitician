@@ -47,6 +47,7 @@ export function QuestionForm({
       setCharCount(0);
       setSelectedTags(new Set());
       setOpen(false);
+      window.dispatchEvent(new CustomEvent("dashboard-create-close"));
     } catch (e) {
       alert(e instanceof Error ? e.message : "Der opstod en fejl");
     } finally {
@@ -79,10 +80,14 @@ export function QuestionForm({
             required
             disabled={disabled}
             rows={3}
-            className="w-full mb-1 rounded-lg px-3 py-2 resize-none disabled:opacity-50"
+            className="w-full mb-1 rounded-lg px-3 py-2 resize-none overflow-hidden disabled:opacity-50"
             style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-form-text0, #FF0000)", backgroundColor: "var(--system-form-bg0, #FF0000)", border: "none", outline: "none" }}
             placeholder="Skriv dit spørgsmål her..."
-            onChange={(e) => setCharCount(e.target.value.length)}
+            onChange={(e) => {
+              setCharCount(e.target.value.length);
+              e.target.style.height = "auto";
+              e.target.style.height = e.target.scrollHeight + "px";
+            }}
           />
           <p className="text-xs text-right" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>{charCount}/300</p>
         </div>
@@ -122,6 +127,8 @@ export function QuestionForm({
                     transition: "background-color 200ms ease",
                     color: selectedTags.has(tag.tagId) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)",
                   }}
+                  onPointerEnter={(e) => { e.currentTarget.style.color = "var(--system-text2, #FF0000)"; }}
+                  onPointerLeave={(e) => { e.currentTarget.style.color = selectedTags.has(tag.tagId) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)"; }}
                 >
                   {tag.tagId}
                 </button>
@@ -143,7 +150,7 @@ export function QuestionForm({
             type="submit"
             disabled={disabled || pending || charCount === 0}
             className="group text-sm px-4 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-            style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
+            style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-bg0-contrast, #FF0000)", color: "var(--system-text0-contrast, #FF0000)" }}
           >
             <span className="group-hover:opacity-50 transition-opacity">{pending ? "Opretter..." : "Opret spørgsmål"}</span>
           </button>

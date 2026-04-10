@@ -187,15 +187,15 @@ export function QuestionDetailCard({
               style={{
                 height: 24,
                 width: 24,
-                backgroundColor: "var(--party-primary, #FF0000)",
+                backgroundColor: "var(--inline-btn-bg, #FF0000)",
               }}
               aria-label="Del"
             >
               <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 0 : 1, transition: "opacity 300ms ease" }}>
-                <FontAwesomeIcon icon={faShare} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "13.5px" }} />
+                <FontAwesomeIcon icon={faShare} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--inline-btn-icon, #FF0000)", fontSize: "13.5px" }} />
               </span>
               <span className="absolute inset-0 flex items-center justify-center" style={{ opacity: copied ? 1 : 0, transition: "opacity 300ms ease" }}>
-                <FontAwesomeIcon icon={faCopy} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--party-dark, #FF0000)", fontSize: "13.5px" }} />
+                <FontAwesomeIcon icon={faCopy} className="group-hover:opacity-50 transition-opacity" style={{ color: "var(--inline-btn-icon, #FF0000)", fontSize: "13.5px" }} />
               </span>
             </button>
             {question.tags.map((tag) => (

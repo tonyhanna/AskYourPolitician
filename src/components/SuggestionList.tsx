@@ -213,6 +213,8 @@ function SuggestionItem({
                       transition: "background-color 200ms ease",
                       color: selectedTags.has(tag.tagId) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)",
                     }}
+                    onPointerEnter={(e) => { e.currentTarget.style.color = "var(--system-text2, #FF0000)"; }}
+                    onPointerLeave={(e) => { e.currentTarget.style.color = selectedTags.has(tag.tagId) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)"; }}
                   >
                     {tag.tagId}
                   </button>
@@ -234,7 +236,7 @@ function SuggestionItem({
               type="submit"
               disabled={pending || (isEdited && !editReason.trim())}
               className="group text-sm px-4 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-bg0-contrast, #FF0000)", color: "var(--system-text0-contrast, #FF0000)" }}
             >
               <span className="group-hover:opacity-50 transition-opacity">{pending ? "Godkender..." : "Godkend spørgsmål"}</span>
             </button>
@@ -335,7 +337,7 @@ function SuggestionItem({
                 ((rejectReason === "already_answered" || rejectReason === "duplicate") && linkStatus !== "valid")
               }
               className="group text-sm px-4 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-error, #FF0000)", color: "var(--system-error-contrast, #FF0000)" }}
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-bg0-contrast, #FF0000)", color: "var(--system-text0-contrast, #FF0000)" }}
             >
               <span className="group-hover:opacity-50 transition-opacity">{pending ? "Afviser..." : "Afvis spørgsmål"}</span>
             </button>

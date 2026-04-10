@@ -77,8 +77,8 @@ export function CircularUpvoteButton({
   const plusOneSize = Math.round(size * 0.4375);
 
   // Party colors from CSS variables
-  const pp = "var(--party-primary, #FF0000)";
-  const pd = "var(--party-dark, #FF0000)";
+  const pp = "var(--inline-btn-bg, #FF0000)";
+  const pd = "var(--inline-btn-icon, #FF0000)";
   const pl = "var(--party-light, #FF0000)";
   // System colors with alpha via color-mix
   const redBg = isDark
@@ -91,8 +91,8 @@ export function CircularUpvoteButton({
   const pendingContrast = "var(--system-pending-contrast, #FF0000)";
   // Party color with alpha
   const ppAlpha = isDark
-    ? "color-mix(in srgb, var(--party-primary, #FF0000) 75%, transparent)"
-    : "color-mix(in srgb, var(--party-primary, #FF0000) 50%, transparent)";
+    ? "color-mix(in srgb, var(--inline-btn-bg, #FF0000) 75%, transparent)"
+    : "color-mix(in srgb, var(--inline-btn-bg, #FF0000) 50%, transparent)";
 
   // ── Core state ──────────────────────────────────────────────────────
   const [state, setState] = useState<State>(() => deriveState(goalReached, isUpvoted));
@@ -318,7 +318,7 @@ export function CircularUpvoteButton({
 
     switch (state) {
       case "idle":
-        return { icon: faArrowUpDuotone, iconColor: pd, bgColor: active ? pd : pp, label: "Upvote" };
+        return { icon: faArrowUpDuotone, iconColor: pd, bgColor: active ? "var(--system-bg0-contrast, #FF0000)" : pp, label: "Upvote" };
 
       case "upvoted":
         if (isConfirmStep) return { icon: faThumbsUp, iconColor: errorContrast, bgColor: redBg, label: "Bekræft fjern upvote" };
@@ -399,7 +399,7 @@ export function CircularUpvoteButton({
           aria-label={appearance.label}
         >
           {showPlusOne ? (
-            <span style={{ color: pl, fontSize: plusOneSize, fontFamily: "var(--font-figtree)", fontWeight: 700 }}>+1</span>
+            <span style={{ color: "var(--system-text0-contrast, #FF0000)", fontSize: plusOneSize, fontFamily: "var(--font-figtree)", fontWeight: 700 }}>+1</span>
           ) : (
             <FontAwesomeIcon icon={appearance.icon} style={{ color: appearance.iconColor, fontSize: iconSize }} />
           )}

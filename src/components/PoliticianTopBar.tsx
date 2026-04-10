@@ -7,6 +7,7 @@ import { faXmark, faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-
 import { faGlasses, faArrowUTurnLeftDown } from "@fortawesome/pro-duotone-svg-icons";
 import { faCommentPlus } from "@fortawesome/pro-solid-svg-icons";
 import { faInfo, faMailbox, faMailboxFlagUp } from "@fortawesome/pro-duotone-svg-icons";
+import { faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 import { directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { stopImpersonation } from "@/app/admin/actions";
 import { useSystemColors } from "./SystemColorProvider";
@@ -85,6 +86,11 @@ export function PoliticianTopBar({
   const pp = "var(--party-primary, #FF0000)";
   const pd = "var(--party-dark, #FF0000)";
   const pl = "var(--party-light, #FF0000)";
+  const topbarBg = "var(--topbar-bg, #FF0000)";
+  const btnBg = "var(--topbar-btn-bg, #FF0000)";
+  const btnIcon = "var(--topbar-btn-icon, #FF0000)";
+  const accentBtnBg = "var(--topbar-accent-btn-bg, #FF0000)";
+  const accentBtnIcon = "var(--topbar-accent-btn-icon, #FF0000)";
   // Resolve topbar text color overrides: key → party var, hex → direct, null → default
   const resolveColor = (key: string | null | undefined, fallback: string) => {
     if (!key) return fallback;
@@ -113,6 +119,7 @@ export function PoliticianTopBar({
   const [modalOpen, setModalOpen] = useState(false);
   const introStorageKey = `intro-dismissed:${politicianSlug}`;
   const [introDismissed, setIntroDismissed] = useState(false);
+  const [infoHover, setInfoHover] = useState(false);
   useEffect(() => {
     setIntroDismissed(localStorage.getItem(introStorageKey) === "1");
     const handler = () => setIntroDismissed(true);
@@ -246,7 +253,7 @@ export function PoliticianTopBar({
     <div
       ref={containerRef}
       className="sticky top-0 z-50 cursor-pointer"
-      style={{ backgroundColor: pp, fontFamily: "var(--font-figtree)", fontWeight: 500 }}
+      style={{ backgroundColor: topbarBg, fontFamily: "var(--font-figtree)", fontWeight: 500 }}
       onClick={(e) => {
         const target = e.target as HTMLElement;
         if (target.closest("button, a, input, textarea")) return;
@@ -272,17 +279,16 @@ export function PoliticianTopBar({
             {backHref && (
               <a
                 href={backHref}
-                className="group w-12 h-12 rounded-full flex items-center justify-center shrink-0 relative"
+                className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+                style={{ backgroundColor: btnBg }}
                 aria-label="Tilbage"
+                onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.opacity = "0.5"; }}
+                onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.opacity = "1"; }}
               >
-                <span
-                  className="absolute inset-0 rounded-full transition-opacity opacity-25 group-hover:opacity-50"
-                  style={{ backgroundColor: pl }}
-                />
                 <FontAwesomeIcon
                   icon={faArrowLeft}
-                  className="relative"
-                  style={{ color: pd, fontSize: 18 }}
+                  className="transition-opacity"
+                  style={{ color: btnIcon, fontSize: 18 }}
                 />
               </a>
             )}
@@ -340,7 +346,7 @@ export function PoliticianTopBar({
                     className="rounded-full flex items-center justify-center cursor-pointer"
                     style={{
                       width: 40, height: 40,
-                      backgroundColor: pd,
+                      backgroundColor: accentBtnBg,
                     }}
                     aria-label={impersonateArmed ? "Stop impersonering" : "Admin"}
                     onPointerEnter={() => { if (canHover.current) setImpersonateHover(true); }}
@@ -348,7 +354,7 @@ export function PoliticianTopBar({
                   >
                     <FontAwesomeIcon
                       icon={showXmark ? faArrowUTurnLeftDown : faGlasses}
-                      style={{ color: pl, fontSize: 18 }}
+                      style={{ color: accentBtnIcon, fontSize: 18 }}
                     />
                   </button>
                 );
@@ -359,12 +365,12 @@ export function PoliticianTopBar({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-full flex items-center justify-center"
-                  style={{ width: 40, height: 40, backgroundColor: pl }}
+                  style={{ width: 40, height: 40, backgroundColor: btnBg }}
                   aria-label="Se borgerside"
                   onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.opacity = "0.5"; }}
                   onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.opacity = "1"; }}
                 >
-                  <FontAwesomeIcon icon={faArrowRight} className="transition-opacity" style={{ color: pd, fontSize: 18 }} />
+                  <FontAwesomeIcon icon={faArrowRight} className="transition-opacity" style={{ color: btnIcon, fontSize: 18 }} />
                 </a>
               )}
             </div>
@@ -373,20 +379,26 @@ export function PoliticianTopBar({
           {/* Mobile-only: info button + suggest/close button (citizen mode only) */}
           {!isDashboard && (
           <div className="sm:hidden ml-auto flex items-center gap-3 shrink-0">
-            {!backHref && introDismissed && !formActive && (
+            {!backHref && !formActive && (
               <button
                 type="button"
                 onClick={() => {
-                  setIntroDismissed(false);
-                  window.dispatchEvent(new Event("show-intro"));
+                  if (introDismissed) {
+                    setIntroDismissed(false);
+                    window.dispatchEvent(new Event("show-intro"));
+                  } else {
+                    setIntroDismissed(true);
+                    window.dispatchEvent(new Event("intro-dismissed"));
+                    localStorage.setItem(introStorageKey, "1");
+                  }
                 }}
-                className="cursor-pointer hover:opacity-50 transition-opacity rounded-full flex items-center justify-center"
-                style={{ width: 24, height: 24, backgroundColor: pl }}
-                aria-label="Vis information"
+                className="cursor-pointer rounded-full flex items-center justify-center"
+                style={{ width: 24, height: 24, backgroundColor: btnBg }}
+                aria-label={introDismissed ? "Vis banner" : "Skjul banner"}
               >
                 <FontAwesomeIcon
                   icon={faInfo}
-                  style={{ color: pd, fontSize: "13.5px" }}
+                  style={{ color: btnIcon, fontSize: "13.5px" }}
                 />
               </button>
             )}
@@ -394,11 +406,11 @@ export function PoliticianTopBar({
             {mailboxPhase && mailboxPhase !== "fadeIn" ? (
               <div
                 className="rounded-full flex items-center justify-center"
-                style={{ width: 40, height: 40, backgroundColor: pd }}
+                style={{ width: 40, height: 40, backgroundColor: accentBtnBg }}
               >
                 <FontAwesomeIcon
                   icon={mailboxPhase === "flagUp" ? faMailboxFlagUp : faMailbox}
-                  style={{ color: pl, fontSize: 20 }}
+                  style={{ color: accentBtnIcon, fontSize: 20 }}
                 />
               </div>
             ) : !success ? (
@@ -406,10 +418,10 @@ export function PoliticianTopBar({
                 type="button"
                 onClick={() => setModalOpen(true)}
                 className="cursor-pointer transition-opacity rounded-full flex items-center justify-center"
-                style={{ width: 40, height: 40, backgroundColor: "var(--system-form-bg0, #FF0000)" }}
+                style={{ width: 40, height: 40, backgroundColor: btnBg }}
                 aria-label="Foreslå et spørgsmål"
               >
-                <FontAwesomeIcon icon={faCommentPlus} style={{ color: "var(--system-icon0, #FF0000)", fontSize: 20 }} />
+                <FontAwesomeIcon icon={faCommentPlus} style={{ color: btnIcon, fontSize: 20 }} />
               </button>
             ) : null}
           </div>
@@ -451,8 +463,8 @@ export function PoliticianTopBar({
                   className="group rounded-full whitespace-nowrap shrink-0 flex items-center justify-center cursor-pointer disabled:cursor-default text-base border-none"
                   style={{
                     ...(mailboxPhase
-                      ? { backgroundColor: pd }
-                      : { ...(hasSession ? { backgroundColor: pd, color: pl } : { backgroundColor: pl, color: pd }) }),
+                      ? { backgroundColor: accentBtnBg }
+                      : { ...(hasSession ? { backgroundColor: accentBtnBg, color: accentBtnIcon } : { backgroundColor: btnBg, color: btnIcon }) }),
                     ...(pillSizeRef.current
                       ? { width: pillSizeRef.current.width, height: pillSizeRef.current.height }
                       : { paddingLeft: 20, paddingRight: 20, paddingTop: 8, paddingBottom: 8 }),
@@ -462,7 +474,7 @@ export function PoliticianTopBar({
                   {mailboxPhase ? (
                     <FontAwesomeIcon
                       icon={mailboxPhase === "flagUp" ? faMailboxFlagUp : faMailbox}
-                      style={{ color: pl, fontSize: 20 }}
+                      style={{ color: accentBtnIcon, fontSize: 20 }}
                     />
                   ) : (
                     <span className={`transition-opacity ${pending ? "opacity-50" : "group-hover:opacity-50"}`}>
@@ -485,30 +497,38 @@ export function PoliticianTopBar({
                   {constituency}
                 </span>
               )}
-              {!backHref && introDismissed && (
+              {!backHref && (
                 <button
                   type="button"
                   onClick={() => {
-                    setIntroDismissed(false);
-                    window.dispatchEvent(new Event("show-intro"));
+                    if (introDismissed) {
+                      setIntroDismissed(false);
+                      window.dispatchEvent(new Event("show-intro"));
+                    } else {
+                      setIntroDismissed(true);
+                      window.dispatchEvent(new Event("intro-dismissed"));
+                      localStorage.setItem(introStorageKey, "1");
+                    }
                   }}
-                  className="cursor-pointer hover:opacity-50 transition-opacity rounded-full flex items-center justify-center"
-                  style={{ width: 24, height: 24, backgroundColor: pl }}
-                  aria-label="Vis information"
+                  className="cursor-pointer rounded-full flex items-center justify-center"
+                  style={{ width: 24, height: 24, backgroundColor: btnBg }}
+                  aria-label={introDismissed ? "Vis banner" : "Skjul banner"}
+                  onPointerEnter={() => { if (canHover.current) setInfoHover(true); }}
+                  onPointerLeave={() => { if (canHover.current) setInfoHover(false); }}
                 >
                   <FontAwesomeIcon
-                    icon={faInfo}
-                    style={{ color: pd, fontSize: "13.5px" }}
+                    icon={infoHover ? (introDismissed ? faChevronDown : faChevronUp) : faInfo}
+                    style={{ color: btnIcon, fontSize: infoHover ? 12 : "13.5px" }}
                   />
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setFormActive(true)}
-                className="text-base px-5 py-2 rounded-full whitespace-nowrap cursor-pointer"
-                style={{ backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", opacity: mailboxPhase === "fadeIn" ? 0 : 1, transition: mailboxPhase === null ? "opacity 300ms ease-out" : "none" }}
+                className="group text-base px-5 py-2 rounded-full whitespace-nowrap cursor-pointer"
+                style={{ backgroundColor: btnBg, opacity: mailboxPhase === "fadeIn" ? 0 : 1, transition: mailboxPhase === null ? "opacity 300ms ease-out" : "none" }}
               >
-                Foreslå et spørgsmål...
+                <span className="group-hover:opacity-50 transition-opacity" style={{ color: btnIcon }}>Foreslå et spørgsmål...</span>
               </button>
             </div>
           )}

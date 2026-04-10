@@ -18,6 +18,15 @@ type PartyData = {
   topbarLeft2Opacity: number | null;
   topbarRightColor: string | null;
   topbarRightOpacity: number | null;
+  topbarBgColor: string | null;
+  topbarBtnBg: string | null;
+  topbarBtnIcon: string | null;
+  topbarAccentBtnBg: string | null;
+  topbarAccentBtnIcon: string | null;
+  fabBtnBg: string | null;
+  fabBtnIcon: string | null;
+  inlineBtnBg: string | null;
+  inlineBtnIcon: string | null;
 } | null;
 
 async function cropToSquare(file: File): Promise<File> {
@@ -55,6 +64,15 @@ export function AdminPartyForm({ party }: { party: PartyData }) {
   const [topbarLeft2Opacity, setTopbarLeft2Opacity] = useState(party?.topbarLeft2Opacity ?? 100);
   const [topbarRightColor, setTopbarRightColor] = useState(party?.topbarRightColor ?? "");
   const [topbarRightOpacity, setTopbarRightOpacity] = useState(party?.topbarRightOpacity ?? 100);
+  const [topbarBgColor, setTopbarBgColor] = useState(party?.topbarBgColor ?? "");
+  const [topbarBtnBg, setTopbarBtnBg] = useState(party?.topbarBtnBg ?? "");
+  const [topbarBtnIcon, setTopbarBtnIcon] = useState(party?.topbarBtnIcon ?? "");
+  const [topbarAccentBtnBg, setTopbarAccentBtnBg] = useState(party?.topbarAccentBtnBg ?? "");
+  const [topbarAccentBtnIcon, setTopbarAccentBtnIcon] = useState(party?.topbarAccentBtnIcon ?? "");
+  const [fabBtnBg, setFabBtnBg] = useState(party?.fabBtnBg ?? "");
+  const [fabBtnIcon, setFabBtnIcon] = useState(party?.fabBtnIcon ?? "");
+  const [inlineBtnBg, setUpvoteBtnBg] = useState(party?.inlineBtnBg ?? "");
+  const [inlineBtnIcon, setUpvoteBtnIcon] = useState(party?.inlineBtnIcon ?? "");
 
   async function handleLogoUpload(file: File) {
     if (!file.type.startsWith("image/")) return;
@@ -96,6 +114,15 @@ export function AdminPartyForm({ party }: { party: PartyData }) {
       <input type="hidden" name="topbarLeft2Opacity" value={topbarLeft2Opacity} />
       <input type="hidden" name="topbarRightColor" value={topbarRightColor} />
       <input type="hidden" name="topbarRightOpacity" value={topbarRightOpacity} />
+      <input type="hidden" name="topbarBgColor" value={topbarBgColor} />
+      <input type="hidden" name="topbarBtnBg" value={topbarBtnBg} />
+      <input type="hidden" name="topbarBtnIcon" value={topbarBtnIcon} />
+      <input type="hidden" name="topbarAccentBtnBg" value={topbarAccentBtnBg} />
+      <input type="hidden" name="topbarAccentBtnIcon" value={topbarAccentBtnIcon} />
+      <input type="hidden" name="fabBtnBg" value={fabBtnBg} />
+      <input type="hidden" name="fabBtnIcon" value={fabBtnIcon} />
+      <input type="hidden" name="inlineBtnBg" value={inlineBtnBg} />
+      <input type="hidden" name="inlineBtnIcon" value={inlineBtnIcon} />
 
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Partinavn</label>
@@ -129,7 +156,7 @@ export function AdminPartyForm({ party }: { party: PartyData }) {
       <div className="space-y-3">
         <label className="block text-sm font-medium text-gray-700">Partifarver</label>
         {([
-          ["Primær", color, setColor],
+          ["Primær/Accent", color, setColor],
           ["Lys", colorLight, setColorLight],
           ["Mørk", colorDark, setColorDark],
         ] as [string, string, (v: string) => void][]).map(([label, value, setter]) => (
@@ -145,7 +172,7 @@ export function AdminPartyForm({ party }: { party: PartyData }) {
         ))}
         <div className="flex gap-2 mt-2">
           <div className="w-8 h-8 rounded-full border border-gray-200" style={{ backgroundColor: colorLight }} title="Lys" />
-          <div className="w-8 h-8 rounded-full border border-gray-200" style={{ backgroundColor: color }} title="Primær" />
+          <div className="w-8 h-8 rounded-full border border-gray-200" style={{ backgroundColor: color }} title="Primær/Accent" />
           <div className="w-8 h-8 rounded-full border border-gray-200" style={{ backgroundColor: colorDark }} title="Mørk" />
         </div>
       </div>
@@ -164,31 +191,30 @@ export function AdminPartyForm({ party }: { party: PartyData }) {
             { key: "light", hex: colorLight },
             { key: "dark", hex: colorDark },
           ];
-          const isCustom = item.colorState && !["primary", "light", "dark", ""].includes(item.colorState);
           return (
             <div key={item.label}>
-              <label className="block text-xs text-gray-500 mb-1">{item.label} <span className="text-gray-400">(default: {item.defaultKey})</span></label>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-gray-600 w-48">{item.label}</span>
                 {partyColorOptions.map(({ key, hex }) => (
                   <button
                     key={key}
                     type="button"
                     onClick={() => item.setColor(item.colorState === key ? "" : key)}
-                    className={`w-7 h-7 rounded-full border-2 cursor-pointer transition ${
+                    className={`w-7 h-7 rounded-full border-2 cursor-pointer transition text-[9px] font-bold flex items-center justify-center ${
                       item.colorState === key ? "border-gray-900 scale-110" : "border-gray-300 hover:border-gray-400"
                     }`}
                     style={{ backgroundColor: hex }}
                     title={key}
-                  />
+                  >
+                    <span style={{ color: key === "light" ? colorDark : colorLight, opacity: 0.7 }}>{key === "primary" ? "P" : key === "light" ? "L" : "M"}</span>
+                  </button>
                 ))}
                 <input
                   type="color"
-                  value={isCustom ? item.colorState : "#000000"}
+                  value={item.colorState && !["primary", "light", "dark"].includes(item.colorState) ? item.colorState : "#888888"}
                   onChange={(e) => item.setColor(e.target.value)}
-                  className={`w-7 h-7 rounded-full border-2 cursor-pointer p-0 ${
-                    isCustom ? "border-gray-900 scale-110" : "border-gray-300 hover:border-gray-400"
-                  }`}
-                  title="Custom farve"
+                  className="w-7 h-7 rounded cursor-pointer border border-gray-300 p-0.5"
+                  title="Vælg farve"
                 />
                 <input
                   type="range"
@@ -206,6 +232,54 @@ export function AdminPartyForm({ party }: { party: PartyData }) {
             </div>
           );
         })}
+      </div>
+
+      {/* Button & FAB colors */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-gray-700">Knap-farver</h3>
+        {[
+          { label: "Topbar baggrund", colorState: topbarBgColor, setColor: setTopbarBgColor, defaultHint: "primær" },
+          { label: "Topbar knap — baggrund", colorState: topbarBtnBg, setColor: setTopbarBtnBg, defaultHint: "lys" },
+          { label: "Topbar knap — ikon/tekst", colorState: topbarBtnIcon, setColor: setTopbarBtnIcon, defaultHint: "mørk" },
+          { label: "Topbar accent knap — baggrund", colorState: topbarAccentBtnBg, setColor: setTopbarAccentBtnBg, defaultHint: "mørk" },
+          { label: "Topbar accent knap — ikon", colorState: topbarAccentBtnIcon, setColor: setTopbarAccentBtnIcon, defaultHint: "lys" },
+          { label: "FAB knap — baggrund", colorState: fabBtnBg, setColor: setFabBtnBg, defaultHint: "primær" },
+          { label: "FAB knap — ikon", colorState: fabBtnIcon, setColor: setFabBtnIcon, defaultHint: "mørk" },
+          { label: "Inline knap — baggrund", colorState: inlineBtnBg, setColor: setUpvoteBtnBg, defaultHint: "primær" },
+          { label: "Inline knap — ikon", colorState: inlineBtnIcon, setColor: setUpvoteBtnIcon, defaultHint: "mørk" },
+        ].map((item) => (
+          <div key={item.label} className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-gray-600 w-48">{item.label}</span>
+            {[
+              { key: "primary", hex: color, label: "P" },
+              { key: "light", hex: colorLight, label: "L" },
+              { key: "dark", hex: colorDark, label: "M" },
+            ].map(({ key, hex, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => item.setColor(item.colorState === key ? "" : key)}
+                className={`w-7 h-7 rounded-full border-2 cursor-pointer transition text-[9px] font-bold flex items-center justify-center ${
+                  item.colorState === key ? "border-gray-900 scale-110" : "border-gray-300 hover:border-gray-400"
+                }`}
+                style={{ backgroundColor: hex }}
+                title={key}
+              >
+                <span style={{ color: key === "light" ? colorDark : colorLight, opacity: 0.7 }}>{label}</span>
+              </button>
+            ))}
+            <input
+              type="color"
+              value={item.colorState && !["primary", "light", "dark"].includes(item.colorState) ? item.colorState : "#888888"}
+              onChange={(e) => item.setColor(e.target.value)}
+              className="w-7 h-7 rounded cursor-pointer border border-gray-300 p-0.5"
+              title="Vælg farve"
+            />
+            {item.colorState && (
+              <button type="button" onClick={() => item.setColor("")} className="text-xs text-red-600 hover:text-red-800 cursor-pointer">Nulstil</button>
+            )}
+          </div>
+        ))}
       </div>
 
       <div className="flex items-center gap-4">

@@ -64,14 +64,22 @@ export function IntroSection({
     };
   }, [loaded, bannerUrl, measure]);
 
-  // Listen for "show-intro" event from info button in PoliticianTopBar
+  // Listen for toggle events from info button in PoliticianTopBar
   useEffect(() => {
-    const handler = () => {
+    const showHandler = () => {
       setDismissed(false);
       localStorage.removeItem(storageKey);
     };
-    window.addEventListener("show-intro", handler);
-    return () => window.removeEventListener("show-intro", handler);
+    const dismissHandler = () => {
+      setDismissed(true);
+      localStorage.setItem(storageKey, "1");
+    };
+    window.addEventListener("show-intro", showHandler);
+    window.addEventListener("intro-dismissed", dismissHandler);
+    return () => {
+      window.removeEventListener("show-intro", showHandler);
+      window.removeEventListener("intro-dismissed", dismissHandler);
+    };
   }, [storageKey]);
 
   function dismiss() {
@@ -86,10 +94,11 @@ export function IntroSection({
 
   return (
     <div
-      className="overflow-hidden transition-all duration-500 ease-in-out"
+      className="overflow-hidden transition-all duration-500 ease-in-out relative"
       style={{
         maxHeight: isVisible ? (contentHeight || 1000) : 0,
         opacity: isVisible ? 1 : 0,
+        zIndex: 41,
       }}
     >
       <div ref={contentRef} className="relative">
@@ -101,20 +110,6 @@ export function IntroSection({
           heroLine2={heroLine2}
           heroLine2Color={heroLine2Color}
         />
-        {/* Dismiss button */}
-        <button
-          onClick={dismiss}
-          className="absolute top-3 right-3 rounded-full flex items-center justify-center cursor-pointer"
-          style={{ width: 24, height: 24, backgroundColor: "var(--system-bg0, #FF0000)", zIndex: 10 }}
-          aria-label="Luk banner"
-          onPointerEnter={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-icon0, #FF0000)"; }}
-          onPointerLeave={(e) => { if (!canHover.current) return; const svg = e.currentTarget.querySelector("svg"); if (svg) svg.style.color = "var(--system-icon1, #FF0000)"; }}
-        >
-          <FontAwesomeIcon
-            icon={faXmark}
-            style={{ color: "var(--system-icon1, #FF0000)", fontSize: "13.5px" }}
-          />
-        </button>
       </div>
     </div>
   );

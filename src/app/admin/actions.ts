@@ -54,6 +54,15 @@ export async function createParty(formData: FormData) {
   const topbarLeft2Opacity = formData.get("topbarLeft2Opacity") ? parseInt(formData.get("topbarLeft2Opacity") as string) : null;
   const topbarRightColor = (formData.get("topbarRightColor") as string)?.trim() || null;
   const topbarRightOpacity = formData.get("topbarRightOpacity") ? parseInt(formData.get("topbarRightOpacity") as string) : null;
+  const topbarBgColor = (formData.get("topbarBgColor") as string)?.trim() || null;
+  const topbarBtnBg = (formData.get("topbarBtnBg") as string)?.trim() || null;
+  const topbarBtnIcon = (formData.get("topbarBtnIcon") as string)?.trim() || null;
+  const topbarAccentBtnBg = (formData.get("topbarAccentBtnBg") as string)?.trim() || null;
+  const topbarAccentBtnIcon = (formData.get("topbarAccentBtnIcon") as string)?.trim() || null;
+  const fabBtnBg = (formData.get("fabBtnBg") as string)?.trim() || null;
+  const fabBtnIcon = (formData.get("fabBtnIcon") as string)?.trim() || null;
+  const inlineBtnBg = (formData.get("inlineBtnBg") as string)?.trim() || null;
+  const inlineBtnIcon = (formData.get("inlineBtnIcon") as string)?.trim() || null;
 
   if (!name) throw new Error("Parti-navn er påkrævet");
 
@@ -80,6 +89,15 @@ export async function createParty(formData: FormData) {
     topbarLeft2Opacity,
     topbarRightColor,
     topbarRightOpacity,
+    topbarBgColor,
+    topbarBtnBg,
+    topbarBtnIcon,
+    topbarAccentBtnBg,
+    topbarAccentBtnIcon,
+    fabBtnBg,
+    fabBtnIcon,
+    inlineBtnBg,
+    inlineBtnIcon,
   });
 
   revalidatePath("/admin");
@@ -100,6 +118,15 @@ export async function updateParty(formData: FormData) {
   const topbarLeft2Opacity = formData.get("topbarLeft2Opacity") ? parseInt(formData.get("topbarLeft2Opacity") as string) : null;
   const topbarRightColor = (formData.get("topbarRightColor") as string)?.trim() || null;
   const topbarRightOpacity = formData.get("topbarRightOpacity") ? parseInt(formData.get("topbarRightOpacity") as string) : null;
+  const topbarBgColor = (formData.get("topbarBgColor") as string)?.trim() || null;
+  const topbarBtnBg = (formData.get("topbarBtnBg") as string)?.trim() || null;
+  const topbarBtnIcon = (formData.get("topbarBtnIcon") as string)?.trim() || null;
+  const topbarAccentBtnBg = (formData.get("topbarAccentBtnBg") as string)?.trim() || null;
+  const topbarAccentBtnIcon = (formData.get("topbarAccentBtnIcon") as string)?.trim() || null;
+  const fabBtnBg = (formData.get("fabBtnBg") as string)?.trim() || null;
+  const fabBtnIcon = (formData.get("fabBtnIcon") as string)?.trim() || null;
+  const inlineBtnBg = (formData.get("inlineBtnBg") as string)?.trim() || null;
+  const inlineBtnIcon = (formData.get("inlineBtnIcon") as string)?.trim() || null;
 
   if (!name || !partyId) throw new Error("Parti-navn er påkrævet");
 
@@ -107,7 +134,7 @@ export async function updateParty(formData: FormData) {
 
   await db
     .update(parties)
-    .set({ name, slug, logoUrl, color, colorLight, colorDark, topbarLeft1Color, topbarLeft1Opacity, topbarLeft2Color, topbarLeft2Opacity, topbarRightColor, topbarRightOpacity, updatedAt: new Date() })
+    .set({ name, slug, logoUrl, color, colorLight, colorDark, topbarLeft1Color, topbarLeft1Opacity, topbarLeft2Color, topbarLeft2Opacity, topbarRightColor, topbarRightOpacity, topbarBgColor, topbarBtnBg, topbarBtnIcon, topbarAccentBtnBg, topbarAccentBtnIcon, fabBtnBg, fabBtnIcon, inlineBtnBg, inlineBtnIcon, updatedAt: new Date() })
     .where(eq(parties.id, partyId));
 
   // Update denormalized party/partySlug on all politicians in this party

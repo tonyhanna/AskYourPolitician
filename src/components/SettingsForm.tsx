@@ -199,12 +199,14 @@ export function SettingsForm({
 
   async function handleSubmit(formData: FormData) {
     // Client-side validation
-    const errors: string[] = [];
-    if (!firstName.trim()) errors.push("Fornavn er påkrævet");
-    if (!lastName.trim()) errors.push("Efternavn er påkrævet");
-    if (!(formData.get("email") as string)?.trim()) errors.push("E-mail er påkrævet");
-    if (errors.length > 0) {
-      setSubmitError(errors.join("\n"));
+    const missingFirst = !firstName.trim();
+    const missingLast = !lastName.trim();
+    const missingEmail = !(formData.get("email") as string)?.trim();
+    if (missingFirst || missingLast || missingEmail) {
+      const namePart = missingFirst && missingLast ? "Navn" : missingFirst ? "Fornavn" : missingLast ? "Efternavn" : "";
+      const emailPart = missingEmail ? (namePart ? "e-mail" : "E-mail") : "";
+      const parts = [namePart, emailPart].filter(Boolean);
+      setSubmitError(parts.join(" og ") + " er påkrævet");
       return;
     }
     setPending(true);
@@ -270,10 +272,10 @@ export function SettingsForm({
                 <img
                   src={profilePreview || profilePhotoUrl}
                   alt="Profilbillede"
-                  className="w-20 h-20 rounded-lg object-cover"
+                  className="w-20 h-20 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-20 h-20 rounded-lg flex items-center justify-center text-center text-xs" style={{ backgroundColor: "var(--system-bg1, #FF0000)", color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
+                <div className="w-20 h-20 rounded-full flex items-center justify-center text-center text-xs" style={{ backgroundColor: "var(--system-bg1, #FF0000)", color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
                   Intet<br />billede
                 </div>
               )}
@@ -290,7 +292,7 @@ export function SettingsForm({
                       <input
                         type="file"
                         accept="image/*"
-                        capture="user"
+    
                         className="hidden"
                         disabled={pending}
                         onChange={(e) => {
@@ -325,7 +327,7 @@ export function SettingsForm({
                       <input
                         type="file"
                         accept="image/*"
-                        capture="user"
+    
                         className="hidden"
                         disabled={pending}
                         onChange={(e) => {
@@ -805,26 +807,30 @@ export function SettingsForm({
         </div>
       </div>
 
-      {/* Submit error */}
-      {submitError && (
-        <div className="mt-6 flex justify-end">
-          <div>
-            {submitError.split("\n").map((line, i) => (
-              <p key={i} className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-error, #FF0000)" }}>{line}</p>
-            ))}
+      {/* Sticky FAB save button + error banner */}
+      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
+        {submitError && (
+          <div
+            className="rounded-full px-5 flex items-center"
+            style={{
+              height: 56,
+              backgroundColor: "color-mix(in srgb, var(--system-bg0, #FF0000) 85%, transparent)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+            }}
+          >
+            <p className="text-sm" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)", whiteSpace: "nowrap" }}>{submitError}</p>
           </div>
-        </div>
-      )}
-
-      {/* Submit button — right-aligned below both columns */}
-      <div className="mt-4 flex justify-end">
+        )}
         <button
           type="submit"
           disabled={pending}
-          className="group text-sm px-6 py-2 rounded-full disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-          style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)" }}
+          className="group rounded-full px-6 disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center gap-2"
+          style={{ height: 56, fontFamily: "var(--font-figtree)", fontWeight: 500, fontSize: 14, backgroundColor: "var(--fab-btn-bg, #FF0000)", color: "var(--fab-btn-icon, #FF0000)", boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)" }}
         >
-          <span className="group-hover:opacity-50 transition-opacity">{pending ? "Gemmer..." : saved ? <>Gemt <FontAwesomeIcon icon={faCheck} style={{ marginLeft: 4 }} /></> : "Gem indstillinger"}</span>
+          <span className="group-hover:opacity-50 transition-opacity flex items-center gap-2">
+            {pending ? "Gemmer..." : saved ? <><FontAwesomeIcon icon={faCheck} />Gemt</> : <><FontAwesomeIcon icon={faCheck} />Gem</>}
+          </span>
         </button>
       </div>
     </form>

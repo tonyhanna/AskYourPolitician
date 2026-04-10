@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Figtree } from "next/font/google";
 import "./globals.css";
 import { SystemColorProvider } from "@/components/SystemColorProvider";
@@ -22,6 +22,13 @@ const figtree = Figtree({
 export const metadata: Metadata = {
   title: "Introkrati",
   description: "Stil spørgsmål til din politiker og stem på de vigtigste.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default async function RootLayout({
