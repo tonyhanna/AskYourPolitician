@@ -117,8 +117,8 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
             backgroundColor: "var(--party-primary, #FF0000)",
             color: "var(--party-dark, #FF0000)",
           }}
-          onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.querySelectorAll("svg").forEach((svg) => { svg.style.opacity = "0.5"; }); }}
-          onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.querySelectorAll("svg").forEach((svg) => { svg.style.opacity = "1"; }); }}
+          onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.querySelectorAll("svg").forEach((svg) => { svg.style.opacity = svg.classList.contains("opacity-50") ? "0.25" : "0.5"; }); }}
+          onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.querySelectorAll("svg").forEach((svg) => { svg.style.opacity = svg.classList.contains("opacity-50") ? "0.5" : "1"; }); }}
           aria-label={formOpen ? "Luk formular" : (activeTab === "questions" ? "Opret spørgsmål" : "Opret mærkesag")}
         >
           {formOpen ? (
@@ -128,7 +128,7 @@ export function DashboardTabs({ questionsTab, causesTab, settingsTab, logoutActi
           ) : (
             <span className="flex items-center">
               <FontAwesomeIcon icon={faFire} style={{ fontSize: 20 }} />
-              <FontAwesomeIcon icon={faPlus} style={{ fontSize: 10, marginLeft: -3 }} />
+              <FontAwesomeIcon icon={faPlus} className="opacity-50" style={{ fontSize: 10, marginLeft: -3 }} />
             </span>
           )}
         </button>

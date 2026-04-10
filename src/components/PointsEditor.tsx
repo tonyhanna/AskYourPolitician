@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useId } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTrash } from "@fortawesome/pro-duotone-svg-icons";
+import { faGripDots } from "@fortawesome/pro-solid-svg-icons";
 import {
   DndContext,
   closestCenter,
@@ -92,7 +95,8 @@ export function PointsEditor({
       <button
         type="button"
         onClick={addItem}
-        className="mt-2 text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+        className="mt-2 text-sm cursor-pointer hover:opacity-50 transition-opacity"
+        style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}
       >
         + Tilføj punkt
       </button>
@@ -128,34 +132,27 @@ function SortablePoint({
     <div ref={setNodeRef} style={style} className="flex items-center gap-2">
       <button
         type="button"
-        className="text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing touch-none"
+        className="cursor-grab active:cursor-grabbing touch-none hover:opacity-50 transition-opacity"
         {...attributes}
         {...listeners}
       >
-        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-          <circle cx="5" cy="3" r="1.5" />
-          <circle cx="11" cy="3" r="1.5" />
-          <circle cx="5" cy="8" r="1.5" />
-          <circle cx="11" cy="8" r="1.5" />
-          <circle cx="5" cy="13" r="1.5" />
-          <circle cx="11" cy="13" r="1.5" />
-        </svg>
+        <FontAwesomeIcon icon={faGripDots} style={{ color: "var(--system-icon2, #FF0000)", fontSize: 12 }} />
       </button>
-      <span className="text-gray-400 text-sm">•</span>
       <input
         type="text"
         value={item.text}
         onChange={(e) => onUpdate(item.id, e.target.value)}
         placeholder="Skriv et handlingspunkt..."
-        className="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="flex-1 rounded-lg px-3 py-1.5 text-sm"
+        style={{ fontFamily: "var(--font-figtree)", backgroundColor: "var(--system-form-bg0, #FF0000)", color: "var(--system-form-text0, #FF0000)", border: "none", outline: "none" }}
       />
       <button
         type="button"
         onClick={() => onRemove(item.id)}
-        className="text-gray-400 hover:text-red-500 text-sm cursor-pointer px-1"
+        className="cursor-pointer hover:opacity-50 transition-opacity px-1"
         title="Fjern punkt"
       >
-        ✕
+        <FontAwesomeIcon icon={faTrash} style={{ color: "var(--system-error, #FF0000)", fontSize: 12 }} />
       </button>
     </div>
   );
