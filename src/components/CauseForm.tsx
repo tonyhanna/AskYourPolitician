@@ -9,7 +9,7 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
   const canHover = useRef(false);
   useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
   const [open, setOpen] = useState(false);
-  const textareaRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Listen for nav button open/close
   useEffect(() => {
@@ -79,7 +79,7 @@ export function CauseForm({ politicianId }: { politicianId: string }) {
             Overskrift
           </label>
           <textarea
-            ref={textareaRef as React.RefObject<HTMLTextAreaElement>}
+            ref={textareaRef}
             id="cause-title"
             name="title"
             rows={1}
