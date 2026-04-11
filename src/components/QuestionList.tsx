@@ -1152,8 +1152,8 @@ function QuestionItem({
                 finally { setPinning(false); }
               }}
               disabled={pinning}
-              onMouseEnter={() => setPinHover(true)}
-              onMouseLeave={() => setPinHover(false)}
+              onMouseEnter={() => { if (canHover.current) setPinHover(true); }}
+              onMouseLeave={() => { if (canHover.current) setPinHover(false); }}
               className="cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-50"
               style={{
                 height: 40, width: 40,
