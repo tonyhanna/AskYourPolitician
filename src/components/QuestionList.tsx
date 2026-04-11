@@ -1102,7 +1102,7 @@ function QuestionItem({
                 setPinning(true);
                 setPinHover(false);
                 setOptimisticPinned(!isPinned);
-                try { await togglePinQuestion(question.id); }
+                try { await togglePinQuestion(question.id); router.refresh(); }
                 catch (e) { setOptimisticPinned(null); alert(e instanceof Error ? e.message : "Der opstod en fejl"); }
                 finally { setPinning(false); }
               }}
