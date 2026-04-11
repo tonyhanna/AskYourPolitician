@@ -6,9 +6,9 @@ import { upload } from "@vercel/blob/client";
 import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster, getMuxUploadUrl, submitMuxAnswer, checkMuxAnswerStatus, archiveQuestion, unarchiveQuestion } from "@/app/politiker/dashboard/actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUp, faXmark, faPlay, faUpload } from "@fortawesome/free-solid-svg-icons";
-import { faHourglass, faShare, faPen, faTrash, faAlarmExclamation, faThumbsUp, faArchive, faCommentCheck, faThumbtack } from "@fortawesome/pro-duotone-svg-icons";
+import { faHourglass, faShare, faPen, faTrash, faAlarmExclamation, faThumbsUp, faArchive, faCommentCheck, faStar } from "@fortawesome/pro-duotone-svg-icons";
 import { faReply } from "@fortawesome/pro-solid-svg-icons";
-import { faThumbtackAngleRegular } from "@/lib/custom-icons";
+import { faStarRegular } from "@/lib/custom-icons";
 import { faCopy } from "@fortawesome/free-solid-svg-icons";
 import { useShareCopy } from "@/hooks/useShareCopy";
 import { CopyLinkButton } from "./CopyLinkButton";
@@ -118,8 +118,25 @@ export function QuestionList({
   const [playingId, setPlayingId] = useState<string | null>(null);
   // Optimistic pin overrides — key: questionId, value: pinned state
   const [pinOverrides, setPinOverrides] = useState<Record<string, boolean>>({});
-  // Reset overrides when server data arrives (questions prop changes)
-  useEffect(() => { setPinOverrides({}); }, [questions]);
+  // Reconcile overrides when server data arrives — only clear overrides whose
+  // server state now matches the optimistic value (= resolved).  Keep overrides
+  // where the server hasn't caught up yet (iOS Safari stale-cache issue).
+  useEffect(() => {
+    setPinOverrides(prev => {
+      if (Object.keys(prev).length === 0) return prev;
+      const next: Record<string, boolean> = {};
+      for (const [id, val] of Object.entries(prev)) {
+        const q = questions.find(x => x.id === id);
+        // Keep override when server state hasn't converged yet
+        if (q && q.pinned !== val) next[id] = val;
+      }
+      return Object.keys(next).length === 0 ? {} : next;
+    });
+  }, [questions]);
+  // Effective pin state: override first, then server
+  const effectivePinned = useCallback((q: { id: string; pinned: boolean }) =>
+    pinOverrides[q.id] !== undefined ? pinOverrides[q.id] : q.pinned
+  , [pinOverrides]);
   const handlePinToggle = useCallback((questionId: string, newPinned: boolean) => {
     const q = questions.find(x => x.id === questionId);
     if (!q) return;
@@ -152,14 +169,14 @@ export function QuestionList({
   const unanswered = questions.filter((q) => q.goalReached && !hasAnswer(q) && !q.deadlineMissed);
   const answered = questions.filter((q) => hasAnswer(q));
 
-  // Sort pinned to top within each group
+  // Sort pinned to top within each group (uses optimistic effective state)
   const allUnanswered = [...missed, ...unanswered];
-  const unansweredPinned = allUnanswered.filter((q) => q.pinned);
-  const unansweredNotPinned = allUnanswered.filter((q) => !q.pinned);
-  const forUpvotingPinned = forUpvoting.filter((q) => q.pinned);
-  const forUpvotingNotPinned = forUpvoting.filter((q) => !q.pinned);
-  const answeredPinned = answered.filter((q) => q.pinned);
-  const answeredNotPinned = answered.filter((q) => !q.pinned);
+  const unansweredPinned = allUnanswered.filter((q) => effectivePinned(q));
+  const unansweredNotPinned = allUnanswered.filter((q) => !effectivePinned(q));
+  const forUpvotingPinned = forUpvoting.filter((q) => effectivePinned(q));
+  const forUpvotingNotPinned = forUpvoting.filter((q) => !effectivePinned(q));
+  const answeredPinned = answered.filter((q) => effectivePinned(q));
+  const answeredNotPinned = answered.filter((q) => !effectivePinned(q));
 
   const hasCol1Content = pendingSuggestions.length > 0 || allUnanswered.length > 0 || forUpvoting.length > 0;
 
@@ -1146,8 +1163,9 @@ function QuestionItem({
             >
               <FontAwesomeIcon
                 icon={pinHover
-                  ? (isPinned ? faThumbtackAngleRegular : faThumbtack)
-                  : (isPinned ? faThumbtack : faThumbtackAngleRegular)}
+                  ? (isPinned ? faStarRegular : faStar)
+                  : (isPinned ? faStar : faStarRegular)}
+                swapOpacity={isPinned && !pinHover}
                 style={{
                   color: (pinHover ? !isPinned : isPinned)
                     ? "var(--system-icon0, #FF0000)"

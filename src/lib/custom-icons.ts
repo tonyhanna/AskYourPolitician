@@ -1,18 +1,18 @@
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 /**
- * Custom FontAwesome icon: thumbtack-angle from Classic Regular style.
- * Extracted from FontAwesome Pro 7.2.0 (regular/thumbtack-angle.svg)
- * because @fortawesome/pro-regular-svg-icons npm package is not installed.
+ * Custom FontAwesome icon: star from Classic Regular (outline) style.
+ * Extracted from @fortawesome/free-regular-svg-icons to avoid naming
+ * conflicts with the duotone faStar import used elsewhere.
  */
-export const faThumbtackAngleRegular: IconDefinition = {
+export const faStarRegular: IconDefinition = {
   prefix: "far" as IconDefinition["prefix"],
-  iconName: "thumbtack-angle" as IconDefinition["iconName"],
+  iconName: "star" as IconDefinition["iconName"],
   icon: [
-    512, // width
+    576, // width
     512, // height
     [], // ligatures
-    "", // unicode
-    "M303.1 6.9c9.4-9.4 24.6-9.4 33.9 0 4 4 50.9 50.9 140.6 140.6L505.2 175c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-9.2-9.2-92 106.8c6.2 43.1-2.8 88.3-28 126.9l-3.2 4.9c-20.1-13.1-20.1-13.1 0 0-13.9 21.3-43.8 24.4-61.8 6.4L67.4 235c-18-18-14.8-47.9 6.4-61.8l4.8-3.2c38.6-25.2 83.8-34.2 126.9-28l106.8-92-9.2-9.2c-9.4-9.4-9.4-24.6 0-33.9zm43.2 77.2L228.3 185.9c-5.7 4.9-13.3 6.9-20.7 5.3-33.2-7.1-68.8-1.7-99.3 16.9L304 403.8c18.6-30.5 24-66 16.9-99.3-1.6-7.3 .4-15 5.3-20.7L428 165.7 346.4 84.1zM121.3 356.9L155.2 390.8 41.1 505c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9L121.3 356.9z",
+    "f005", // unicode
+    "M288.1-32c9 0 17.3 5.1 21.4 13.1L383 125.3 542.9 150.7c8.9 1.4 16.3 7.7 19.1 16.3s.5 18-5.8 24.4L441.7 305.9 467 465.8c1.4 8.9-2.3 17.9-9.6 23.2s-17 6.1-25 2L288.1 417.6 143.8 491c-8 4.1-17.7 3.3-25-2s-11-14.2-9.6-23.2L134.4 305.9 20 191.4c-6.4-6.4-8.6-15.8-5.8-24.4s10.1-14.9 19.1-16.3l159.9-25.4 73.6-144.2c4.1-8 12.4-13.1 21.4-13.1zm0 76.8L230.3 158c-3.5 6.8-10 11.6-17.6 12.8l-125.5 20 89.8 89.9c5.4 5.4 7.9 13.1 6.7 20.7l-19.8 125.5 113.3-57.6c6.8-3.5 14.9-3.5 21.8 0l113.3 57.6-19.8-125.5c-1.2-7.6 1.3-15.3 6.7-20.7l89.8-89.9-125.5-20c-7.6-1.2-14.1-6-17.6-12.8L288.1 44.8z",
   ],
 };
