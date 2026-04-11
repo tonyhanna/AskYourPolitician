@@ -6,7 +6,7 @@ import { upload } from "@vercel/blob/client";
 import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster, getMuxUploadUrl, submitMuxAnswer, checkMuxAnswerStatus, archiveQuestion, unarchiveQuestion } from "@/app/politiker/dashboard/actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUp, faXmark, faPlay, faUpload } from "@fortawesome/free-solid-svg-icons";
-import { faHourglass, faShare, faPen, faTrash, faAlarmExclamation, faThumbsUp, faArchive, faCommentCheck, faStar } from "@fortawesome/pro-duotone-svg-icons";
+import { faHourglass, faShare, faPen, faTrash, faAlarmExclamation, faThumbsUp, faArchive, faCommentCheck, faStar, faHeadSideSpeak } from "@fortawesome/pro-duotone-svg-icons";
 import { faReply } from "@fortawesome/pro-solid-svg-icons";
 import { faStarRegular } from "@/lib/custom-icons";
 import { faCopy } from "@fortawesome/free-solid-svg-icons";
@@ -187,23 +187,23 @@ export function QuestionList({
       <div className="space-y-6">
         {pendingSuggestions.length > 0 && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
+            <h1 style={{ fontSize: "clamp(33px, 5vw, 41px)", fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text3, #FF0000)", marginBottom: 0 }}>
               Til godkendelse
-              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: "var(--system-error, #FF0000)", color: "var(--system-error-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 700, position: "relative", top: -1 }}>
+              <span className="ml-3 font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 36, height: 36, fontSize: "clamp(14px, 2vw, 18px)", backgroundColor: "var(--system-error, #FF0000)", color: "var(--system-error-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 700, position: "relative", top: -1 }}>
                 {pendingSuggestions.length}
               </span>
-            </h3>
+            </h1>
             <SuggestionList suggestions={pendingSuggestions} availableTags={availableTags} />
           </div>
         )}
         {allUnanswered.length > 0 ? (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
+            <h1 style={{ fontSize: "clamp(33px, 5vw, 41px)", fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text3, #FF0000)", marginBottom: 0 }}>
               Ubesvaret
-              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: missed.length > 0 ? "var(--system-error, #FF0000)" : "var(--system-pending, #FF0000)", color: missed.length > 0 ? "var(--system-error-contrast, #FF0000)" : "var(--system-pending-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 700, position: "relative", top: -1 }}>
+              <span className="ml-3 font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 36, height: 36, fontSize: "clamp(14px, 2vw, 18px)", backgroundColor: missed.length > 0 ? "var(--system-error, #FF0000)" : "var(--system-pending, #FF0000)", color: missed.length > 0 ? "var(--system-error-contrast, #FF0000)" : "var(--system-pending-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 700, position: "relative", top: -1 }}>
                 {allUnanswered.length}
               </span>
-            </h3>
+            </h1>
             {unansweredPinned.map((q) => (
               <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} pinOverride={pinOverrides[q.id]} onPinToggle={handlePinToggle} />
             ))}
@@ -217,12 +217,12 @@ export function QuestionList({
         ) : null}
         {forUpvoting.length > 0 && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
+            <h1 style={{ fontSize: "clamp(33px, 5vw, 41px)", fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text3, #FF0000)", marginBottom: 0 }}>
               Til upvote
-              <span className="ml-2 text-xs font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 22, height: 22, backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 700, position: "relative", top: -1 }}>
+              <span className="ml-3 font-medium align-middle inline-flex items-center justify-center rounded-full" style={{ width: 36, height: 36, fontSize: "clamp(14px, 2vw, 18px)", backgroundColor: "var(--system-success, #FF0000)", color: "var(--system-success-contrast, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 700, position: "relative", top: -1 }}>
                 {forUpvoting.length}
               </span>
-            </h3>
+            </h1>
             {forUpvotingPinned.map((q) => (
               <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} pinOverride={pinOverrides[q.id]} onPinToggle={handlePinToggle} />
             ))}
@@ -244,16 +244,16 @@ export function QuestionList({
             <button
               type="button"
               onClick={() => setShowArchivedCol1((v) => !v)}
-              className={`cursor-pointer hover:opacity-50 transition-opacity ${showArchivedCol1 ? "text-lg font-semibold" : "text-sm"}`}
-              style={{ fontFamily: "var(--font-figtree)", fontWeight: showArchivedCol1 ? 600 : 500, color: "var(--system-text2, #FF0000)" }}
+              className="cursor-pointer hover:opacity-50 transition-opacity"
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: showArchivedCol1 ? "var(--system-text3, #FF0000)" : "var(--system-text2, #FF0000)", fontSize: showArchivedCol1 ? "clamp(33px, 5vw, 41px)" : 14 }}
             >
-              <FontAwesomeIcon icon={showArchivedCol1 ? faXmark : faArchive} style={{ fontSize: showArchivedCol1 ? 18 : 14, marginRight: 6 }} />
-              {showArchivedCol1 ? "Arkiverede spørgsmål" : "Vis arkiverede spørgsmål"}
+              <FontAwesomeIcon icon={showArchivedCol1 ? faXmark : faArchive} style={{ fontSize: showArchivedCol1 ? "0.7em" : 14, marginRight: 6 }} />
+              Arkiveret
             </button>
             {showArchivedCol1 && (
               <div className="space-y-4 mt-4">
                 {archivedUnanswered.map((q) => (
-                  <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} pinOverride={pinOverrides[q.id]} onPinToggle={handlePinToggle} />
+                  <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
                 ))}
               </div>
             )}
@@ -265,7 +265,7 @@ export function QuestionList({
       <div className="space-y-6">
         {answered.length > 0 ? (
           <>
-            <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>Besvaret</h3>
+            <h1 style={{ fontSize: "clamp(33px, 5vw, 41px)", fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text3, #FF0000)", marginBottom: 0 }}>Besvaret</h1>
             {answeredPinned.map((q) => (
               <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} pinOverride={pinOverrides[q.id]} onPinToggle={handlePinToggle} />
             ))}
@@ -277,23 +277,26 @@ export function QuestionList({
             ))}
           </>
         ) : (
-          <p className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>Ingen besvarede spørgsmål</p>
+          <>
+            <h1 style={{ fontSize: "clamp(33px, 5vw, 41px)", fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-text3, #FF0000)", marginBottom: 0 }}>Besvaret</h1>
+            <p className="text-sm" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)", fontWeight: 500 }}>Ingen besvarede spørgsmål</p>
+          </>
         )}
         {archivedAnswered.length > 0 && (
           <div className="pt-4" style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }}>
             <button
               type="button"
               onClick={() => setShowArchivedCol2((v) => !v)}
-              className={`cursor-pointer hover:opacity-50 transition-opacity ${showArchivedCol2 ? "text-lg font-semibold" : "text-sm"}`}
-              style={{ fontFamily: "var(--font-figtree)", fontWeight: showArchivedCol2 ? 600 : 500, color: "var(--system-text2, #FF0000)" }}
+              className="cursor-pointer hover:opacity-50 transition-opacity"
+              style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: showArchivedCol2 ? "var(--system-text3, #FF0000)" : "var(--system-text2, #FF0000)", fontSize: showArchivedCol2 ? "clamp(33px, 5vw, 41px)" : 14 }}
             >
-              <FontAwesomeIcon icon={showArchivedCol2 ? faXmark : faArchive} style={{ fontSize: showArchivedCol2 ? 18 : 14, marginRight: 6 }} />
-              {showArchivedCol2 ? "Arkiverede spørgsmål" : "Vis arkiverede spørgsmål"}
+              <FontAwesomeIcon icon={showArchivedCol2 ? faXmark : faArchive} style={{ fontSize: showArchivedCol2 ? "0.7em" : 14, marginRight: 6 }} />
+              Arkiveret
             </button>
             {showArchivedCol2 && (
               <div className="space-y-4 mt-4">
                 {archivedAnswered.map((q) => (
-                  <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} pinOverride={pinOverrides[q.id]} onPinToggle={handlePinToggle} />
+                  <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
                 ))}
               </div>
             )}
@@ -1141,41 +1144,43 @@ function QuestionItem({
       <div style={{ borderTop: "1px solid var(--system-bg2, #FF0000)", padding: "12px 10px" }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center" style={{ gap: 10 }}>
-            <button
-              onClick={async () => {
-                setPinning(true);
-                setPinHover(false);
-                onPinToggle?.(question.id, !isPinned);
-                try {
-                  await togglePinQuestion(question.id);
-                  router.refresh();
-                }
-                catch (e) { onPinToggle?.(question.id, isPinned); alert(e instanceof Error ? e.message : "Der opstod en fejl"); }
-                finally { setPinning(false); }
-              }}
-              disabled={pinning}
-              onMouseEnter={() => { if (canHover.current) setPinHover(true); }}
-              onMouseLeave={() => { if (canHover.current) setPinHover(false); }}
-              className="cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-50"
-              style={{
-                height: 40, width: 40,
-                backgroundColor: "var(--system-bg0, #FF0000)",
-              }}
-              aria-label={isPinned ? "Unpin" : "Pin"}
-            >
-              <FontAwesomeIcon
-                icon={pinHover
-                  ? (isPinned ? faStarRegular : faStar)
-                  : (isPinned ? faStar : faStarRegular)}
-                swapOpacity={isPinned && !pinHover}
-                style={{
-                  color: (pinHover ? !isPinned : isPinned)
-                    ? "var(--system-icon0, #FF0000)"
-                    : "var(--system-icon2, #FF0000)",
-                  fontSize: 16,
+            {onPinToggle && (
+              <button
+                onClick={async () => {
+                  setPinning(true);
+                  setPinHover(false);
+                  onPinToggle(question.id, !isPinned);
+                  try {
+                    await togglePinQuestion(question.id);
+                    router.refresh();
+                  }
+                  catch (e) { onPinToggle(question.id, isPinned); alert(e instanceof Error ? e.message : "Der opstod en fejl"); }
+                  finally { setPinning(false); }
                 }}
-              />
-            </button>
+                disabled={pinning}
+                onMouseEnter={() => { if (canHover.current) setPinHover(true); }}
+                onMouseLeave={() => { if (canHover.current) setPinHover(false); }}
+                className="cursor-pointer rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-50"
+                style={{
+                  height: 40, width: 40,
+                  backgroundColor: "var(--system-bg0, #FF0000)",
+                }}
+                aria-label={isPinned ? "Unpin" : "Pin"}
+              >
+                <FontAwesomeIcon
+                  icon={pinHover
+                    ? (isPinned ? faStarRegular : faStar)
+                    : (isPinned ? faStar : faStarRegular)}
+                  swapOpacity={isPinned && !pinHover}
+                  style={{
+                    color: (pinHover ? !isPinned : isPinned)
+                      ? "var(--system-icon0, #FF0000)"
+                      : "var(--system-icon2, #FF0000)",
+                    fontSize: 16,
+                  }}
+                />
+              </button>
+            )}
             <span className="text-sm" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>
               {question.upvoteCount} / {question.upvoteGoal} {question.upvoteGoal === 1 ? "upvote" : "upvotes"}
             </span>
@@ -1269,7 +1274,8 @@ function QuestionItem({
                     aria-label="Besvar"
                   >
                     <FontAwesomeIcon
-                      icon={replyOpen ? faXmark : ((question.answerUrl || question.muxAssetStatus) ? faPen : faReply)}
+                      icon={replyOpen ? faXmark : ((question.answerUrl || question.muxAssetStatus) ? faHeadSideSpeak : faReply)}
+
                       className="group-hover:opacity-50 transition-opacity"
                       style={{ color: replyOpen ? "var(--system-error, #FF0000)" : (question.answerUrl || question.muxAssetStatus) ? "var(--system-icon0, #FF0000)" : "var(--system-success, #FF0000)", fontSize: 16 }}
                     />
@@ -1309,7 +1315,8 @@ function QuestionItem({
                 aria-label="Besvar"
               >
                 <FontAwesomeIcon
-                  icon={replyOpen ? faXmark : ((question.answerUrl || question.muxAssetStatus) ? faPen : faReply)}
+                  icon={replyOpen ? faXmark : ((question.answerUrl || question.muxAssetStatus) ? faHeadSideSpeak : faReply)}
+                  swapOpacity={!replyOpen && !!(question.answerUrl || question.muxAssetStatus)}
                   className="group-hover:opacity-50 transition-opacity"
                   style={{ color: replyOpen ? "var(--system-error, #FF0000)" : (question.answerUrl || question.muxAssetStatus) ? "var(--system-icon0, #FF0000)" : "var(--system-success, #FF0000)", fontSize: 16 }}
                 />
