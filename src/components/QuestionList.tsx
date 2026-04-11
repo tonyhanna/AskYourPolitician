@@ -475,6 +475,8 @@ function QuestionItem({
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [pinning, setPinning] = useState(false);
   const isPinned = pinOverride !== undefined ? pinOverride : question.pinned;
+  const canHover = useRef(false);
+  useEffect(() => { canHover.current = window.matchMedia("(hover: hover)").matches; }, []);
 
   const [clipError, setClipError] = useState<string | null>(null);
   // Operation counter — incremented on every new submit attempt.
