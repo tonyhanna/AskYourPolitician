@@ -183,29 +183,31 @@ export function QuestionFeedFilter({
     <div className="flex flex-col flex-1">
       {/* Sticky section nav + filter + tags */}
       <StickyPillNav
-        items={showSectionNav ? sectionNavItems : []}
+        items={filtersOpen ? (showSectionNav ? sectionNavItems : []) : sectionNavItems}
         activeId={activeSection || ""}
         onSelect={(id) => document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
         blurBackground={filtersOpen}
         leftOverride={!showSectionNav && filtersOpen && allTags.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-            {allTags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => toggleTag(tag)}
-                className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
-                style={{
-                  fontFamily: "var(--font-figtree)", fontWeight: 500,
-                  backgroundColor: selectedTags.has(tag) ? "var(--system-bg0-contrast, #FF0000)" : "var(--system-bg1, #FF0000)",
-                  transition: "background-color 200ms ease",
-                  color: selectedTags.has(tag) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)",
-                }}
-                onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2, #FF0000)"; }}
-                onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)"; }}
-              >
-                {tag}
-              </button>
-            ))}
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              {allTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => toggleTag(tag)}
+                  className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-all duration-150"
+                  style={{
+                    fontFamily: "var(--font-figtree)", fontWeight: 500,
+                    backgroundColor: selectedTags.has(tag) ? "var(--system-bg0-contrast, #FF0000)" : "var(--system-bg1, #FF0000)",
+                    transition: "background-color 200ms ease",
+                    color: selectedTags.has(tag) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)",
+                  }}
+                  onPointerEnter={(e) => { if (!canHover.current) return; e.currentTarget.style.color = "var(--system-text2, #FF0000)"; }}
+                  onPointerLeave={(e) => { if (!canHover.current) return; e.currentTarget.style.color = selectedTags.has(tag) ? "var(--system-text0-contrast, #FF0000)" : "var(--system-text0, #FF0000)"; }}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
           </div>
         ) : undefined}
         rightContent={
@@ -251,14 +253,19 @@ export function QuestionFeedFilter({
             )}
           </div>
         }
-        bottomContent={filtersOpen && allTags.length > 0 && showSectionNav ? (
+        bottomContent={filtersOpen && allTags.length > 0 ? (
+          !showSectionNav ? (
+            <div style={{ paddingTop: 18 }}>
+              <hr className="border-0" style={{ borderTop: "1px solid var(--system-bg2)", opacity: isAtTop ? 1 : 0, transition: "opacity 300ms ease", position: "relative", zIndex: 1 }} />
+            </div>
+          ) :
           <div style={{ paddingTop: 10 }}>
             <div className="flex flex-wrap gap-2">
             {allTags.map((tag) => (
               <button
                 key={tag}
                 onClick={() => toggleTag(tag)}
-                className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
+                className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-all duration-150"
                 style={{
                   fontFamily: "var(--font-figtree)", fontWeight: 500,
                   backgroundColor: selectedTags.has(tag) ? "var(--system-bg0-contrast, #FF0000)" : "var(--system-bg1, #FF0000)",
@@ -272,7 +279,7 @@ export function QuestionFeedFilter({
               </button>
             ))}
             </div>
-            <hr className="border-0 mt-4" style={{ borderTop: "1px solid var(--system-bg2)", opacity: isAtTop ? 1 : 0, transition: "opacity 300ms ease", position: "relative", zIndex: 1 }} />
+            <hr className="border-0" style={{ marginTop: 18, borderTop: "1px solid var(--system-bg2)", opacity: isAtTop ? 1 : 0, transition: "opacity 300ms ease", position: "relative", zIndex: 1 }} />
           </div>
         ) : undefined}
       />
@@ -327,7 +334,15 @@ export function QuestionFeedFilter({
       )}
 
       {/* Separator between answered and regular questions */}
-      {answeredQuestions.length > 0 && (
+      {answeredQuestions.length > 0 && filteredQuestions.length > 0 && (
+        <div
+          className="my-6"
+          style={{ height: 1, backgroundColor: "var(--system-bg2, #FF0000)" }}
+        />
+      )}
+
+      {/* Separator between pinned and unanswered (when no answered in between) */}
+      {pinnedQuestions.length > 0 && answeredQuestions.length === 0 && filteredQuestions.length > 0 && (
         <div
           className="my-6"
           style={{ height: 1, backgroundColor: "var(--system-bg2, #FF0000)" }}

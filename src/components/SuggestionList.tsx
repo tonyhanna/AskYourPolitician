@@ -120,6 +120,7 @@ function SuggestionItem({
             <textarea
               value={editedText}
               onChange={(e) => setEditedText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
               maxLength={300}
               rows={2}
               className="w-full mb-1 rounded-lg px-3 py-2 resize-none overflow-hidden"
@@ -225,7 +226,7 @@ function SuggestionItem({
                     key={tag.tagId}
                     type="button"
                     onClick={() => toggleTag(tag.tagId)}
-                    className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
+                    className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-all duration-150"
                     style={{
                       fontFamily: "var(--font-figtree)", fontWeight: 500,
                       backgroundColor: selectedTags.has(tag.tagId) ? "var(--system-bg0-contrast, #FF0000)" : "var(--system-bg0, #FF0000)",

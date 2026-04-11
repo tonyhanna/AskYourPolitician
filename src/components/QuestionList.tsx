@@ -429,6 +429,10 @@ function QuestionItem({
   const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [pinning, setPinning] = useState(false);
+  const [optimisticPinned, setOptimisticPinned] = useState<boolean | null>(null);
+  const isPinned = optimisticPinned !== null ? optimisticPinned : question.pinned;
+  // Reset optimistic state when server data arrives
+  useEffect(() => { setOptimisticPinned(null); }, [question.pinned]);
 
   const [clipError, setClipError] = useState<string | null>(null);
   // Operation counter — incremented on every new submit attempt.
@@ -861,6 +865,7 @@ function QuestionItem({
             defaultValue={question.text}
             maxLength={300}
             required
+            onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
             rows={2}
             className="w-full mb-1 rounded-lg px-3 py-2 resize-none overflow-hidden"
             style={{ fontSize: 22, lineHeight: 1.3, fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-form-text0, #FF0000)", backgroundColor: "var(--system-form-bg0, #FF0000)", border: "none", outline: "none" }}
@@ -908,7 +913,7 @@ function QuestionItem({
                     key={tag.tagId}
                     type="button"
                     onClick={() => toggleTag(tag.tagId)}
-                    className="text-sm px-3 py-1.5 rounded-full border border-transparent cursor-pointer transition-all duration-150"
+                    className="text-sm px-3 py-1.5 rounded-full cursor-pointer transition-all duration-150"
                     style={{
                       fontFamily: "var(--font-figtree)", fontWeight: 500,
                       backgroundColor: selectedTags.has(tag.tagId) ? "var(--system-bg0-contrast, #FF0000)" : "var(--system-bg0, #FF0000)",
@@ -1096,8 +1101,9 @@ function QuestionItem({
               onClick={async () => {
                 setPinning(true);
                 setPinHover(false);
+                setOptimisticPinned(!isPinned);
                 try { await togglePinQuestion(question.id); }
-                catch (e) { alert(e instanceof Error ? e.message : "Der opstod en fejl"); }
+                catch (e) { setOptimisticPinned(null); alert(e instanceof Error ? e.message : "Der opstod en fejl"); }
                 finally { setPinning(false); }
               }}
               disabled={pinning}
@@ -1108,14 +1114,14 @@ function QuestionItem({
                 height: 40, width: 40,
                 backgroundColor: "var(--system-bg0, #FF0000)",
               }}
-              aria-label={question.pinned ? "Unpin" : "Pin"}
+              aria-label={isPinned ? "Unpin" : "Pin"}
             >
               <FontAwesomeIcon
                 icon={pinHover
-                  ? (question.pinned ? faStarOfLifeRegular : faStarOfLifeSolid)
-                  : (question.pinned ? faStarOfLifeSolid : faStarOfLifeRegular)}
+                  ? (isPinned ? faStarOfLifeRegular : faStarOfLifeSolid)
+                  : (isPinned ? faStarOfLifeSolid : faStarOfLifeRegular)}
                 style={{
-                  color: (pinHover ? !question.pinned : question.pinned)
+                  color: (pinHover ? !isPinned : isPinned)
                     ? "var(--system-icon0, #FF0000)"
                     : "var(--system-icon2, #FF0000)",
                   fontSize: 16,
