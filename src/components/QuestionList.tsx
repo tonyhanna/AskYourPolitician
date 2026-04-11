@@ -6,9 +6,9 @@ import { upload } from "@vercel/blob/client";
 import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster, getMuxUploadUrl, submitMuxAnswer, checkMuxAnswerStatus, archiveQuestion, unarchiveQuestion } from "@/app/politiker/dashboard/actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUp, faXmark, faPlay, faUpload } from "@fortawesome/free-solid-svg-icons";
-import { faHourglass, faShare, faPen, faTrash, faAlarmExclamation, faThumbsUp, faArchive, faCommentCheck } from "@fortawesome/pro-duotone-svg-icons";
-import { faStarOfLife as faStarOfLifeSolid, faReply } from "@fortawesome/pro-solid-svg-icons";
-import { faStarOfLifeRegular } from "@/lib/custom-icons";
+import { faHourglass, faShare, faPen, faTrash, faAlarmExclamation, faThumbsUp, faArchive, faCommentCheck, faThumbtack } from "@fortawesome/pro-duotone-svg-icons";
+import { faReply } from "@fortawesome/pro-solid-svg-icons";
+import { faThumbtackAngleRegular } from "@/lib/custom-icons";
 import { faCopy } from "@fortawesome/free-solid-svg-icons";
 import { useShareCopy } from "@/hooks/useShareCopy";
 import { CopyLinkButton } from "./CopyLinkButton";
@@ -124,18 +124,21 @@ export function QuestionList({
     const q = questions.find(x => x.id === questionId);
     if (!q) return;
     const qHasAnswer = !!(q.answerUrl || q.muxAssetStatus);
-    const overrides: Record<string, boolean> = { [questionId]: newPinned };
-    // If pinning, unpin others in same category
-    if (newPinned) {
-      for (const other of questions) {
-        if (other.id === questionId) continue;
-        const otherHasAnswer = !!(other.answerUrl || other.muxAssetStatus);
-        if (otherHasAnswer === qHasAnswer && other.pinned) {
-          overrides[other.id] = false;
+    setPinOverrides(prev => {
+      const overrides: Record<string, boolean> = { ...prev, [questionId]: newPinned };
+      // If pinning, unpin others in same category (check both server state and current overrides)
+      if (newPinned) {
+        for (const other of questions) {
+          if (other.id === questionId) continue;
+          const otherHasAnswer = !!(other.answerUrl || other.muxAssetStatus);
+          const otherIsPinned = overrides[other.id] !== undefined ? overrides[other.id] : other.pinned;
+          if (otherHasAnswer === qHasAnswer && otherIsPinned) {
+            overrides[other.id] = false;
+          }
         }
       }
-    }
-    setPinOverrides(prev => ({ ...prev, ...overrides }));
+      return overrides;
+    });
   }, [questions]);
   const [showArchivedCol1, setShowArchivedCol1] = useState(false);
   const [showArchivedCol2, setShowArchivedCol2] = useState(false);
@@ -1143,8 +1146,8 @@ function QuestionItem({
             >
               <FontAwesomeIcon
                 icon={pinHover
-                  ? (isPinned ? faStarOfLifeRegular : faStarOfLifeSolid)
-                  : (isPinned ? faStarOfLifeSolid : faStarOfLifeRegular)}
+                  ? (isPinned ? faThumbtackAngleRegular : faThumbtack)
+                  : (isPinned ? faThumbtack : faThumbtackAngleRegular)}
                 style={{
                   color: (pinHover ? !isPinned : isPinned)
                     ? "var(--system-icon0, #FF0000)"

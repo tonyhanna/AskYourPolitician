@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark, faCopy } from "@fortawesome/free-solid-svg-icons";
-import { faShare, faFire, faStarOfLife, faHeadSideSpeak, faBoxBallot } from "@fortawesome/pro-duotone-svg-icons";
+import { faShare, faFire, faStar, faHeadSideSpeak, faBoxBallot } from "@fortawesome/pro-duotone-svg-icons";
 import { PlayableMediaCard } from "./PlayableMediaCard";
 import { AnsweredQuestionCard } from "./AnsweredQuestionCard";
 import { useShareCopy } from "@/hooks/useShareCopy";
@@ -173,7 +173,7 @@ export function QuestionFeedFilter({
   // Build nav items dynamically based on which sections have content
   const sectionNavItems = useMemo(() => {
     const items: PillNavItem[] = [];
-    if (pinnedQuestions.length > 0) items.push({ id: "pinned", label: "Udvalgt", icon: faStarOfLife, swapIconOpacity: true });
+    if (pinnedQuestions.length > 0) items.push({ id: "pinned", label: "Udvalgt", icon: faStar, swapIconOpacity: true });
     if (answeredQuestions.length > 0) items.push({ id: "answered", label: "Besvaret", icon: faHeadSideSpeak, swapIconOpacity: true });
     if (filteredQuestions.length > 0) items.push({ id: "unanswered", label: "Ubesvaret", icon: faBoxBallot });
     return items;
