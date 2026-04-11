@@ -116,6 +116,27 @@ export function QuestionList({
   pendingSuggestions?: PendingSuggestion[];
 }) {
   const [playingId, setPlayingId] = useState<string | null>(null);
+  // Optimistic pin overrides — key: questionId, value: pinned state
+  const [pinOverrides, setPinOverrides] = useState<Record<string, boolean>>({});
+  // Reset overrides when server data arrives (questions prop changes)
+  useEffect(() => { setPinOverrides({}); }, [questions]);
+  const handlePinToggle = useCallback((questionId: string, newPinned: boolean) => {
+    const q = questions.find(x => x.id === questionId);
+    if (!q) return;
+    const qHasAnswer = !!(q.answerUrl || q.muxAssetStatus);
+    const overrides: Record<string, boolean> = { [questionId]: newPinned };
+    // If pinning, unpin others in same category
+    if (newPinned) {
+      for (const other of questions) {
+        if (other.id === questionId) continue;
+        const otherHasAnswer = !!(other.answerUrl || other.muxAssetStatus);
+        if (otherHasAnswer === qHasAnswer && other.pinned) {
+          overrides[other.id] = false;
+        }
+      }
+    }
+    setPinOverrides(prev => ({ ...prev, ...overrides }));
+  }, [questions]);
   const [showArchivedCol1, setShowArchivedCol1] = useState(false);
   const [showArchivedCol2, setShowArchivedCol2] = useState(false);
   useEffect(() => { if (archivedQuestions.filter(q => !hasAnswer(q)).length === 0) setShowArchivedCol1(false); }, [archivedQuestions]);
@@ -164,13 +185,13 @@ export function QuestionList({
               </span>
             </h3>
             {unansweredPinned.map((q) => (
-              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} pinOverride={pinOverrides[q.id]} onPinToggle={handlePinToggle} />
             ))}
             {unansweredPinned.length > 0 && unansweredNotPinned.length > 0 && (
               <hr style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }} />
             )}
             {unansweredNotPinned.map((q) => (
-              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} pinOverride={pinOverrides[q.id]} onPinToggle={handlePinToggle} />
             ))}
           </div>
         ) : null}
@@ -183,13 +204,13 @@ export function QuestionList({
               </span>
             </h3>
             {forUpvotingPinned.map((q) => (
-              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} pinOverride={pinOverrides[q.id]} onPinToggle={handlePinToggle} />
             ))}
             {forUpvotingPinned.length > 0 && forUpvotingNotPinned.length > 0 && (
               <hr style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }} />
             )}
             {forUpvotingNotPinned.map((q) => (
-              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} pinOverride={pinOverrides[q.id]} onPinToggle={handlePinToggle} />
             ))}
           </div>
         )}
@@ -212,7 +233,7 @@ export function QuestionList({
             {showArchivedCol1 && (
               <div className="space-y-4 mt-4">
                 {archivedUnanswered.map((q) => (
-                  <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
+                  <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} pinOverride={pinOverrides[q.id]} onPinToggle={handlePinToggle} />
                 ))}
               </div>
             )}
@@ -226,13 +247,13 @@ export function QuestionList({
           <>
             <h3 className="text-lg font-semibold" style={{ color: "var(--system-text2, #FF0000)", fontFamily: "var(--font-figtree)" }}>Besvaret</h3>
             {answeredPinned.map((q) => (
-              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} pinOverride={pinOverrides[q.id]} onPinToggle={handlePinToggle} />
             ))}
             {answeredPinned.length > 0 && answeredNotPinned.length > 0 && (
               <hr style={{ borderTop: "1px solid var(--system-bg2, #FF0000)" }} />
             )}
             {answeredNotPinned.map((q) => (
-              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
+              <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} pinOverride={pinOverrides[q.id]} onPinToggle={handlePinToggle} />
             ))}
           </>
         ) : (
@@ -252,7 +273,7 @@ export function QuestionList({
             {showArchivedCol2 && (
               <div className="space-y-4 mt-4">
                 {archivedAnswered.map((q) => (
-                  <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} />
+                  <QuestionItem key={q.id} question={q} availableTags={availableTags} basePath={basePath} playingId={playingId} setPlayingId={setPlayingId} pinOverride={pinOverrides[q.id]} onPinToggle={handlePinToggle} />
                 ))}
               </div>
             )}
@@ -371,12 +392,16 @@ function QuestionItem({
   basePath,
   playingId,
   setPlayingId,
+  pinOverride,
+  onPinToggle,
 }: {
   question: Question;
   availableTags: { tagId: string; title: string }[];
   basePath: string;
   playingId: string | null;
   setPlayingId: (id: string | null) => void;
+  pinOverride?: boolean;
+  onPinToggle?: (questionId: string, newPinned: boolean) => void;
 }) {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -429,10 +454,7 @@ function QuestionItem({
   const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [pinning, setPinning] = useState(false);
-  const [optimisticPinned, setOptimisticPinned] = useState<boolean | null>(null);
-  const isPinned = optimisticPinned !== null ? optimisticPinned : question.pinned;
-  // Reset optimistic state when server data arrives
-  useEffect(() => { setOptimisticPinned(null); }, [question.pinned]);
+  const isPinned = pinOverride !== undefined ? pinOverride : question.pinned;
 
   const [clipError, setClipError] = useState<string | null>(null);
   // Operation counter — incremented on every new submit attempt.
@@ -1101,9 +1123,12 @@ function QuestionItem({
               onClick={async () => {
                 setPinning(true);
                 setPinHover(false);
-                setOptimisticPinned(!isPinned);
-                try { await togglePinQuestion(question.id); router.refresh(); }
-                catch (e) { setOptimisticPinned(null); alert(e instanceof Error ? e.message : "Der opstod en fejl"); }
+                onPinToggle?.(question.id, !isPinned);
+                try {
+                  await togglePinQuestion(question.id);
+                  router.refresh();
+                }
+                catch (e) { onPinToggle?.(question.id, isPinned); alert(e instanceof Error ? e.message : "Der opstod en fejl"); }
                 finally { setPinning(false); }
               }}
               disabled={pinning}
