@@ -151,7 +151,7 @@ export default async function QuestionLandingPage({ params }: Props) {
   // Resolve topbar bg color for theme-color meta + rubber-band
   const resolvePartyColor = (key: string | null | undefined, fb: string) => {
     if (!key) return fb;
-    if (key === "primary") return party?.color || fb;
+    if (key === "accent") return party?.color || fb;
     if (key === "light") return party?.colorLight || fb;
     if (key === "dark") return party?.colorDark || fb;
     return key;
@@ -170,10 +170,10 @@ export default async function QuestionLandingPage({ params }: Props) {
 
       {party?.color && <ThemeColorSetter color={topbarBgColor} />}
 
-      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": party?.color || "#FF0000", "--party-dark": party?.colorDark || "#FF0000", "--party-light": party?.colorLight || "#FF0000", ...(() => {
+      <div className="min-h-dvh flex flex-col" style={{ "--party-accent": party?.color || "#FF0000", "--party-dark": party?.colorDark || "#FF0000", "--party-light": party?.colorLight || "#FF0000", ...(() => {
         const rc = (key: string | null | undefined, fb: string) => {
           if (!key) return fb;
-          if (key === "primary") return party?.color || fb;
+          if (key === "accent") return party?.color || fb;
           if (key === "light") return party?.colorLight || fb;
           if (key === "dark") return party?.colorDark || fb;
           return key;

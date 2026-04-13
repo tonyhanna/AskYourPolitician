@@ -42,7 +42,7 @@ export function CopyLinkButton({ url, title, compact = false }: { url: string; t
       <button
         onClick={handleClick}
         className="inline-flex items-center gap-1.5 text-xs py-1.5 pr-3 cursor-pointer transition hover:opacity-70"
-        style={{ color: "var(--party-primary)" }}
+        style={{ color: "var(--party-accent)" }}
       >
         <FontAwesomeIcon icon={faCopy} className="text-xs" />
         {copied ? "Kopieret!" : "Del"}
@@ -54,7 +54,7 @@ export function CopyLinkButton({ url, title, compact = false }: { url: string; t
     <button
       onClick={handleClick}
       className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full cursor-pointer transition hover:opacity-70"
-      style={{ backgroundColor: "#E8E7E5", color: "var(--party-primary)" }}
+      style={{ backgroundColor: "#E8E7E5", color: "var(--party-accent)" }}
     >
       <FontAwesomeIcon icon={faCopy} className="text-xs" />
       {copied ? "Kopieret!" : "Kopier link"}

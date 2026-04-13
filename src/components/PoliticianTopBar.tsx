@@ -83,7 +83,7 @@ export function PoliticianTopBar({
   }, [impersonateArmed]);
   const { error: colorError, errorContrast } = useSystemColors();
   // Party colors from CSS variables (set by page wrapper)
-  const pp = "var(--party-primary, #FF0000)";
+  const pa = "var(--party-accent, #FF0000)";
   const pd = "var(--party-dark, #FF0000)";
   const pl = "var(--party-light, #FF0000)";
   const topbarBg = "var(--topbar-bg, #FF0000)";
@@ -94,7 +94,7 @@ export function PoliticianTopBar({
   // Resolve topbar text color overrides: key → party var, hex → direct, null → default
   const resolveColor = (key: string | null | undefined, fallback: string) => {
     if (!key) return fallback;
-    if (key === "primary") return pp;
+    if (key === "accent") return pa;
     if (key === "light") return pl;
     if (key === "dark") return pd;
     return key; // hex value

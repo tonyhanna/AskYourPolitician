@@ -26,7 +26,7 @@ export function UpvoteButton({
   const [pending, setPending] = useState(false);
 
   const pillClass = "inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full cursor-pointer transition hover:opacity-70";
-  const pillStyle = { backgroundColor: "var(--party-primary)", color: "#ffffff" };
+  const pillStyle = { backgroundColor: "var(--party-accent)", color: "#ffffff" };
 
   if (isUpvoted) {
     return (

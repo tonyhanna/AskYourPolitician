@@ -28,7 +28,7 @@ export function UpvoteModal({
 }: UpvoteModalProps) {
   const colorError = "var(--system-error, #FF0000)";
   // Party colors from CSS variables
-  const pp = "var(--party-primary, #FF0000)";
+  const pa = "var(--party-accent, #FF0000)";
   const pd = "var(--party-dark, #FF0000)";
   const pl = "var(--party-light, #FF0000)";
 

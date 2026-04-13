@@ -250,7 +250,7 @@ export function AnsweredQuestionCard({
       {photoUrl ? (
         <img src={photoUrl} alt="" loading="eager" className="absolute inset-0 w-full h-full object-cover" />
       ) : (
-        <div className="absolute inset-0" style={{ backgroundColor: "var(--party-primary, #FF0000)" }} />
+        <div className="absolute inset-0" style={{ backgroundColor: "var(--party-accent, #FF0000)" }} />
       )}
       {muxClipUrl && (
         <video ref={clipRef} src={muxClipUrl} muted loop playsInline preload="none" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0 }} />

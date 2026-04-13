@@ -168,12 +168,12 @@ export default async function BorgerFeed({
     ? await db.select().from(parties).where(eq(parties.id, politician.partyId)).limit(1)
     : [undefined];
 
-  // Resolve hero text color keys ("primary", "light", "dark") to actual party hex values
+  // Resolve hero text color keys ("accent", "light", "dark") to actual party hex values
   let resolvedHeroLine1Color = politician.heroLine1Color;
   let resolvedHeroLine2Color = politician.heroLine2Color;
   if (party && (politician.heroLine1Color || politician.heroLine2Color)) {
     const colorMap: Record<string, string | null> = {
-      primary: party.color,
+      accent: party.color,
       light: party.colorLight,
       dark: party.colorDark,
     };
@@ -184,7 +184,7 @@ export default async function BorgerFeed({
   // Resolve topbar bg color for theme-color meta + rubber-band
   const resolvePartyColor = (key: string | null | undefined, fb: string) => {
     if (!key) return fb;
-    if (key === "primary") return party?.color || fb;
+    if (key === "accent") return party?.color || fb;
     if (key === "light") return party?.colorLight || fb;
     if (key === "dark") return party?.colorDark || fb;
     return key;
@@ -201,10 +201,10 @@ export default async function BorgerFeed({
       )}
       {/* Client-side: toggle body bg based on scroll (topbar color at top, system bg when scrolled) */}
       {party?.color && <ThemeColorSetter color={topbarBgColor} />}
-      <div className="min-h-dvh flex flex-col" style={{ "--party-primary": party?.color || "#FF0000", "--party-dark": party?.colorDark || "#FF0000", "--party-light": party?.colorLight || "#FF0000", ...(() => {
+      <div className="min-h-dvh flex flex-col" style={{ "--party-accent": party?.color || "#FF0000", "--party-dark": party?.colorDark || "#FF0000", "--party-light": party?.colorLight || "#FF0000", ...(() => {
         const rc = (key: string | null | undefined, fb: string) => {
           if (!key) return fb;
-          if (key === "primary") return party?.color || fb;
+          if (key === "accent") return party?.color || fb;
           if (key === "light") return party?.colorLight || fb;
           if (key === "dark") return party?.colorDark || fb;
           return key;

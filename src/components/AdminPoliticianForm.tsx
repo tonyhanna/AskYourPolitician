@@ -266,7 +266,7 @@ export function AdminPoliticianForm({ politician, allParties }: { politician: Po
         ].map((line) => {
           const partyColorOptions = selectedParty
             ? [
-                { key: "primary", hex: selectedParty.color },
+                { key: "accent", hex: selectedParty.color },
                 { key: "light", hex: selectedParty.colorLight },
                 { key: "dark", hex: selectedParty.colorDark },
               ].filter((c) => c.hex) as { key: string; hex: string }[]

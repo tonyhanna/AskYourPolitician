@@ -135,11 +135,11 @@ export function SettingsForm({
     return () => window.removeEventListener("resize", computeHeroScale);
   }, [bannerUrl, heroLine1Text, heroLine2Text, heroLine1Color, heroLine2Color, computeHeroScale]);
 
-  // Resolve color key ("primary"/"light"/"dark") to hex
+  // Resolve color key ("accent"/"light"/"dark") to hex
   const selectedParty = allParties.find((p) => p.id === (politician?.partyId ?? ""));
   function resolveHeroColor(colorKey: string): string {
     if (!colorKey || !selectedParty) return "#FF0000";
-    if (colorKey === "primary") return selectedParty.color || "#FF0000";
+    if (colorKey === "accent") return selectedParty.color || "#FF0000";
     if (colorKey === "light") return selectedParty.colorLight || "#FF0000";
     if (colorKey === "dark") return selectedParty.colorDark || "#FF0000";
     return "#FF0000";
@@ -519,7 +519,7 @@ export function SettingsForm({
             ].map((line) => {
               const partyColorOptions = selectedParty
                 ? [
-                    { key: "primary", hex: selectedParty.color },
+                    { key: "accent", hex: selectedParty.color },
                     { key: "light", hex: selectedParty.colorLight },
                     { key: "dark", hex: selectedParty.colorDark },
                   ].filter((c) => c.hex) as { key: string; hex: string }[]
