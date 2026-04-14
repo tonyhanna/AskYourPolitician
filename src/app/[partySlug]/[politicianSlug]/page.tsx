@@ -8,6 +8,7 @@ import { QuestionFeedFilter } from "@/components/QuestionFeedFilter";
 import { ChatbaseWidget } from "@/components/ChatbaseWidget";
 import { IntroSection } from "@/components/IntroSection";
 import { PoliticianTopBar } from "@/components/PoliticianTopBar";
+import { GuidedTourModal } from "@/components/GuidedTourModal";
 import { ThemeColorSetter } from "@/components/ThemeColorSetter";
 import { getAppSettings } from "@/lib/settings";
 
@@ -237,6 +238,15 @@ export default async function BorgerFeed({
         partySlug={partySlug}
         politicianSlug={politicianSlug}
         hasSession={!!citizen}
+        guidedTourMuxPlaybackId={politician.guidedTourMuxPlaybackId}
+      />
+      <GuidedTourModal
+        muxPlaybackId={politician.guidedTourMuxPlaybackId ?? null}
+        muxAssetStatus={politician.guidedTourMuxAssetStatus ?? null}
+        muxMediaType={politician.guidedTourMuxMediaType ?? null}
+        duration={politician.guidedTourDuration ?? null}
+        aspectRatio={politician.guidedTourAspectRatio ?? null}
+        posterUrl={politician.guidedTourPosterUrl ?? null}
       />
       <IntroSection
         bannerUrl={politician.bannerUrl}

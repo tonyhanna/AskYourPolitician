@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { BannerHero } from "./BannerHero";
-import { useCanHover } from "./StickyPillNav";
 
 export function IntroSection({
   bannerUrl,
@@ -23,9 +20,8 @@ export function IntroSection({
   heroLine2Color?: string | null;
   politicianSlug: string;
 }) {
-  const storageKey = `intro-dismissed:${politicianSlug}`;
-  const canHover = useCanHover();
-  const [dismissed, setDismissed] = useState(true); // default true to avoid flash
+  const visitsKey = `intro-visits:${politicianSlug}`;
+  const [hidden, setHidden] = useState(true); // default hidden to avoid flash
   const [loaded, setLoaded] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number>(0);
@@ -36,18 +32,28 @@ export function IntroSection({
     }
   }, []);
 
+  // Determine visibility on mount: show if visits < 3 or session flag set
+  // Use ref guard to avoid double-increment from React Strict Mode in dev
+  const didCount = useRef(false);
   useEffect(() => {
-    const d = localStorage.getItem(storageKey) === "1";
-    setDismissed(d);
+    const visits = parseInt(localStorage.getItem(visitsKey) || "0", 10);
+    if (visits < 3) {
+      if (!didCount.current) {
+        didCount.current = true;
+        localStorage.setItem(visitsKey, String(visits + 1));
+      }
+      setHidden(false);
+    } else {
+      setHidden(true);
+    }
     setLoaded(true);
-  }, [storageKey]);
+  }, [visitsKey]);
 
   // Measure height — re-measure on resize and when images inside load
   useEffect(() => {
     if (!contentRef.current) return;
     measure();
 
-    // Listen for image loads inside the banner
     const images = contentRef.current.querySelectorAll("img");
     images.forEach((img) => {
       if (img.complete) {
@@ -64,33 +70,24 @@ export function IntroSection({
     };
   }, [loaded, bannerUrl, measure]);
 
-  // Listen for toggle events from info button in PoliticianTopBar
+  // Listen for toggle-intro event from profile icon click (in-memory only — gone on refresh)
   useEffect(() => {
-    const showHandler = () => {
-      setDismissed(false);
-      localStorage.removeItem(storageKey);
+    const toggleHandler = () => {
+      setHidden(prev => {
+        if (prev) {
+          // Opening — scroll to top
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        return !prev;
+      });
     };
-    const dismissHandler = () => {
-      setDismissed(true);
-      localStorage.setItem(storageKey, "1");
-    };
-    window.addEventListener("show-intro", showHandler);
-    window.addEventListener("intro-dismissed", dismissHandler);
-    return () => {
-      window.removeEventListener("show-intro", showHandler);
-      window.removeEventListener("intro-dismissed", dismissHandler);
-    };
-  }, [storageKey]);
-
-  function dismiss() {
-    setDismissed(true);
-    localStorage.setItem(storageKey, "1");
-    window.dispatchEvent(new Event("intro-dismissed"));
-  }
+    window.addEventListener("toggle-intro", toggleHandler);
+    return () => window.removeEventListener("toggle-intro", toggleHandler);
+  }, []);
 
   if (!bannerUrl) return null;
 
-  const isVisible = loaded && !dismissed;
+  const isVisible = loaded && !hidden;
 
   return (
     <div

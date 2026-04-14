@@ -11,7 +11,7 @@ import { del } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { getActivePolitician } from "@/lib/admin";
 import { checkAndNotifyGoalReached } from "@/lib/goal-check";
-import { createDirectUpload, deleteMuxAsset } from "@/lib/mux";
+import { createDirectUpload, createGuidedTourUpload, deleteMuxAsset } from "@/lib/mux";
 
 export async function createQuestion(formData: FormData) {
   const session = await auth();
@@ -70,6 +70,7 @@ export async function updateSettings(formData: FormData) {
   const heroLine2 = (formData.get("heroLine2") as string)?.trim() || null;
   const heroLine2Color = (formData.get("heroLine2Color") as string)?.trim() || null;
   const chatbaseId = (formData.get("chatbaseId") as string)?.trim() || null;
+  const guidedTourPosterUrl = (formData.get("guidedTourPosterUrl") as string) || null;
   const defaultUpvoteGoal = parseInt(formData.get("defaultUpvoteGoal") as string) || 1000;
   if (!firstName || !lastName || !partyId || !email) throw new Error("Fornavn, efternavn, parti og email er påkrævet");
 
@@ -121,6 +122,7 @@ export async function updateSettings(formData: FormData) {
         heroLine2,
         heroLine2Color,
         chatbaseId,
+        guidedTourPosterUrl,
         defaultUpvoteGoal,
         updatedAt: new Date(),
       })
@@ -1089,6 +1091,105 @@ export async function submitMuxAnswer(
 
   // NOTE: Notification emails are sent from the Mux webhook when the asset is ready,
   // so citizens only get notified when the video/audio is actually playable.
+
+  revalidatePath("/politiker/dashboard");
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Guided Tour Video
+// ──────────────────────────────────────────────────────────────────────────────
+
+export async function getGuidedTourUploadUrl() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const politician = await getActivePolitician();
+  if (!politician) throw new Error("Politician not found");
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:4000";
+  const { uploadUrl, uploadId } = await createGuidedTourUpload(politician.id, appUrl);
+
+  return { uploadUrl, uploadId };
+}
+
+export async function submitGuidedTourVideo(
+  mediaType: "video" | "audio",
+  posterUrl?: string,
+  duration?: number,
+  aspectRatio?: number,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const politician = await getActivePolitician();
+  if (!politician) throw new Error("Politician not found");
+
+  // Clean up old asset
+  if (politician.guidedTourMuxAssetId) {
+    deleteMuxAsset(politician.guidedTourMuxAssetId).catch(() => {});
+  }
+  if (politician.guidedTourPosterUrl && politician.guidedTourPosterUrl !== posterUrl && isBlobUrl(politician.guidedTourPosterUrl)) {
+    del([politician.guidedTourPosterUrl]).catch(() => {});
+  }
+
+  await db
+    .update(politicians)
+    .set({
+      guidedTourPosterUrl: posterUrl ?? null,
+      guidedTourDuration: duration ?? null,
+      guidedTourAspectRatio: aspectRatio ?? null,
+      guidedTourMuxAssetStatus: "preparing",
+      guidedTourMuxMediaType: mediaType,
+      guidedTourMuxPlaybackId: null,
+      guidedTourMuxAssetId: null,
+    })
+    .where(eq(politicians.id, politician.id));
+
+  revalidatePath("/politiker/dashboard");
+}
+
+export async function checkGuidedTourStatus(): Promise<string | null> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const politician = await getActivePolitician();
+  if (!politician) return null;
+
+  const [row] = await db
+    .select({ status: politicians.guidedTourMuxAssetStatus })
+    .from(politicians)
+    .where(eq(politicians.id, politician.id))
+    .limit(1);
+
+  return row?.status ?? null;
+}
+
+export async function removeGuidedTourVideo() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const politician = await getActivePolitician();
+  if (!politician) throw new Error("Politician not found");
+
+  if (politician.guidedTourMuxAssetId) {
+    deleteMuxAsset(politician.guidedTourMuxAssetId).catch(() => {});
+  }
+  if (politician.guidedTourPosterUrl && isBlobUrl(politician.guidedTourPosterUrl)) {
+    del([politician.guidedTourPosterUrl]).catch(() => {});
+  }
+
+  await db
+    .update(politicians)
+    .set({
+      guidedTourMuxAssetId: null,
+      guidedTourMuxPlaybackId: null,
+      guidedTourMuxAssetStatus: null,
+      guidedTourMuxMediaType: null,
+      guidedTourDuration: null,
+      guidedTourAspectRatio: null,
+      guidedTourPosterUrl: null,
+    })
+    .where(eq(politicians.id, politician.id));
 
   revalidatePath("/politiker/dashboard");
 }

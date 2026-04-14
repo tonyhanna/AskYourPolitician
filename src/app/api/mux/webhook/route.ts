@@ -53,6 +53,35 @@ export async function POST(req: NextRequest) {
     const hasVideo = tracks?.some((t) => t.type === "video");
     const mediaType = hasVideo ? "video" : "audio";
 
+    // Check if this is a guided tour video (passthrough = "tour:{politicianId}")
+    if (passthrough?.startsWith("tour:")) {
+      const politicianId = passthrough.slice(5);
+      await db
+        .update(politicians)
+        .set({
+          guidedTourMuxAssetId: assetId,
+          guidedTourMuxPlaybackId: playbackId,
+          guidedTourMuxAssetStatus: "ready",
+          guidedTourMuxMediaType: mediaType,
+          guidedTourDuration: duration,
+          guidedTourAspectRatio: aspectRatio,
+        })
+        .where(eq(politicians.id, politicianId));
+
+      // Revalidate pages
+      const [politician] = await db
+        .select({ slug: politicians.slug, partySlug: parties.slug })
+        .from(politicians)
+        .innerJoin(parties, eq(politicians.partyId, parties.id))
+        .where(eq(politicians.id, politicianId))
+        .limit(1);
+      if (politician) {
+        revalidatePath(`/${politician.partySlug}/${politician.slug}`);
+        revalidatePath("/politiker/dashboard");
+      }
+      return NextResponse.json({ received: true });
+    }
+
     // Find question by passthrough (question ID) or by muxAssetId
     let questionId = passthrough;
 
@@ -165,7 +194,13 @@ export async function POST(req: NextRequest) {
     const assetId = data.id as string;
     const passthrough = data.passthrough as string | undefined;
 
-    if (passthrough) {
+    if (passthrough?.startsWith("tour:")) {
+      const politicianId = passthrough.slice(5);
+      await db
+        .update(politicians)
+        .set({ guidedTourMuxAssetId: assetId, guidedTourMuxAssetStatus: "errored" })
+        .where(eq(politicians.id, politicianId));
+    } else if (passthrough) {
       await db
         .update(questions)
         .set({ muxAssetId: assetId, muxAssetStatus: "errored" })

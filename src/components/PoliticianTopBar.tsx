@@ -7,7 +7,7 @@ import { faXmark, faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-
 import { faGlasses, faArrowUTurnLeftDown } from "@fortawesome/pro-duotone-svg-icons";
 import { faCommentPlus } from "@fortawesome/pro-solid-svg-icons";
 import { faInfo, faMailbox, faMailboxFlagUp } from "@fortawesome/pro-duotone-svg-icons";
-import { faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
+import { faPlay } from "@fortawesome/free-solid-svg-icons";
 import { directSuggestion } from "@/app/[partySlug]/[politicianSlug]/actions";
 import { stopImpersonation } from "@/app/admin/actions";
 import { useSystemColors } from "./SystemColorProvider";
@@ -35,6 +35,7 @@ type PoliticianTopBarProps = {
   topbarLeft2Opacity?: number | null;
   topbarRightColor?: string | null;
   topbarRightOpacity?: number | null;
+  guidedTourMuxPlaybackId?: string | null;
 };
 
 export function PoliticianTopBar({
@@ -58,6 +59,7 @@ export function PoliticianTopBar({
   topbarLeft2Opacity,
   topbarRightColor: topbarRightColorKey,
   topbarRightOpacity,
+  guidedTourMuxPlaybackId,
 }: PoliticianTopBarProps) {
   const isDashboard = mode === "dashboard";
   const canHover = useRef(false);
@@ -117,15 +119,8 @@ export function PoliticianTopBar({
   const pillSizeRef = useRef<{ width: number; height: number } | null>(null);
   const [namesRevealed, setNamesRevealed] = useState<false | "fading" | true>(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const introStorageKey = `intro-dismissed:${politicianSlug}`;
-  const [introDismissed, setIntroDismissed] = useState(false);
   const [infoHover, setInfoHover] = useState(false);
-  useEffect(() => {
-    setIntroDismissed(localStorage.getItem(introStorageKey) === "1");
-    const handler = () => setIntroDismissed(true);
-    window.addEventListener("intro-dismissed", handler);
-    return () => window.removeEventListener("intro-dismissed", handler);
-  }, [introStorageKey]);
+  const hasGuidedTour = !!guidedTourMuxPlaybackId;
 
   const [isNarrow, setIsNarrow] = useState(false);
 
@@ -304,6 +299,9 @@ export function PoliticianTopBar({
                 src={profilePhotoUrl}
                 alt=""
                 className="w-12 h-12 rounded-full object-cover shrink-0 cursor-pointer"
+                onClick={() => {
+                  window.dispatchEvent(new Event("toggle-intro"));
+                }}
               />
             )}
           </div>
@@ -379,23 +377,13 @@ export function PoliticianTopBar({
           {/* Mobile-only: info button + suggest/close button (citizen mode only) */}
           {!isDashboard && (
           <div className="sm:hidden ml-auto flex items-center gap-3 shrink-0">
-            {!backHref && !formActive && (
+            {!backHref && !formActive && hasGuidedTour && (
               <button
                 type="button"
-                onClick={() => {
-                  if (introDismissed) {
-                    setIntroDismissed(false);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                    window.dispatchEvent(new Event("show-intro"));
-                  } else {
-                    setIntroDismissed(true);
-                    window.dispatchEvent(new Event("intro-dismissed"));
-                    localStorage.setItem(introStorageKey, "1");
-                  }
-                }}
+                onClick={() => window.dispatchEvent(new Event("open-guided-tour"))}
                 className="cursor-pointer rounded-full flex items-center justify-center"
                 style={{ width: 24, height: 24, backgroundColor: btnBg }}
-                aria-label={introDismissed ? "Vis banner" : "Skjul banner"}
+                aria-label="Guided tour"
               >
                 <FontAwesomeIcon
                   icon={faInfo}
@@ -498,29 +486,19 @@ export function PoliticianTopBar({
                   {constituency}
                 </span>
               )}
-              {!backHref && (
+              {!backHref && hasGuidedTour && (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (introDismissed) {
-                      setIntroDismissed(false);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    window.dispatchEvent(new Event("show-intro"));
-                    } else {
-                      setIntroDismissed(true);
-                      window.dispatchEvent(new Event("intro-dismissed"));
-                      localStorage.setItem(introStorageKey, "1");
-                    }
-                  }}
+                  onClick={() => window.dispatchEvent(new Event("open-guided-tour"))}
                   className="cursor-pointer rounded-full flex items-center justify-center"
                   style={{ width: 24, height: 24, backgroundColor: btnBg }}
-                  aria-label={introDismissed ? "Vis banner" : "Skjul banner"}
+                  aria-label="Guided tour"
                   onPointerEnter={() => { if (canHover.current) setInfoHover(true); }}
                   onPointerLeave={() => { if (canHover.current) setInfoHover(false); }}
                 >
                   <FontAwesomeIcon
-                    icon={infoHover ? (introDismissed ? faChevronDown : faChevronUp) : faInfo}
-                    style={{ color: btnIcon, fontSize: infoHover ? 12 : "13.5px" }}
+                    icon={infoHover ? faPlay : faInfo}
+                    style={{ color: btnIcon, fontSize: infoHover ? 10 : "13.5px" }}
                   />
                 </button>
               )}

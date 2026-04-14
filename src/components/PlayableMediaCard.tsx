@@ -22,6 +22,7 @@ type PlayableMediaCardProps = {
   className?: string;
   style?: React.CSSProperties;
   autoPlay?: boolean;
+  onEnded?: () => void;
 };
 
 export function PlayableMediaCard({
@@ -32,6 +33,7 @@ export function PlayableMediaCard({
   className = "",
   style,
   autoPlay,
+  onEnded: onEndedCallback,
 }: PlayableMediaCardProps) {
   const mediaInfo = getAnswerMediaInfo(question);
   const isReady = mediaInfo?.status === "ready";
@@ -216,7 +218,8 @@ export function PlayableMediaCard({
     savedTimeRef.current = 0;
     setIsWatching(false);
     setPlayingId?.(null);
-  }, [setPlayingId]);
+    onEndedCallback?.();
+  }, [setPlayingId, onEndedCallback]);
 
   // Progress bar
   useEffect(() => {

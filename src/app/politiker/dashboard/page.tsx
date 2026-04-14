@@ -341,6 +341,13 @@ export default async function Dashboard() {
                   heroLine2: politician.heroLine2,
                   heroLine2Color: politician.heroLine2Color,
                   chatbaseId: politician.chatbaseId,
+                  guidedTourMuxAssetId: politician.guidedTourMuxAssetId,
+                  guidedTourMuxPlaybackId: politician.guidedTourMuxPlaybackId,
+                  guidedTourMuxAssetStatus: politician.guidedTourMuxAssetStatus,
+                  guidedTourMuxMediaType: politician.guidedTourMuxMediaType,
+                  guidedTourDuration: politician.guidedTourDuration,
+                  guidedTourAspectRatio: politician.guidedTourAspectRatio,
+                  guidedTourPosterUrl: politician.guidedTourPosterUrl,
                   defaultUpvoteGoal: politician.defaultUpvoteGoal,
                 }}
                 allParties={allParties}

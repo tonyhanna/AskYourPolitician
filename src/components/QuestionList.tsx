@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { deleteQuestion, editQuestion, submitAnswerUrl, togglePinQuestion, updateAnswerPoster, getMuxUploadUrl, submitMuxAnswer, checkMuxAnswerStatus, archiveQuestion, unarchiveQuestion } from "@/app/politiker/dashboard/actions";
@@ -309,10 +309,21 @@ export function QuestionList({
   );
 }
 
-function AlarmTooltipButton({ label }: { label?: React.ReactNode }) {
+function AlarmTooltipButton({ label, goalReachedAt }: { label?: React.ReactNode; goalReachedAt?: string | null }) {
   const [show, setShow] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const flippedRef = useRef(false);
+
+  // Calculate elapsed time since deadline (24h after goalReachedAt)
+  const elapsed = useMemo(() => {
+    if (!goalReachedAt) return null;
+    const deadlineMs = new Date(goalReachedAt).getTime() + 24 * 60 * 60 * 1000;
+    const diff = Date.now() - deadlineMs;
+    if (diff <= 0) return null;
+    const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+    const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+    return { days, hours };
+  }, [goalReachedAt]);
 
   // Dismiss on outside tap (mobile)
   useEffect(() => {
@@ -368,7 +379,7 @@ function AlarmTooltipButton({ label }: { label?: React.ReactNode }) {
             pointerEvents: "none",
           }}
         >
-          24-timers deadline er overskredet
+          {elapsed ? `Deadline er overskredet med: ${elapsed.days} ${elapsed.days === 1 ? "dag" : "dage"} og ${elapsed.hours} ${elapsed.hours === 1 ? "time" : "timer"}` : "Deadline er overskredet"}
         </div>
       )}
     </div>
@@ -1262,7 +1273,7 @@ function QuestionItem({
               </span>
             )}
             {question.deadlineMissed && (
-              <AlarmTooltipButton label={<><span className="hidden md:inline">Svartid overskredet</span><span className="md:hidden">Overskredet</span></>} />
+              <AlarmTooltipButton label={<><span className="hidden md:inline">Svartid overskredet</span><span className="md:hidden">Overskredet</span></>} goalReachedAt={question.goalReachedAt} />
             )}
             {hasUpvotes && !question.archived && (
               <div className="flex items-center" style={{ gap: 5 }}>
@@ -1277,7 +1288,7 @@ function QuestionItem({
                       icon={replyOpen ? faXmark : ((question.answerUrl || question.muxAssetStatus) ? faHeadSideSpeak : faReply)}
 
                       className="group-hover:opacity-50 transition-opacity"
-                      style={{ color: replyOpen ? "var(--system-error, #FF0000)" : (question.answerUrl || question.muxAssetStatus) ? "var(--system-icon0, #FF0000)" : "var(--system-success, #FF0000)", fontSize: 16 }}
+                      style={{ color: replyOpen ? "var(--system-error, #FF0000)" : "var(--system-icon0, #FF0000)", fontSize: 16}}
                     />
                   </button>
                 )}
@@ -1318,7 +1329,7 @@ function QuestionItem({
                   icon={replyOpen ? faXmark : ((question.answerUrl || question.muxAssetStatus) ? faHeadSideSpeak : faReply)}
                   swapOpacity={!replyOpen && !!(question.answerUrl || question.muxAssetStatus)}
                   className="group-hover:opacity-50 transition-opacity"
-                  style={{ color: replyOpen ? "var(--system-error, #FF0000)" : (question.answerUrl || question.muxAssetStatus) ? "var(--system-icon0, #FF0000)" : "var(--system-success, #FF0000)", fontSize: 16 }}
+                  style={{ color: replyOpen ? "var(--system-error, #FF0000)" : "var(--system-icon0, #FF0000)", fontSize: 16}}
                 />
               </button>
             )}

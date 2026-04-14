@@ -4,7 +4,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUpload, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { upload } from "@vercel/blob/client";
-import { updateSettings } from "@/app/politiker/dashboard/actions";
+import { updateSettings, getGuidedTourUploadUrl, submitGuidedTourVideo, checkGuidedTourStatus, removeGuidedTourVideo } from "@/app/politiker/dashboard/actions";
+import { getMuxThumbnailUrl } from "@/lib/mux";
 import { generateSlug } from "@/lib/utils";
 
 type PoliticianData = {
@@ -25,6 +26,13 @@ type PoliticianData = {
   heroLine2: string | null;
   heroLine2Color: string | null;
   chatbaseId: string | null;
+  guidedTourMuxAssetId: string | null;
+  guidedTourMuxPlaybackId: string | null;
+  guidedTourMuxAssetStatus: string | null;
+  guidedTourMuxMediaType: string | null;
+  guidedTourDuration: number | null;
+  guidedTourAspectRatio: number | null;
+  guidedTourPosterUrl: string | null;
   defaultUpvoteGoal: number;
 } | null;
 
@@ -90,6 +98,13 @@ export function SettingsForm({
   const [heroLine2Color, setHeroLine2Color] = useState(politician?.heroLine2Color ?? "");
   const [chatbaseId, setChatbaseId] = useState(politician?.chatbaseId ?? "");
   const [chatbaseRemoved, setChatbaseRemoved] = useState(false);
+  // Guided tour video
+  const [tourStatus, setTourStatus] = useState(politician?.guidedTourMuxAssetStatus ?? null);
+  const [tourPlaybackId, setTourPlaybackId] = useState(politician?.guidedTourMuxPlaybackId ?? null);
+  const [tourPosterUrl, setTourPosterUrl] = useState(politician?.guidedTourPosterUrl ?? "");
+  const [tourUploadProgress, setTourUploadProgress] = useState(0);
+  const [tourStep, setTourStep] = useState<"idle" | "uploading" | "submitting" | "processing">("idle");
+  const [tourRemoved, setTourRemoved] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [bannerError, setBannerError] = useState("");
   const [ogError, setOgError] = useState("");
@@ -134,6 +149,69 @@ export function SettingsForm({
     window.addEventListener("resize", computeHeroScale);
     return () => window.removeEventListener("resize", computeHeroScale);
   }, [bannerUrl, heroLine1Text, heroLine2Text, heroLine1Color, heroLine2Color, computeHeroScale]);
+
+  // Guided tour: poll for Mux processing status
+  useEffect(() => {
+    if (tourStatus !== "preparing" && tourStep !== "processing") return;
+    let timeout: ReturnType<typeof setTimeout>;
+    async function check() {
+      const status = await checkGuidedTourStatus();
+      if (status === "ready") {
+        setTourStatus("ready");
+        setTourStep("idle");
+        // Reload to get the new playback ID
+        window.location.reload();
+      } else if (status === "errored") {
+        setTourStatus("errored");
+        setTourStep("idle");
+        alert("Fejl under videobehandling. Prøv igen.");
+      } else {
+        timeout = setTimeout(check, 5000);
+      }
+    }
+    check();
+    return () => clearTimeout(timeout);
+  }, [tourStatus, tourStep]);
+
+  async function handleGuidedTourUpload(file: File) {
+    setTourStep("uploading");
+    setTourUploadProgress(0);
+    try {
+      // Get duration + aspect ratio from video
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      const fileUrl = URL.createObjectURL(file);
+      await new Promise<void>((resolve) => {
+        video.onloadedmetadata = () => resolve();
+        video.src = fileUrl;
+      });
+      const duration = video.duration;
+      const aspectRatio = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : undefined;
+      URL.revokeObjectURL(fileUrl);
+
+      const { uploadUrl } = await getGuidedTourUploadUrl();
+
+      // PUT file to Mux
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", uploadUrl);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) setTourUploadProgress(Math.round((e.loaded / e.total) * 100));
+        };
+        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`)));
+        xhr.onerror = () => reject(new Error("Upload failed"));
+        xhr.send(file);
+      });
+
+      setTourStep("submitting");
+      await submitGuidedTourVideo("video", tourPosterUrl || undefined, duration, aspectRatio);
+      setTourStatus("preparing");
+      setTourStep("processing");
+    } catch (e) {
+      setTourStep("idle");
+      alert(e instanceof Error ? e.message : "Der opstod en fejl");
+    }
+  }
 
   // Resolve color key ("accent"/"light"/"dark") to hex
   const selectedParty = allParties.find((p) => p.id === (politician?.partyId ?? ""));
@@ -256,6 +334,7 @@ export function SettingsForm({
       <input type="hidden" name="bannerBgColor" value={bannerBgColor} />
       <input type="hidden" name="heroLine1Color" value={heroLine1Color} />
       <input type="hidden" name="heroLine2Color" value={heroLine2Color} />
+      <input type="hidden" name="guidedTourPosterUrl" value={tourRemoved ? "" : tourPosterUrl} />
       {/* Party is managed by admin only — pass as hidden field */}
       <input type="hidden" name="partyId" value={politician?.partyId ?? ""} />
 
@@ -804,7 +883,107 @@ export function SettingsForm({
             <p className="text-xs mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Minimum: 1200 × 630 px.</p>
             {ogError && ogError.split("\n").map((line, i) => <p key={i} className="text-xs mt-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-error, #FF0000)" }}>{line}</p>)}
           </div>
+
+          {/* ── Video ── */}
+          <div>
+            <label className="block font-medium mb-3" style={{ fontFamily: "var(--font-figtree)", fontSize: 18, color: "var(--system-text2, #FF0000)" }}>
+              Video
+            </label>
+        <div>
+          <label className="block text-sm font-medium mb-1" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
+            Guided tour: Spørg din politiker
+          </label>
+          <p className="text-xs mb-2" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>
+            Upload en video der forklarer borgerne, hvordan de bruger siden. Vises via info-knappen på borgersiden.
+          </p>
+
+          {/* Current video thumbnail / processing state */}
+          {tourStep === "uploading" && (
+            <div className="rounded-xl overflow-hidden mb-2" style={{ backgroundColor: "var(--system-bg2, #FF0000)", padding: 16 }}>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 rounded-full overflow-hidden" style={{ height: 6, backgroundColor: "var(--system-bg1, #FF0000)" }}>
+                  <div className="h-full rounded-full transition-all" style={{ width: `${tourUploadProgress}%`, backgroundColor: "var(--system-success, #FF0000)" }} />
+                </div>
+                <span className="text-xs" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>{tourUploadProgress}%</span>
+              </div>
+            </div>
+          )}
+          {(tourStep === "submitting" || tourStep === "processing" || tourStatus === "preparing") && (
+            <div className="rounded-xl overflow-hidden mb-2" style={{ backgroundColor: "var(--system-bg2, #FF0000)", padding: 16 }}>
+              <span className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-pending, #FF0000)" }}>
+                Video behandles...
+              </span>
+            </div>
+          )}
+          {tourStatus === "ready" && tourPlaybackId && !tourRemoved && tourStep === "idle" && (
+            <div className="rounded-xl overflow-hidden mb-2" style={{ maxWidth: 320 }}>
+              <img
+                src={getMuxThumbnailUrl(tourPlaybackId, { width: 640 })}
+                alt="Guided tour thumbnail"
+                className="w-full block rounded-xl"
+              />
+            </div>
+          )}
+          {tourStatus === "errored" && (
+            <p className="text-xs mb-2" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-error, #FF0000)" }}>
+              Fejl under videobehandling. Prøv at uploade igen.
+            </p>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-3 mt-1">
+            {tourRemoved ? (
+              <>
+                <span className="text-xs" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Video fjernes ved gem</span>
+                <button
+                  type="button"
+                  onClick={() => setTourRemoved(false)}
+                  className="text-xs cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                >
+                  Fortryd
+                </button>
+              </>
+            ) : (
+              <>
+                {tourStep === "idle" && (
+                  <label className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-success, #FF0000)" }}>
+                    <FontAwesomeIcon icon={faUpload} style={{ fontSize: 15, marginRight: 4, position: "relative" as const, top: 1 }} />
+                    {tourStatus === "ready" && tourPlaybackId ? "Ændre video" : "Upload video"}
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      disabled={pending || tourStep !== "idle"}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleGuidedTourUpload(file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                )}
+                {tourStatus === "ready" && tourPlaybackId && tourStep === "idle" && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setTourRemoved(true);
+                      await removeGuidedTourVideo();
+                      setTourStatus(null);
+                      setTourPlaybackId(null);
+                      setTourPosterUrl("");
+                      setTourRemoved(false);
+                    }}
+                    className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                  >
+                    Fjern
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
+      </div>
+      </div>
       </div>
 
       {/* Sticky FAB save button + error banner */}
