@@ -1171,20 +1171,20 @@ export async function submitMediaUpload(
   revalidatePath("/politiker/dashboard");
 }
 
-export async function checkMediaStatus(mediaTypeKey: string): Promise<string | null> {
+export async function checkMediaStatus(mediaTypeKey: string): Promise<{ status: string | null; muxPlaybackId: string | null }> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const politician = await getActivePolitician();
-  if (!politician) return null;
+  if (!politician) return { status: null, muxPlaybackId: null };
 
   const [row] = await db
-    .select({ status: politicianMedia.muxAssetStatus })
+    .select({ status: politicianMedia.muxAssetStatus, muxPlaybackId: politicianMedia.muxPlaybackId })
     .from(politicianMedia)
     .where(and(eq(politicianMedia.politicianId, politician.id), eq(politicianMedia.type, mediaTypeKey)))
     .limit(1);
 
-  return row?.status ?? null;
+  return { status: row?.status ?? null, muxPlaybackId: row?.muxPlaybackId ?? null };
 }
 
 export async function removeMedia(mediaTypeKey: string) {

@@ -88,6 +88,16 @@ export function SettingsForm({
 }) {
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
+  // Keep "Gemt" label visible until fade-out completes (200ms after saved→false)
+  const [displaySaved, setDisplaySaved] = useState(false);
+  useEffect(() => {
+    if (saved) {
+      setDisplaySaved(true);
+    } else {
+      const t = setTimeout(() => setDisplaySaved(false), 250);
+      return () => clearTimeout(t);
+    }
+  }, [saved]);
   // Committed URLs (already uploaded / from DB)
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(politician?.profilePhotoUrl ?? "");
   const [bannerUrl, setBannerUrl] = useState(politician?.bannerUrl ?? "");
@@ -113,6 +123,7 @@ export function SettingsForm({
   const [tourUploadProgress, setTourUploadProgress] = useState(0);
   const [tourStep, setTourStep] = useState<"idle" | "uploading" | "submitting" | "processing">("idle");
   const [tourRemoved, setTourRemoved] = useState(false);
+  const [tourError, setTourError] = useState("");
   const [profileError, setProfileError] = useState("");
   const [bannerError, setBannerError] = useState("");
   const [ogError, setOgError] = useState("");
@@ -132,6 +143,29 @@ export function SettingsForm({
   const uniqueUrl = appUrl && partySlug && computedSlug ? `${appUrl}/${partySlug}/${computedSlug}` : null;
   const [heroLine1Text, setHeroLine1Text] = useState(politician?.heroLine1 ?? "");
   const [heroLine2Text, setHeroLine2Text] = useState(politician?.heroLine2 ?? "");
+  // Track uncontrolled field changes (email, constituency, upvote goal)
+  const [formFieldDirty, setFormFieldDirty] = useState(false);
+
+  // Dirty state — show Gem FAB only when there are unsaved changes
+  const isDirty = formFieldDirty
+    || firstName !== (politician?.firstName ?? googleName.split(" ")[0] ?? "")
+    || middleName !== (politician?.middleName ?? "")
+    || lastName !== (politician?.lastName ?? (googleName.split(" ").length > 1 ? googleName.split(" ").slice(-1)[0] : "") ?? "")
+    || heroLine1Text !== (politician?.heroLine1 ?? "")
+    || heroLine2Text !== (politician?.heroLine2 ?? "")
+    || heroLine1Color !== (politician?.heroLine1Color ?? "")
+    || heroLine2Color !== (politician?.heroLine2Color ?? "")
+    || bannerBgColor !== (politician?.bannerBgColor ?? "")
+    || chatbaseId !== (politician?.chatbaseId ?? "")
+    || chatbaseRemoved
+    || profileRemoved
+    || bannerRemoved
+    || ogRemoved
+    || !!pendingProfileFile
+    || !!pendingBannerFile
+    || !!pendingOgFile
+    || tourRemoved
+    || (bannerBgColorPrev !== "" && bannerBgColor !== (politician?.bannerBgColor ?? ""));
 
   // Hero text preview auto-scale (mirrors BannerHero logic)
   const heroTextRef = useRef<HTMLDivElement>(null);
@@ -163,12 +197,11 @@ export function SettingsForm({
     if (tourStatus !== "preparing" && tourStep !== "processing") return;
     let timeout: ReturnType<typeof setTimeout>;
     async function check() {
-      const status = await checkMediaStatus("guided-tour");
+      const { status, muxPlaybackId } = await checkMediaStatus("guided-tour");
       if (status === "ready") {
         setTourStatus("ready");
+        setTourPlaybackId(muxPlaybackId);
         setTourStep("idle");
-        // Reload to get the new playback ID
-        window.location.reload();
       } else if (status === "errored") {
         setTourStatus("errored");
         setTourStep("idle");
@@ -182,6 +215,7 @@ export function SettingsForm({
   }, [tourStatus, tourStep]);
 
   async function handleGuidedTourUpload(file: File) {
+    setTourError("");
     setTourStep("uploading");
     setTourUploadProgress(0);
     try {
@@ -196,6 +230,12 @@ export function SettingsForm({
       const duration = video.duration;
       const aspectRatio = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : undefined;
       URL.revokeObjectURL(fileUrl);
+
+      if (aspectRatio && aspectRatio > 1) {
+        setTourError("Videoen skal være i portrait-format (højere end bred)");
+        setTourStep("idle");
+        return;
+      }
 
       const { uploadUrl } = await getMediaUploadUrl("guided-tour");
 
@@ -324,8 +364,20 @@ export function SettingsForm({
       formData.set("bannerUrl", finalBannerUrl);
       formData.set("ogImageUrl", finalOgUrl);
       setSubmitError("");
+      // Remove guided tour video if marked for removal
+      const didRemoveTour = tourRemoved;
+      if (didRemoveTour) {
+        await removeMedia("guided-tour");
+      }
       await updateSettings(formData);
+      if (didRemoveTour) {
+        setTourStatus(null);
+        setTourPlaybackId(null);
+        setTourPosterUrl("");
+        setTourRemoved(false);
+      }
       setSaved(true);
+      setFormFieldDirty(false);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : "Der opstod en fejl");
@@ -335,7 +387,10 @@ export function SettingsForm({
   }
 
   return (
-    <form action={handleSubmit}>
+    <form action={handleSubmit} onChange={(e) => {
+      const target = e.target as unknown as HTMLInputElement;
+      if (["email", "constituency", "defaultUpvoteGoal"].includes(target.name)) setFormFieldDirty(true);
+    }}>
       <input type="hidden" name="profilePhotoUrl" value={profileRemoved ? "" : profilePhotoUrl} />
       <input type="hidden" name="bannerUrl" value={bannerRemoved ? "" : bannerUrl} />
       <input type="hidden" name="ogImageUrl" value={ogRemoved ? "" : ogImageUrl} />
@@ -906,23 +961,24 @@ export function SettingsForm({
 
           {/* Current video thumbnail / processing state */}
           {tourStep === "uploading" && (
-            <div className="rounded-xl overflow-hidden mb-2" style={{ backgroundColor: "var(--system-bg1, #FF0000)", padding: 16 }}>
-              <div className="flex items-center gap-3">
+            <div className="rounded-xl overflow-hidden mb-2 flex items-center" style={{ backgroundColor: "var(--system-bg1, #FF0000)", padding: "0 16px", height: 38 }}>
+              <div className="flex items-center gap-3 w-full">
                 <div className="flex-1 rounded-full overflow-hidden" style={{ height: 6, backgroundColor: "var(--system-bg2, #FF0000)" }}>
                   <div className="h-full rounded-full transition-all" style={{ width: `${tourUploadProgress}%`, backgroundColor: "var(--system-success, #FF0000)" }} />
                 </div>
-                <span className="text-xs" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>{tourUploadProgress}%</span>
+                <span className="text-xs text-right shrink-0" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)", width: 32 }}>{tourUploadProgress}%</span>
               </div>
             </div>
           )}
           {(tourStep === "submitting" || tourStep === "processing" || tourStatus === "preparing") && (
-            <div className="rounded-xl overflow-hidden mb-2" style={{ backgroundColor: "var(--system-bg1, #FF0000)", padding: 16 }}>
-              <span className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>
-                Video behandles...
+            <div className="rounded-xl overflow-hidden mb-2 flex items-center" style={{ backgroundColor: "var(--system-bg1, #FF0000)", padding: "0 16px", height: 38 }}>
+              <span className="text-sm" style={{ fontFamily: "var(--font-figtree)" }}>
+                <span style={{ color: "var(--system-text0, #FF0000)" }}>Video behandles.</span>{" "}
+                <span style={{ color: "var(--system-text2, #FF0000)" }}>Du behøver ikke blive her på siden.</span>
               </span>
             </div>
           )}
-          {tourStatus === "ready" && tourPlaybackId && !tourRemoved && tourStep === "idle" && (
+          {tourStatus === "ready" && tourPlaybackId && tourStep === "idle" && (
             <div className="mb-2 w-full lg:w-[337px]">
               <PlayableMediaCard
                 question={{
@@ -942,16 +998,21 @@ export function SettingsForm({
               Fejl under videobehandling. Prøv at uploade igen.
             </p>
           )}
+          {tourError && (
+            <p className="text-xs mb-2" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-error, #FF0000)" }}>
+              {tourError}
+            </p>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-3 mt-1">
             {tourRemoved ? (
               <>
-                <span className="text-xs" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Video fjernes ved gem</span>
+                <span className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>Video fjernes ved gem</span>
                 <button
                   type="button"
                   onClick={() => setTourRemoved(false)}
-                  className="text-xs cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
+                  className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
                 >
                   Fortryd
                 </button>
@@ -975,17 +1036,10 @@ export function SettingsForm({
                     />
                   </label>
                 )}
-                {tourStatus === "ready" && tourPlaybackId && tourStep === "idle" && (
+                {tourStatus === "ready" && tourPlaybackId && tourStep === "idle" && !tourRemoved && (
                   <button
                     type="button"
-                    onClick={async () => {
-                      setTourRemoved(true);
-                      await removeMedia("guided-tour");
-                      setTourStatus(null);
-                      setTourPlaybackId(null);
-                      setTourPosterUrl("");
-                      setTourRemoved(false);
-                    }}
+                    onClick={() => setTourRemoved(true)}
                     className="text-sm cursor-pointer hover:opacity-50 transition-opacity" style={{ fontFamily: "var(--font-figtree)", fontWeight: 500, color: "var(--system-error, #FF0000)" }}
                   >
                     Fjern
@@ -999,8 +1053,8 @@ export function SettingsForm({
       </div>
       </div>
 
-      {/* Sticky FAB save button + error banner */}
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
+      {/* Sticky FAB save button + error banner — only shown when dirty */}
+      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3" style={{ opacity: isDirty || pending || saved ? 1 : 0, pointerEvents: isDirty || pending || saved ? "auto" : "none", transition: "opacity 200ms ease" }}>
         {submitError && (
           <div
             className="rounded-full px-5 flex items-center"
@@ -1021,7 +1075,7 @@ export function SettingsForm({
           style={{ height: 56, fontFamily: "var(--font-figtree)", fontWeight: 500, fontSize: 14, backgroundColor: "var(--fab-btn-bg, #FF0000)", color: "var(--fab-btn-icon, #FF0000)", boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)" }}
         >
           <span className="group-hover:opacity-50 transition-opacity flex items-center gap-2">
-            {pending ? "Gemmer..." : saved ? <><FontAwesomeIcon icon={faCheck} />Gemt</> : <><FontAwesomeIcon icon={faCheck} />Gem</>}
+            {pending ? "Gemmer..." : displaySaved ? <><FontAwesomeIcon icon={faCheck} />Gemt</> : <><FontAwesomeIcon icon={faCheck} />Gem</>}
           </span>
         </button>
       </div>
