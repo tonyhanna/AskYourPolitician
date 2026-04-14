@@ -31,15 +31,15 @@ export async function createDirectUpload(questionId: string, corsOrigin: string)
 }
 
 /**
- * Create a direct upload URL for a guided tour video.
- * Passthrough uses `tour:{politicianId}` prefix so the webhook can route it.
+ * Create a direct upload URL for a politician media item.
+ * Passthrough uses `media:{mediaId}` so the webhook can route it to politician_media table.
  */
-export async function createGuidedTourUpload(politicianId: string, corsOrigin: string) {
+export async function createMediaUpload(mediaId: string, corsOrigin: string) {
   const upload = await mux.video.uploads.create({
     cors_origin: corsOrigin,
     new_asset_settings: {
       playback_policy: ["public"],
-      passthrough: `tour:${politicianId}`,
+      passthrough: `media:${mediaId}`,
       static_renditions: [
         { resolution: "highest" },
       ],

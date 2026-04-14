@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { auth, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { politicians, questions, questionTags, causes, questionSuggestions, citizens, parties } from "@/db/schema";
+import { politicians, politicianMedia, questions, questionTags, causes, questionSuggestions, citizens, parties } from "@/db/schema";
 import { eq, desc, inArray, and } from "drizzle-orm";
 import { QuestionForm } from "@/components/QuestionForm";
 import { SettingsForm } from "@/components/SettingsForm";
@@ -226,6 +226,10 @@ export default async function Dashboard() {
   const uniqueUrl = politician ? `${appUrl}/${politician.partySlug}/${politician.slug}` : null;
   const party = politician ? allParties.find((p) => p.id === politician.partyId) : null;
 
+  const politicianMediaItems = politician
+    ? await db.select().from(politicianMedia).where(eq(politicianMedia.politicianId, politician.id))
+    : [];
+
   // Resolve topbar bg color for theme-color meta + rubber-band
   const resolvePartyColor = (key: string | null | undefined, fb: string) => {
     if (!key) return fb;
@@ -341,13 +345,6 @@ export default async function Dashboard() {
                   heroLine2: politician.heroLine2,
                   heroLine2Color: politician.heroLine2Color,
                   chatbaseId: politician.chatbaseId,
-                  guidedTourMuxAssetId: politician.guidedTourMuxAssetId,
-                  guidedTourMuxPlaybackId: politician.guidedTourMuxPlaybackId,
-                  guidedTourMuxAssetStatus: politician.guidedTourMuxAssetStatus,
-                  guidedTourMuxMediaType: politician.guidedTourMuxMediaType,
-                  guidedTourDuration: politician.guidedTourDuration,
-                  guidedTourAspectRatio: politician.guidedTourAspectRatio,
-                  guidedTourPosterUrl: politician.guidedTourPosterUrl,
                   defaultUpvoteGoal: politician.defaultUpvoteGoal,
                 }}
                 allParties={allParties}
@@ -355,6 +352,7 @@ export default async function Dashboard() {
                 googleName={session.user.name ?? ""}
                 appUrl={appUrl}
                 partySlug={politician.partySlug}
+                media={politicianMediaItems}
               />
             </div>
           }

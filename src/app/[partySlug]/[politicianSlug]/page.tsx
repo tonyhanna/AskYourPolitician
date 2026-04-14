@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { db } from "@/db";
-import { politicians, parties, questions, questionTags, upvotes, citizens, causes } from "@/db/schema";
+import { politicians, politicianMedia, parties, questions, questionTags, upvotes, citizens, causes } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getCitizenFromSession } from "@/lib/citizen-session";
@@ -70,6 +70,9 @@ export default async function BorgerFeed({
     .limit(1);
 
   if (!politician) notFound();
+
+  const mediaItems = await db.select().from(politicianMedia).where(eq(politicianMedia.politicianId, politician.id));
+  const guidedTour = mediaItems.find(m => m.type === "guided-tour");
 
   const basePath = `/${partySlug}/${politicianSlug}`;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -238,15 +241,15 @@ export default async function BorgerFeed({
         partySlug={partySlug}
         politicianSlug={politicianSlug}
         hasSession={!!citizen}
-        guidedTourMuxPlaybackId={politician.guidedTourMuxPlaybackId}
+        guidedTourMuxPlaybackId={guidedTour?.muxPlaybackId ?? null}
       />
       <GuidedTourModal
-        muxPlaybackId={politician.guidedTourMuxPlaybackId ?? null}
-        muxAssetStatus={politician.guidedTourMuxAssetStatus ?? null}
-        muxMediaType={politician.guidedTourMuxMediaType ?? null}
-        duration={politician.guidedTourDuration ?? null}
-        aspectRatio={politician.guidedTourAspectRatio ?? null}
-        posterUrl={politician.guidedTourPosterUrl ?? null}
+        muxPlaybackId={guidedTour?.muxPlaybackId ?? null}
+        muxAssetStatus={guidedTour?.muxAssetStatus ?? null}
+        muxMediaType={guidedTour?.muxMediaType ?? null}
+        duration={guidedTour?.duration ?? null}
+        aspectRatio={guidedTour?.aspectRatio ?? null}
+        posterUrl={guidedTour?.posterUrl ?? null}
       />
       <IntroSection
         bannerUrl={politician.bannerUrl}

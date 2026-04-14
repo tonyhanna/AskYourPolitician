@@ -381,7 +381,7 @@ export function PoliticianTopBar({
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new Event("open-guided-tour"))}
-                className="cursor-pointer rounded-full flex items-center justify-center"
+                className="cursor-pointer rounded-full flex items-center justify-center hover:opacity-50 transition-opacity"
                 style={{ width: 24, height: 24, backgroundColor: btnBg }}
                 aria-label="Guided tour"
               >
@@ -498,7 +498,7 @@ export function PoliticianTopBar({
                 >
                   <FontAwesomeIcon
                     icon={infoHover ? faPlay : faInfo}
-                    style={{ color: btnIcon, fontSize: infoHover ? 10 : "13.5px" }}
+                    style={{ color: btnIcon, fontSize: infoHover ? 10 : "13.5px", marginLeft: infoHover ? 1 : 0 }}
                   />
                 </button>
               )}

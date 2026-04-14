@@ -8,6 +8,7 @@ import {
   varchar,
   boolean,
   uniqueIndex,
+  unique,
   real,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "@auth/core/adapters";
@@ -130,17 +131,28 @@ export const politicians = pgTable("politicians", {
   heroLine2Color: varchar("hero_line_2_color", { length: 7 }),
   constituency: varchar("constituency", { length: 255 }),
   chatbaseId: varchar("chatbase_id", { length: 255 }),
-  guidedTourMuxAssetId: varchar("guided_tour_mux_asset_id", { length: 255 }),
-  guidedTourMuxPlaybackId: varchar("guided_tour_mux_playback_id", { length: 255 }),
-  guidedTourMuxAssetStatus: varchar("guided_tour_mux_asset_status", { length: 50 }),
-  guidedTourMuxMediaType: varchar("guided_tour_mux_media_type", { length: 10 }),
-  guidedTourDuration: real("guided_tour_duration"),
-  guidedTourAspectRatio: real("guided_tour_aspect_ratio"),
-  guidedTourPosterUrl: varchar("guided_tour_poster_url", { length: 2048 }),
   defaultUpvoteGoal: integer("default_upvote_goal").notNull().default(1000),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const politicianMedia = pgTable("politician_media", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  politicianId: uuid("politician_id")
+    .notNull()
+    .references(() => politicians.id, { onDelete: "cascade" }),
+  type: varchar("type", { length: 50 }).notNull(),
+  muxAssetId: varchar("mux_asset_id", { length: 255 }),
+  muxPlaybackId: varchar("mux_playback_id", { length: 255 }),
+  muxAssetStatus: varchar("mux_asset_status", { length: 50 }),
+  muxMediaType: varchar("mux_media_type", { length: 10 }),
+  duration: real("duration"),
+  aspectRatio: real("aspect_ratio"),
+  posterUrl: varchar("poster_url", { length: 2048 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  unique("politician_media_type_unique").on(table.politicianId, table.type),
+]);
 
 export const questions = pgTable("questions", {
   id: uuid("id").primaryKey().defaultRandom(),

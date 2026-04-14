@@ -4,8 +4,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUpload, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { upload } from "@vercel/blob/client";
-import { updateSettings, getGuidedTourUploadUrl, submitGuidedTourVideo, checkGuidedTourStatus, removeGuidedTourVideo } from "@/app/politiker/dashboard/actions";
-import { getMuxThumbnailUrl } from "@/lib/mux";
+import { updateSettings, getMediaUploadUrl, submitMediaUpload, checkMediaStatus, removeMedia } from "@/app/politiker/dashboard/actions";
+import { PlayableMediaCard } from "./PlayableMediaCard";
 import { generateSlug } from "@/lib/utils";
 
 type PoliticianData = {
@@ -26,15 +26,20 @@ type PoliticianData = {
   heroLine2: string | null;
   heroLine2Color: string | null;
   chatbaseId: string | null;
-  guidedTourMuxAssetId: string | null;
-  guidedTourMuxPlaybackId: string | null;
-  guidedTourMuxAssetStatus: string | null;
-  guidedTourMuxMediaType: string | null;
-  guidedTourDuration: number | null;
-  guidedTourAspectRatio: number | null;
-  guidedTourPosterUrl: string | null;
   defaultUpvoteGoal: number;
 } | null;
+
+type MediaItem = {
+  id: string;
+  type: string;
+  muxAssetId: string | null;
+  muxPlaybackId: string | null;
+  muxAssetStatus: string | null;
+  muxMediaType: string | null;
+  duration: number | null;
+  aspectRatio: number | null;
+  posterUrl: string | null;
+};
 
 type PartyOption = {
   id: string;
@@ -71,6 +76,7 @@ export function SettingsForm({
   googleName,
   appUrl,
   partySlug,
+  media = [],
 }: {
   politician: PoliticianData;
   allParties: PartyOption[];
@@ -78,6 +84,7 @@ export function SettingsForm({
   googleName: string;
   appUrl?: string | null;
   partySlug?: string | null;
+  media?: MediaItem[];
 }) {
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -99,9 +106,10 @@ export function SettingsForm({
   const [chatbaseId, setChatbaseId] = useState(politician?.chatbaseId ?? "");
   const [chatbaseRemoved, setChatbaseRemoved] = useState(false);
   // Guided tour video
-  const [tourStatus, setTourStatus] = useState(politician?.guidedTourMuxAssetStatus ?? null);
-  const [tourPlaybackId, setTourPlaybackId] = useState(politician?.guidedTourMuxPlaybackId ?? null);
-  const [tourPosterUrl, setTourPosterUrl] = useState(politician?.guidedTourPosterUrl ?? "");
+  const guidedTour = media.find(m => m.type === "guided-tour");
+  const [tourStatus, setTourStatus] = useState(guidedTour?.muxAssetStatus ?? null);
+  const [tourPlaybackId, setTourPlaybackId] = useState(guidedTour?.muxPlaybackId ?? null);
+  const [tourPosterUrl, setTourPosterUrl] = useState(guidedTour?.posterUrl ?? "");
   const [tourUploadProgress, setTourUploadProgress] = useState(0);
   const [tourStep, setTourStep] = useState<"idle" | "uploading" | "submitting" | "processing">("idle");
   const [tourRemoved, setTourRemoved] = useState(false);
@@ -155,7 +163,7 @@ export function SettingsForm({
     if (tourStatus !== "preparing" && tourStep !== "processing") return;
     let timeout: ReturnType<typeof setTimeout>;
     async function check() {
-      const status = await checkGuidedTourStatus();
+      const status = await checkMediaStatus("guided-tour");
       if (status === "ready") {
         setTourStatus("ready");
         setTourStep("idle");
@@ -189,7 +197,7 @@ export function SettingsForm({
       const aspectRatio = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : undefined;
       URL.revokeObjectURL(fileUrl);
 
-      const { uploadUrl } = await getGuidedTourUploadUrl();
+      const { uploadUrl } = await getMediaUploadUrl("guided-tour");
 
       // PUT file to Mux
       await new Promise<void>((resolve, reject) => {
@@ -204,7 +212,7 @@ export function SettingsForm({
       });
 
       setTourStep("submitting");
-      await submitGuidedTourVideo("video", tourPosterUrl || undefined, duration, aspectRatio);
+      await submitMediaUpload("guided-tour", "video", tourPosterUrl || undefined, duration, aspectRatio);
       setTourStatus("preparing");
       setTourStep("processing");
     } catch (e) {
@@ -334,7 +342,6 @@ export function SettingsForm({
       <input type="hidden" name="bannerBgColor" value={bannerBgColor} />
       <input type="hidden" name="heroLine1Color" value={heroLine1Color} />
       <input type="hidden" name="heroLine2Color" value={heroLine2Color} />
-      <input type="hidden" name="guidedTourPosterUrl" value={tourRemoved ? "" : tourPosterUrl} />
       {/* Party is managed by admin only — pass as hidden field */}
       <input type="hidden" name="partyId" value={politician?.partyId ?? ""} />
 
@@ -899,9 +906,9 @@ export function SettingsForm({
 
           {/* Current video thumbnail / processing state */}
           {tourStep === "uploading" && (
-            <div className="rounded-xl overflow-hidden mb-2" style={{ backgroundColor: "var(--system-bg2, #FF0000)", padding: 16 }}>
+            <div className="rounded-xl overflow-hidden mb-2" style={{ backgroundColor: "var(--system-bg1, #FF0000)", padding: 16 }}>
               <div className="flex items-center gap-3">
-                <div className="flex-1 rounded-full overflow-hidden" style={{ height: 6, backgroundColor: "var(--system-bg1, #FF0000)" }}>
+                <div className="flex-1 rounded-full overflow-hidden" style={{ height: 6, backgroundColor: "var(--system-bg2, #FF0000)" }}>
                   <div className="h-full rounded-full transition-all" style={{ width: `${tourUploadProgress}%`, backgroundColor: "var(--system-success, #FF0000)" }} />
                 </div>
                 <span className="text-xs" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text2, #FF0000)" }}>{tourUploadProgress}%</span>
@@ -909,18 +916,24 @@ export function SettingsForm({
             </div>
           )}
           {(tourStep === "submitting" || tourStep === "processing" || tourStatus === "preparing") && (
-            <div className="rounded-xl overflow-hidden mb-2" style={{ backgroundColor: "var(--system-bg2, #FF0000)", padding: 16 }}>
-              <span className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-pending, #FF0000)" }}>
+            <div className="rounded-xl overflow-hidden mb-2" style={{ backgroundColor: "var(--system-bg1, #FF0000)", padding: 16 }}>
+              <span className="text-sm" style={{ fontFamily: "var(--font-figtree)", color: "var(--system-text0, #FF0000)" }}>
                 Video behandles...
               </span>
             </div>
           )}
           {tourStatus === "ready" && tourPlaybackId && !tourRemoved && tourStep === "idle" && (
-            <div className="rounded-xl overflow-hidden mb-2" style={{ maxWidth: 320 }}>
-              <img
-                src={getMuxThumbnailUrl(tourPlaybackId, { width: 640 })}
-                alt="Guided tour thumbnail"
-                className="w-full block rounded-xl"
+            <div className="mb-2 w-full lg:w-[337px]">
+              <PlayableMediaCard
+                question={{
+                  id: "guided-tour-settings",
+                  answerPhotoUrl: tourPosterUrl || null,
+                  answerDuration: guidedTour?.duration ?? null,
+                  muxPlaybackId: tourPlaybackId,
+                  muxAssetStatus: tourStatus,
+                  muxMediaType: guidedTour?.muxMediaType ?? "video",
+                }}
+                className="rounded-xl overflow-hidden"
               />
             </div>
           )}
@@ -967,7 +980,7 @@ export function SettingsForm({
                     type="button"
                     onClick={async () => {
                       setTourRemoved(true);
-                      await removeGuidedTourVideo();
+                      await removeMedia("guided-tour");
                       setTourStatus(null);
                       setTourPlaybackId(null);
                       setTourPosterUrl("");

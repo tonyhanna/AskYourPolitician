@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { PlayableMediaCard } from "./PlayableMediaCard";
 
 export function GuidedTourModal({
@@ -55,21 +53,12 @@ export function GuidedTourModal({
     <div
       className="fixed inset-0 flex items-center justify-center p-4"
       style={{ zIndex: 100, backgroundColor: "rgba(0, 0, 0, 0.7)" }}
-      onClick={(e) => { if (e.target === e.currentTarget) close(); }}
+      onClick={close}
     >
       <div
-        className="relative w-full"
-        style={{ maxWidth: 640 }}
+        className="relative w-full lg:w-[337px]"
+        onClick={close}
       >
-        <button
-          type="button"
-          onClick={close}
-          className="absolute -top-10 right-0 cursor-pointer hover:opacity-70 transition-opacity"
-          style={{ color: "#fff", fontSize: 24 }}
-          aria-label="Luk"
-        >
-          <FontAwesomeIcon icon={faXmark} />
-        </button>
         <PlayableMediaCard
           question={{
             id: "guided-tour",

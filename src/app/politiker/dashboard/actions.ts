@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { users, accounts, sessions, politicians, questions, questionTags, upvotes, citizens, answerHistory, causes, questionSuggestions, parties } from "@/db/schema";
+import { users, accounts, sessions, politicians, politicianMedia, questions, questionTags, upvotes, citizens, answerHistory, causes, questionSuggestions, parties } from "@/db/schema";
 import { sendAnswerNotificationEmail, sendSuggestionApprovedEmail, sendSuggestionRejectedEmail } from "@/lib/email";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { generateSlug } from "@/lib/utils";
@@ -11,7 +11,7 @@ import { del } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { getActivePolitician } from "@/lib/admin";
 import { checkAndNotifyGoalReached } from "@/lib/goal-check";
-import { createDirectUpload, createGuidedTourUpload, deleteMuxAsset } from "@/lib/mux";
+import { createDirectUpload, createMediaUpload, deleteMuxAsset } from "@/lib/mux";
 
 export async function createQuestion(formData: FormData) {
   const session = await auth();
@@ -70,7 +70,6 @@ export async function updateSettings(formData: FormData) {
   const heroLine2 = (formData.get("heroLine2") as string)?.trim() || null;
   const heroLine2Color = (formData.get("heroLine2Color") as string)?.trim() || null;
   const chatbaseId = (formData.get("chatbaseId") as string)?.trim() || null;
-  const guidedTourPosterUrl = (formData.get("guidedTourPosterUrl") as string) || null;
   const defaultUpvoteGoal = parseInt(formData.get("defaultUpvoteGoal") as string) || 1000;
   if (!firstName || !lastName || !partyId || !email) throw new Error("Fornavn, efternavn, parti og email er påkrævet");
 
@@ -122,7 +121,6 @@ export async function updateSettings(formData: FormData) {
         heroLine2,
         heroLine2Color,
         chatbaseId,
-        guidedTourPosterUrl,
         defaultUpvoteGoal,
         updatedAt: new Date(),
       })
@@ -1096,24 +1094,43 @@ export async function submitMuxAnswer(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Guided Tour Video
+// Politician Media (guided tour, etc.)
 // ──────────────────────────────────────────────────────────────────────────────
 
-export async function getGuidedTourUploadUrl() {
+export async function getMediaUploadUrl(mediaType: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const politician = await getActivePolitician();
   if (!politician) throw new Error("Politician not found");
 
+  // Upsert a media row to get an ID for the passthrough
+  const [existing] = await db
+    .select({ id: politicianMedia.id })
+    .from(politicianMedia)
+    .where(and(eq(politicianMedia.politicianId, politician.id), eq(politicianMedia.type, mediaType)))
+    .limit(1);
+
+  let mediaId: string;
+  if (existing) {
+    mediaId = existing.id;
+  } else {
+    const [row] = await db
+      .insert(politicianMedia)
+      .values({ politicianId: politician.id, type: mediaType })
+      .returning({ id: politicianMedia.id });
+    mediaId = row.id;
+  }
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:4000";
-  const { uploadUrl, uploadId } = await createGuidedTourUpload(politician.id, appUrl);
+  const { uploadUrl, uploadId } = await createMediaUpload(mediaId, appUrl);
 
   return { uploadUrl, uploadId };
 }
 
-export async function submitGuidedTourVideo(
-  mediaType: "video" | "audio",
+export async function submitMediaUpload(
+  mediaTypeKey: string,
+  muxMediaType: "video" | "audio",
   posterUrl?: string,
   duration?: number,
   aspectRatio?: number,
@@ -1124,31 +1141,37 @@ export async function submitGuidedTourVideo(
   const politician = await getActivePolitician();
   if (!politician) throw new Error("Politician not found");
 
+  const [existing] = await db
+    .select()
+    .from(politicianMedia)
+    .where(and(eq(politicianMedia.politicianId, politician.id), eq(politicianMedia.type, mediaTypeKey)))
+    .limit(1);
+
   // Clean up old asset
-  if (politician.guidedTourMuxAssetId) {
-    deleteMuxAsset(politician.guidedTourMuxAssetId).catch(() => {});
+  if (existing?.muxAssetId) {
+    deleteMuxAsset(existing.muxAssetId).catch(() => {});
   }
-  if (politician.guidedTourPosterUrl && politician.guidedTourPosterUrl !== posterUrl && isBlobUrl(politician.guidedTourPosterUrl)) {
-    del([politician.guidedTourPosterUrl]).catch(() => {});
+  if (existing?.posterUrl && existing.posterUrl !== posterUrl && isBlobUrl(existing.posterUrl)) {
+    del([existing.posterUrl]).catch(() => {});
   }
 
   await db
-    .update(politicians)
+    .update(politicianMedia)
     .set({
-      guidedTourPosterUrl: posterUrl ?? null,
-      guidedTourDuration: duration ?? null,
-      guidedTourAspectRatio: aspectRatio ?? null,
-      guidedTourMuxAssetStatus: "preparing",
-      guidedTourMuxMediaType: mediaType,
-      guidedTourMuxPlaybackId: null,
-      guidedTourMuxAssetId: null,
+      posterUrl: posterUrl ?? null,
+      duration: duration ?? null,
+      aspectRatio: aspectRatio ?? null,
+      muxAssetStatus: "preparing",
+      muxMediaType: muxMediaType,
+      muxPlaybackId: null,
+      muxAssetId: null,
     })
-    .where(eq(politicians.id, politician.id));
+    .where(and(eq(politicianMedia.politicianId, politician.id), eq(politicianMedia.type, mediaTypeKey)));
 
   revalidatePath("/politiker/dashboard");
 }
 
-export async function checkGuidedTourStatus(): Promise<string | null> {
+export async function checkMediaStatus(mediaTypeKey: string): Promise<string | null> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -1156,40 +1179,38 @@ export async function checkGuidedTourStatus(): Promise<string | null> {
   if (!politician) return null;
 
   const [row] = await db
-    .select({ status: politicians.guidedTourMuxAssetStatus })
-    .from(politicians)
-    .where(eq(politicians.id, politician.id))
+    .select({ status: politicianMedia.muxAssetStatus })
+    .from(politicianMedia)
+    .where(and(eq(politicianMedia.politicianId, politician.id), eq(politicianMedia.type, mediaTypeKey)))
     .limit(1);
 
   return row?.status ?? null;
 }
 
-export async function removeGuidedTourVideo() {
+export async function removeMedia(mediaTypeKey: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const politician = await getActivePolitician();
   if (!politician) throw new Error("Politician not found");
 
-  if (politician.guidedTourMuxAssetId) {
-    deleteMuxAsset(politician.guidedTourMuxAssetId).catch(() => {});
-  }
-  if (politician.guidedTourPosterUrl && isBlobUrl(politician.guidedTourPosterUrl)) {
-    del([politician.guidedTourPosterUrl]).catch(() => {});
-  }
+  const [existing] = await db
+    .select()
+    .from(politicianMedia)
+    .where(and(eq(politicianMedia.politicianId, politician.id), eq(politicianMedia.type, mediaTypeKey)))
+    .limit(1);
 
-  await db
-    .update(politicians)
-    .set({
-      guidedTourMuxAssetId: null,
-      guidedTourMuxPlaybackId: null,
-      guidedTourMuxAssetStatus: null,
-      guidedTourMuxMediaType: null,
-      guidedTourDuration: null,
-      guidedTourAspectRatio: null,
-      guidedTourPosterUrl: null,
-    })
-    .where(eq(politicians.id, politician.id));
+  if (existing) {
+    if (existing.muxAssetId) {
+      deleteMuxAsset(existing.muxAssetId).catch(() => {});
+    }
+    if (existing.posterUrl && isBlobUrl(existing.posterUrl)) {
+      del([existing.posterUrl]).catch(() => {});
+    }
+    await db
+      .delete(politicianMedia)
+      .where(eq(politicianMedia.id, existing.id));
+  }
 
   revalidatePath("/politiker/dashboard");
 }

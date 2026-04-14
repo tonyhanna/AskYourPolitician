@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { questions, answerHistory, upvotes, citizens, politicians, parties } from "@/db/schema";
+import { questions, answerHistory, upvotes, citizens, politicians, parties, politicianMedia } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { sendAnswerNotificationEmail } from "@/lib/email";
@@ -53,31 +53,33 @@ export async function POST(req: NextRequest) {
     const hasVideo = tracks?.some((t) => t.type === "video");
     const mediaType = hasVideo ? "video" : "audio";
 
-    // Check if this is a guided tour video (passthrough = "tour:{politicianId}")
-    if (passthrough?.startsWith("tour:")) {
-      const politicianId = passthrough.slice(5);
-      await db
-        .update(politicians)
+    // Check if this is a politician media item (passthrough = "media:{mediaId}")
+    if (passthrough?.startsWith("media:")) {
+      const mediaId = passthrough.slice(6);
+      const [media] = await db
+        .update(politicianMedia)
         .set({
-          guidedTourMuxAssetId: assetId,
-          guidedTourMuxPlaybackId: playbackId,
-          guidedTourMuxAssetStatus: "ready",
-          guidedTourMuxMediaType: mediaType,
-          guidedTourDuration: duration,
-          guidedTourAspectRatio: aspectRatio,
+          muxAssetId: assetId,
+          muxPlaybackId: playbackId,
+          muxAssetStatus: "ready",
+          muxMediaType: mediaType,
+          duration,
+          aspectRatio,
         })
-        .where(eq(politicians.id, politicianId));
+        .where(eq(politicianMedia.id, mediaId))
+        .returning({ politicianId: politicianMedia.politicianId });
 
-      // Revalidate pages
-      const [politician] = await db
-        .select({ slug: politicians.slug, partySlug: parties.slug })
-        .from(politicians)
-        .innerJoin(parties, eq(politicians.partyId, parties.id))
-        .where(eq(politicians.id, politicianId))
-        .limit(1);
-      if (politician) {
-        revalidatePath(`/${politician.partySlug}/${politician.slug}`);
-        revalidatePath("/politiker/dashboard");
+      if (media) {
+        const [politician] = await db
+          .select({ slug: politicians.slug, partySlug: parties.slug })
+          .from(politicians)
+          .innerJoin(parties, eq(politicians.partyId, parties.id))
+          .where(eq(politicians.id, media.politicianId))
+          .limit(1);
+        if (politician) {
+          revalidatePath(`/${politician.partySlug}/${politician.slug}`);
+          revalidatePath("/politiker/dashboard");
+        }
       }
       return NextResponse.json({ received: true });
     }
@@ -194,12 +196,12 @@ export async function POST(req: NextRequest) {
     const assetId = data.id as string;
     const passthrough = data.passthrough as string | undefined;
 
-    if (passthrough?.startsWith("tour:")) {
-      const politicianId = passthrough.slice(5);
+    if (passthrough?.startsWith("media:")) {
+      const mediaId = passthrough.slice(6);
       await db
-        .update(politicians)
-        .set({ guidedTourMuxAssetId: assetId, guidedTourMuxAssetStatus: "errored" })
-        .where(eq(politicians.id, politicianId));
+        .update(politicianMedia)
+        .set({ muxAssetId: assetId, muxAssetStatus: "errored" })
+        .where(eq(politicianMedia.id, mediaId));
     } else if (passthrough) {
       await db
         .update(questions)
